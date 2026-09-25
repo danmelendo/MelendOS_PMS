@@ -26,6 +26,7 @@ import {
   Users,
   BarChart3,
   Star,
+  MessagesSquare,
   Wand2,
   Globe,
   BookOpenCheck,
@@ -33,10 +34,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
+import { useInboxLive, useUnreadCount } from "@/lib/chat";
 
 const items = [
   { to: "/today", label: "Hoy", icon: Calendar },
   { to: "/calendar", label: "Calendario", icon: CalendarDays },
+  { to: "/messages", label: "Mensajes", icon: MessagesSquare },
   { to: "/reservations", label: "Reservas", icon: ClipboardList },
   { to: "/customers", label: "Clientes", icon: Users },
   { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
@@ -58,6 +61,8 @@ const adminItems = [
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
+  useInboxLive();
+  const unread = useUnreadCount();
   const { signOut, user } = useAuth();
   const { isAdmin } = useRoles();
   const navigate = useNavigate();
@@ -96,6 +101,14 @@ export function AppSidebar() {
                       <Link to={item.to} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
                         <span>{item.label}</span>
+                        {item.to === "/messages" && unread > 0 && (
+                          <span
+                            className="ml-auto min-w-5 rounded-full bg-sidebar-primary px-1.5 text-center text-[11px] font-semibold text-sidebar-primary-foreground"
+                            aria-label={`${unread} mensajes sin leer`}
+                          >
+                            {unread}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

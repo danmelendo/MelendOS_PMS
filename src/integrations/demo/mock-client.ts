@@ -102,6 +102,8 @@ function resolveEmbeds(table: string, row: Row, select: string): Row {
     if (has("rooms")) out.rooms = clone(db().rooms.find((x) => x.id === row.room_id) ?? null);
     if (has("customers"))
       out.customers = clone(db().customers.find((x) => x.id === row.customer_id) ?? null);
+    if (has("members"))
+      out.members = clone(db().members.find((x) => x.id === row.member_id) ?? null);
     if (has("reservation_extras")) {
       out.reservation_extras = db()
         .reservation_extras.filter((re) => re.reservation_id === row.id)

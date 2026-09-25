@@ -224,3 +224,11 @@
     animation-name: overlay-out;
   }
 }
+
+/* Horizontal scrollers without a visible scrollbar (chips, tab rows). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

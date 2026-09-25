@@ -1,7 +1,9 @@
+import { MessagesSquare } from "lucide-react";
+import { chatOpen } from "@/lib/chat";
 import { GuestReview } from "@/components/Reviews";
 import { guestToken } from "@/integrations/pms/demo-stays-connector";
 import { useFeatures } from "@/lib/features";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -144,6 +146,16 @@ function BookingDetailScreen() {
           </span>
         )}
       </div>
+
+      {features.chat && chatOpen(booking.status, booking.checkOut) && (
+        <Link
+          to="/stays/chat/$bookingId"
+          params={{ bookingId: booking.id }}
+          className="mt-4 flex items-center justify-center gap-2 bg-[var(--brand)] py-3 text-sm font-semibold text-white"
+        >
+          <MessagesSquare className="h-4 w-4" /> Hablar con recepción
+        </Link>
+      )}
 
       <GuestReview
         reservationId={booking.id}

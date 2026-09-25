@@ -18,7 +18,7 @@ import { reviewAuthor } from "@domain/reviews.ts";
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 22; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 23; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -1311,6 +1311,33 @@ export function buildSeedDb(): DemoDb {
     incidents,
     payments: [],
     domain_events: [],
+    // Guest ↔ reception chats: an unread request from a guest in house, and an
+    // answered one from the demo member about the next stay.
+    stay_messages: [
+      chat(
+        "msg-1",
+        "res-2",
+        "guest",
+        "Buenas noches, ¿podrían subirnos dos toallas más?",
+        35,
+        "towels",
+      ),
+      chat(
+        "msg-2",
+        "res-member-next",
+        "guest",
+        "Hola, llegamos en el vuelo de las 9:00. ¿Podríamos entrar antes?",
+        26 * 60,
+        "early_checkin",
+      ),
+      chat(
+        "msg-3",
+        "res-member-next",
+        "staff",
+        "¡Hola! Te guardamos la habitación desde las 12:00 sin coste. Buen viaje 😊",
+        25 * 60,
+      ),
+    ],
     // A guest asked the booking agent to cancel; reception decides on "Hoy".
     cancellation_requests: [
       {
@@ -1329,6 +1356,28 @@ export function buildSeedDb(): DemoDb {
   assignTenants(out);
   addSimulatedHistory(out, now);
   return out;
+}
+
+function chat(
+  id: string,
+  reservationId: string,
+  sender: "guest" | "staff",
+  body: string,
+  minutesAgo: number,
+  category: string | null = null,
+): Row {
+  const at = new Date(Date.now() - minutesAgo * 60_000).toISOString();
+  return {
+    id,
+    reservation_id: reservationId,
+    sender,
+    body,
+    category,
+    staff_id: sender === "staff" ? DEMO_USER_ID : null,
+    created_at: at,
+    // Staff replies were read by the guest; the latest guest request is not.
+    read_at: sender === "staff" || id === "msg-2" ? at : null,
+  };
 }
 
 // A year of simulated history per hotel plus the stays already booked ahead,
@@ -1455,7 +1504,7 @@ function assignTenants(d: DemoDb) {
     r.property_id = r.property_id ?? d.rooms.find((x) => x.id === r.room_id)?.property_id ?? null;
   }
   const byReservation = new Map(d.reservations.map((r) => [r.id, r.tenant_id]));
-  for (const t of ["reservation_extras", "signatures", "cancellation_requests"]) {
+  for (const t of ["reservation_extras", "signatures", "cancellation_requests", "stay_messages"]) {
     for (const r of d[t]) r.tenant_id = byReservation.get(r.reservation_id as string) ?? null;
   }
   for (const s of d.common_spaces) s.tenant_id = byProperty.get(s.property_id as string) ?? null;
