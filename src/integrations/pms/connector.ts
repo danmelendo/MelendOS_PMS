@@ -96,7 +96,12 @@ export interface PmsConnector {
   getPrebooking(id: string): Promise<Prebooking | null>;
   /** Starts the deposit payment; the browser must follow the redirect. The
    *  booking is confirmed only by the gateway notification, never here. */
-  startPayment(id: string, returnUrl: string): Promise<PaymentRedirect>;
+  /** Deposit of a pending booking, or the outstanding balance of the stay's bill. */
+  startPayment(
+    id: string,
+    returnUrl: string,
+    kind?: "deposit" | "balance",
+  ): Promise<PaymentRedirect>;
   cancelPrebooking(id: string): Promise<void>;
   listBookings(memberId: string): Promise<Prebooking[]>;
   getBooking(id: string): Promise<Prebooking | null>;

@@ -18,7 +18,7 @@ import { reviewAuthor } from "@domain/reviews.ts";
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 23; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 24; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -1311,6 +1311,45 @@ export function buildSeedDb(): DemoDb {
     incidents,
     payments: [],
     domain_events: [],
+    // In-stay services (mirror of supabase/seeds/stay-services.sql) and the bill
+    // of a guest in house: a posted breakfast and a laundry order to confirm.
+    stay_services: STAY_SERVICES.map(([tenant, key, category, name, price, unit], i) => ({
+      id: `svc-${tenant}-${key}`,
+      tenant_id: `tenant-${tenant}`,
+      category,
+      name,
+      description: null,
+      price,
+      unit,
+      active: true,
+      sort_order: i,
+    })),
+    folio_charges: [
+      folioCharge(
+        "chg-1",
+        "res-2",
+        "svc-lumen-breakfast",
+        "food",
+        "Desayuno en la habitación",
+        2,
+        18,
+        "posted",
+        "guest",
+        20 * 60,
+      ),
+      folioCharge(
+        "chg-2",
+        "res-2",
+        "svc-lumen-laundry",
+        "laundry",
+        "Lavandería",
+        1,
+        15,
+        "requested",
+        "guest",
+        50,
+      ),
+    ],
     // Guest ↔ reception chats: an unread request from a guest in house, and an
     // answered one from the demo member about the next stay.
     stay_messages: [
@@ -1356,6 +1395,55 @@ export function buildSeedDb(): DemoDb {
   assignTenants(out);
   addSimulatedHistory(out, now);
   return out;
+}
+
+const STAY_SERVICES: [string, string, string, string, number, string][] = [
+  ["lumen", "breakfast", "food", "Desayuno en la habitación", 18, "persona"],
+  ["lumen", "cheese", "food", "Tabla de quesos y vino", 28, "unidad"],
+  ["lumen", "minibar-cava", "minibar", "Minibar · benjamín de cava", 12, "unidad"],
+  ["lumen", "laundry", "laundry", "Lavandería", 15, "bolsa"],
+  ["lumen", "parking", "parking", "Parking", 22, "día"],
+  ["lumen", "valet", "parking", "Aparcacoches", 8, "servicio"],
+  ["lumen", "meeting", "catering", "Catering para reuniones", 12, "persona"],
+  ["albora", "breakfast", "food", "Desayuno en la habitación", 20, "persona"],
+  ["albora", "dinner", "food", "Cena en la terraza", 45, "persona"],
+  ["albora", "picnic", "catering", "Picnic para la playa", 18, "persona"],
+  ["albora", "massage", "spa", "Masaje relajante 50 min", 70, "sesión"],
+  ["albora", "laundry", "laundry", "Lavandería", 15, "bolsa"],
+  ["albora", "parking", "parking", "Parking del hotel", 15, "día"],
+  ["albora", "valet", "parking", "Aparcacoches", 8, "servicio"],
+];
+
+function folioCharge(
+  id: string,
+  reservationId: string,
+  serviceId: string,
+  category: string,
+  description: string,
+  qty: number,
+  unitPrice: number,
+  status: "posted" | "requested",
+  source: "guest" | "staff",
+  minutesAgo: number,
+): Row {
+  const at = new Date(Date.now() - minutesAgo * 60_000).toISOString();
+  return {
+    id,
+    reservation_id: reservationId,
+    service_id: serviceId,
+    category,
+    description,
+    qty,
+    unit_price: unitPrice,
+    amount: qty * unitPrice,
+    status,
+    source,
+    note: null,
+    created_by: null,
+    created_at: at,
+    posted_at: status === "posted" ? at : null,
+    void_reason: null,
+  };
 }
 
 function chat(
@@ -1504,7 +1592,13 @@ function assignTenants(d: DemoDb) {
     r.property_id = r.property_id ?? d.rooms.find((x) => x.id === r.room_id)?.property_id ?? null;
   }
   const byReservation = new Map(d.reservations.map((r) => [r.id, r.tenant_id]));
-  for (const t of ["reservation_extras", "signatures", "cancellation_requests", "stay_messages"]) {
+  for (const t of [
+    "reservation_extras",
+    "signatures",
+    "cancellation_requests",
+    "stay_messages",
+    "folio_charges",
+  ]) {
     for (const r of d[t]) r.tenant_id = byReservation.get(r.reservation_id as string) ?? null;
   }
   for (const s of d.common_spaces) s.tenant_id = byProperty.get(s.property_id as string) ?? null;

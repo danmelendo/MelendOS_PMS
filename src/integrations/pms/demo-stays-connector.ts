@@ -479,12 +479,16 @@ export class DemoStaysConnector implements PmsConnector {
     return (data as Row | null) ?? null;
   }
 
-  async startPayment(id: string, returnUrl: string): Promise<PaymentRedirect> {
+  async startPayment(
+    id: string,
+    returnUrl: string,
+    kind: "deposit" | "balance" = "deposit",
+  ): Promise<PaymentRedirect> {
     const { data, error } = await supabase.functions.invoke("payments-create", {
-      body: { reservation_id: id, return_url: returnUrl },
+      body: { reservation_id: id, return_url: returnUrl, kind },
     });
     if (error || !data) throw new Error(await errorMessage(error, "No se pudo iniciar el pago"));
-    if (IS_DEMO) {
+    if (IS_DEMO && kind === "deposit") {
       // The demo "gateway" confirms at once; mirror what the database triggers
       // do on the real backend (journal and loyalty points).
       const { data: row } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();

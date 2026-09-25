@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Bot, MessagesSquare, SendHorizonal } from "lucide-react";
+import { ArrowLeft, Bot, MessagesSquare, Receipt, SendHorizonal } from "lucide-react";
+import { FolioDrawer } from "@/components/FolioDrawer";
 import { toast } from "sonner";
 import { bookingReference } from "@domain/reference.ts";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,6 +171,7 @@ function Thread({
   onBack: () => void;
 }) {
   const [text, setText] = useState("");
+  const [folio, setFolio] = useState(false);
   const reply = useStaffReply();
   const markRead = useMarkRead();
   const end = useRef<HTMLDivElement>(null);
@@ -226,7 +228,13 @@ function Thread({
             {STATUS_LABELS[stay.status]}
           </Badge>
         )}
+        {stay && stay.status !== "pending" && (
+          <Button size="sm" variant="outline" onClick={() => setFolio(true)}>
+            <Receipt className="mr-1 h-3.5 w-3.5" /> Cuenta
+          </Button>
+        )}
       </div>
+      <FolioDrawer reservationId={folio ? reservationId : null} onOpenChange={setFolio} />
 
       <div className="max-h-[55vh] flex-1 space-y-2 overflow-y-auto bg-muted/20 p-4">
         {messages?.map((m) => {

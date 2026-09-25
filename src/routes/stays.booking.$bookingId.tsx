@@ -1,3 +1,4 @@
+import { StayFolio } from "@/components/StayFolio";
 import { MessagesSquare } from "lucide-react";
 import { chatOpen } from "@/lib/chat";
 import { GuestReview } from "@/components/Reviews";
@@ -146,6 +147,16 @@ function BookingDetailScreen() {
           </span>
         )}
       </div>
+
+      {features.folio && (
+        <StayFolio
+          reservationId={booking.id}
+          propertyId={booking.propertyId}
+          token={guestToken(booking.id)}
+          status={booking.status}
+          checkOut={booking.checkOut}
+        />
+      )}
 
       {features.chat && chatOpen(booking.status, booking.checkOut) && (
         <Link

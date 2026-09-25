@@ -1,8 +1,9 @@
-// POST /payments-create  { reservation_id, return_url }
+// POST /payments-create  { reservation_id, return_url, kind? }
 //
-// Starts the deposit payment of a pending reservation with the hotel's gateway.
-// The amount always comes from the database (deposit_amount), never from the
-// client. Returns the redirect the browser must follow (auto-posted form for
+// Starts a payment with the hotel's gateway: the deposit of a pending
+// reservation (kind "deposit", the default) or the outstanding balance of the
+// stay's bill (kind "balance": booking total + posted charges - paid). The
+// amount always comes from the database, never from the client. Returns the redirect the browser must follow (auto-posted form for
 // Redsys, URL for Stripe). Nothing is confirmed here: confirmation only happens
 // in payments-notify, from the provider's verified notification.
 import { adminClient, corsHeaders, json } from "../_shared/http.ts";
@@ -12,12 +13,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  let body: { reservation_id?: string; return_url?: string };
+  let body: { reservation_id?: string; return_url?: string; kind?: string };
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid JSON" }, 400);
   }
+  const kind = body.kind === "balance" ? "balance" : "deposit";
   const reservationId = body.reservation_id;
   if (!reservationId || !/^[0-9a-f-]{36}$/i.test(reservationId)) {
     return json({ error: "reservation_id is required" }, 400);
@@ -39,14 +41,27 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (error) return json({ error: "Could not load the reservation" }, 500);
   if (!res) return json({ error: "Reservation not found" }, 404);
-  if (res.status !== "pending" || res.deposit_paid) {
-    return json({ error: "This reservation is not awaiting payment" }, 409);
+  let amount: number;
+  if (kind === "deposit") {
+    if (res.status !== "pending" || res.deposit_paid) {
+      return json({ error: "This reservation is not awaiting payment" }, 409);
+    }
+    if (res.is_prebooking && res.hold_expires_at && new Date(res.hold_expires_at) < new Date()) {
+      return json({ error: "The hold on this room has expired" }, 409);
+    }
+    amount = Number(res.deposit_amount);
+    if (!(amount > 0)) return json({ error: "Invalid deposit amount" }, 422);
+  } else {
+    if (!["confirmed", "in_progress", "completed"].includes(res.status) || !res.deposit_paid) {
+      return json({ error: "This stay has no bill to settle" }, 409);
+    }
+    const { data: balance, error: balErr } = await db.rpc("folio_balance", {
+      p_reservation_id: res.id,
+    });
+    if (balErr) return json({ error: "Could not compute the balance" }, 500);
+    amount = Math.round(Number(balance) * 100) / 100;
+    if (!(amount > 0)) return json({ error: "Nothing to pay" }, 409);
   }
-  if (res.is_prebooking && res.hold_expires_at && new Date(res.hold_expires_at) < new Date()) {
-    return json({ error: "The hold on this room has expired" }, 409);
-  }
-  const amount = Number(res.deposit_amount);
-  if (!(amount > 0)) return json({ error: "Invalid deposit amount" }, 422);
 
   let gateway;
   try {
@@ -63,6 +78,7 @@ Deno.serve(async (req) => {
       provider: gateway.provider,
       provider_ref: `pending-${crypto.randomUUID()}`,
       amount,
+      kind,
     })
     .select("id")
     .single();
@@ -85,7 +101,7 @@ Deno.serve(async (req) => {
       paymentId: payment.id,
       amount,
       currency: "EUR",
-      description: `Señal reserva ${hotel}${room ? ` · hab. ${room}` : ""}`,
+      description: `${kind === "balance" ? "Cuenta estancia" : "Señal reserva"} ${hotel}${room ? ` · hab. ${room}` : ""}`,
       notificationUrl: notifyUrl.toString(),
       okUrl: ok.toString(),
       koUrl: ko.toString(),

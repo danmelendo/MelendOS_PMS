@@ -998,4 +998,199 @@ describe.skipIf(!DB_URL)("RLS", () => {
       if (!closed.ok) expect(closed.error).toMatch(/cerrada/);
     });
   });
+  describe("folio: charges, extensions and payments", () => {
+    async function inHouse(total = 200, paid = 60, days = [400, 402]) {
+      const r = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, base_price, paid_amount, deposit_paid, created_by_role, access_token_hash)
+         values ($1, $2, now() + make_interval(days => $5), now() + make_interval(days => $6), 'in_progress', $3, $3, $4, true, 'public',
+                 encode(extensions.digest('folio-token', 'sha256'), 'hex'))
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"], total, paid, days[0], days[1]],
+      );
+      return r.rows[0].id;
+    }
+    const service = async () =>
+      (
+        await client.query(
+          `insert into public.stay_services (tenant_id, category, name, price, unit)
+           values ($1, 'laundry', 'Lavandería test', 15, 'bolsa') returning id`,
+          [ids.lumen],
+        )
+      ).rows[0].id as string;
+    const balance = async (id: string) =>
+      Number((await client.query("select public.folio_balance($1) as b", [id])).rows[0].b);
+
+    it("guests order services; reception confirms them into the balance", async () => {
+      await client.query("savepoint setup");
+      const id = await inHouse();
+      const svc = await service();
+      await asIdentity("anon", undefined, () =>
+        client.query("select public.order_service($1, 'folio-token', $2, 2, 'sin suavizante')", [
+          id,
+          svc,
+        ]),
+      );
+      const wrong = await attempt("anon", undefined, () =>
+        client.query("select public.order_service($1, 'guess', $2, 1)", [id, svc]),
+      );
+      const anonTable = await attempt("anon", undefined, () =>
+        count("select count(*) as n from public.folio_charges"),
+      );
+      const beforePost = await balance(id);
+      const chat = (
+        await client.query(
+          "select body from public.stay_messages where reservation_id = $1 and sender = 'guest'",
+          [id],
+        )
+      ).rows[0]?.body;
+      await asIdentity("authenticated", users.lumenReception, () =>
+        client.query(
+          "update public.folio_charges set status = 'posted' where reservation_id = $1",
+          [id],
+        ),
+      );
+      const afterPost = await balance(id);
+      const folio = await asIdentity(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.get_folio($1, 'folio-token') as f", [id])).rows[0].f,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(wrong.ok).toBe(false);
+      expect(anonTable).toEqual({ ok: true, value: 0 });
+      expect(beforePost).toBe(140); // 200 - 60: requested orders do not count yet
+      expect(chat).toBe("Pedido: 2 × Lavandería test — sin suavizante");
+      expect(afterPost).toBe(170);
+      expect(folio.balance).toBe(170);
+      expect(folio.charges[0]).toMatchObject({ amount: 30, status: "posted" });
+    });
+
+    it("posted charges are never edited, voiding needs a reason, other hotels cannot touch them", async () => {
+      await client.query("savepoint setup");
+      const id = await inHouse();
+      const charge = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query(
+              `insert into public.folio_charges (tenant_id, reservation_id, category, description, qty, unit_price, source, created_by)
+               values ($1, $2, 'other', 'Botella de vino', 1, 25, 'staff', $3) returning id`,
+              [ids.lumen, id, users.lumenReception],
+            )
+          ).rows[0].id as string,
+      );
+      const edit = await attempt("authenticated", users.lumenReception, () =>
+        client.query("update public.folio_charges set unit_price = 1 where id = $1", [charge]),
+      );
+      const noReason = await attempt("authenticated", users.lumenReception, () =>
+        client.query("update public.folio_charges set status = 'void' where id = $1", [charge]),
+      );
+      const otherHotel = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () =>
+          (
+            await client.query(
+              "update public.folio_charges set status = 'void', void_reason = 'x' where id = $1",
+              [charge],
+            )
+          ).rowCount,
+      );
+      const asGuest = await attempt("authenticated", users.lumenReception, () =>
+        client.query(
+          `insert into public.folio_charges (tenant_id, reservation_id, category, description, unit_price, source, created_by)
+           values ($1, $2, 'other', 'x', 1, 'guest', $3)`,
+          [ids.lumen, id, users.lumenReception],
+        ),
+      );
+      await client.query("rollback to savepoint setup");
+      expect(edit.ok).toBe(false);
+      expect(noReason.ok).toBe(false);
+      expect(otherHotel).toEqual({ ok: true, value: 0 });
+      expect(asGuest.ok).toBe(false);
+    });
+
+    it("reception approves an extension: new check-out and total; a taken room blocks it", async () => {
+      await client.query("savepoint setup");
+      const id = await inHouse(200, 60, [500, 502]);
+      const end = (await client.query("select end_at from public.reservations where id = $1", [id]))
+        .rows[0].end_at as Date;
+      const newEnd = new Date(end.getTime() + 86_400_000);
+      const ext = (
+        await client.query(
+          `insert into public.stay_extensions (tenant_id, reservation_id, new_check_out, new_end_at, nights, amount)
+           values ($1, $2, $3::date, $4, 1, 110) returning id`,
+          [ids.lumen, id, newEnd.toISOString().slice(0, 10), newEnd.toISOString()],
+        )
+      ).rows[0].id;
+      const other = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.decide_extension($1, true)", [ext]),
+      );
+      await asIdentity("authenticated", users.lumenReception, () =>
+        client.query("select public.decide_extension($1, true)", [ext]),
+      );
+      const after = (
+        await client.query("select end_at, total from public.reservations where id = $1", [id])
+      ).rows[0];
+
+      // Another stay right after blocks a second extension.
+      await client.query(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, created_by_role)
+         values ($1, $2, $3::timestamptz + interval '3 hours', $3::timestamptz + interval '2 days', 'confirmed', 'admin')`,
+        [ids.lumen, ids["lumen-room-101"], newEnd.toISOString()],
+      );
+      const later = new Date(newEnd.getTime() + 86_400_000);
+      const ext2 = (
+        await client.query(
+          `insert into public.stay_extensions (tenant_id, reservation_id, new_check_out, new_end_at, nights, amount)
+           values ($1, $2, $3::date, $4, 1, 110) returning id`,
+          [ids.lumen, id, later.toISOString().slice(0, 10), later.toISOString()],
+        )
+      ).rows[0].id;
+      const blocked = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.decide_extension($1, true)", [ext2]),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(other.ok).toBe(false);
+      expect(new Date(after.end_at).toISOString()).toBe(newEnd.toISOString());
+      expect(Number(after.total)).toBe(310);
+      expect(blocked.ok).toBe(false);
+      if (!blocked.ok) expect(blocked.error).toMatch(/no está libre/);
+    });
+
+    it("desk payments settle the balance, never more", async () => {
+      await client.query("savepoint setup");
+      const id = await inHouse(200, 60);
+      const pay = (amount: number, user = users.lumenReception) =>
+        attempt("authenticated", user, () =>
+          client.query("select public.record_desk_payment($1, $2, 'card')", [id, amount]),
+        );
+      const tooMuch = await pay(141);
+      const otherHotel = await pay(10, users.alboraAdmin);
+      const anon = await attempt("anon", undefined, () =>
+        client.query("select public.record_desk_payment($1, 10, 'cash')", [id]),
+      );
+      await asIdentity("authenticated", users.lumenReception, () =>
+        client.query("select public.record_desk_payment($1, 140, 'cash')", [id]),
+      );
+      const left = await balance(id);
+      const payment = (
+        await client.query(
+          "select provider, kind, status, amount from public.payments where reservation_id = $1",
+          [id],
+        )
+      ).rows[0];
+      await client.query("rollback to savepoint setup");
+      expect(tooMuch.ok).toBe(false);
+      expect(otherHotel.ok).toBe(false);
+      expect(anon.ok).toBe(false);
+      expect(left).toBe(0);
+      expect(payment).toMatchObject({ provider: "desk", kind: "balance", status: "succeeded" });
+      expect(Number(payment.amount)).toBe(140);
+    });
+  });
 });
