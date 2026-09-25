@@ -1,0 +1,15 @@
+# Netlify deploy config. The app is a static SPA (Vite) that runs against the
+# in-browser mock when no VITE_SUPABASE_* env vars are set — so it deploys with
+# zero backend. `public/_redirects` already provides the SPA fallback; this file
+# pins the build and repeats the rule for clarity.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page app: every route falls back to index.html (client-side routing
+# for both the PMS panel /_app/* and the mobile app /app/*).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

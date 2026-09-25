@@ -1,0 +1,13 @@
+# SPA fallback for Apache hosting
+AddType text/javascript .js
+AddType text/css .css
+
+RewriteEngine On
+RewriteBase /
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule . /index.html [L]
+

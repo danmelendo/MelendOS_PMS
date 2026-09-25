@@ -1,0 +1,367 @@
+import { useState } from "react";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useRoles } from "@/lib/roles";
+import { usePromoCodes, formatDiscount, type DiscountType, type PromoCode } from "@/lib/promos";
+import { toast } from "sonner";
+import { Archive, Trash2, Ticket } from "lucide-react";
+
+export const Route = createFileRoute("/_app/promos")({
+  component: PromosPage,
+});
+
+interface NewCode {
+  code: string;
+  discount_type: DiscountType;
+  discount_value: string;
+  valid_from: string; // yyyy-mm-dd
+  valid_until: string; // yyyy-mm-dd ("" = no expiry)
+  single_use: boolean;
+}
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function PromosPage() {
+  const { isAdmin, loading: rolesLoading } = useRoles();
+  const { data: codes } = usePromoCodes();
+  const qc = useQueryClient();
+
+  const [form, setForm] = useState<NewCode>({
+    code: "",
+    discount_type: "percent",
+    discount_value: "",
+    valid_from: todayISO(),
+    valid_until: "",
+    single_use: false,
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["promo_codes"] });
+
+  const create = useMutation({
+    mutationFn: async (n: NewCode) => {
+      const code = n.code.trim().toUpperCase();
+      if (!code) throw new Error("Indica el nombre del código");
+      if (!/^[A-Z0-9_-]+$/.test(code))
+        throw new Error("Usa solo letras, números, guion o guion bajo");
+      const value = Number(n.discount_value);
+      if (!value || value <= 0) throw new Error("El valor del descuento debe ser mayor que 0");
+      if (n.discount_type === "percent" && value > 100)
+        throw new Error("El porcentaje no puede superar 100");
+      if (n.valid_until && n.valid_until < n.valid_from)
+        throw new Error("La fecha de fin es anterior a la de inicio");
+
+      const { error } = await supabase.from("promo_codes").insert({
+        code,
+        discount_type: n.discount_type,
+        discount_value: value,
+        valid_from: new Date(`${n.valid_from}T00:00:00`).toISOString(),
+        // include the whole end day (until 23:59:59 local)
+        valid_until: n.valid_until ? new Date(`${n.valid_until}T23:59:59`).toISOString() : null,
+        single_use: n.single_use,
+      });
+      if (error) {
+        if (error.code === "23505") throw new Error("Ya existe un código activo con ese nombre");
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Código creado");
+      setForm((f) => ({ ...f, code: "", discount_value: "" }));
+    },
+    onError: (e: Error) => toast.error(e.message || "No se pudo crear el código"),
+  });
+
+  const patch = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<PromoCode> }) => {
+      const { error } = await supabase.from("promo_codes").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Guardado");
+    },
+    onError: (e: Error) => toast.error(e.message || "Error al guardar"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("promo_codes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Código eliminado");
+    },
+    onError: (e: Error) => toast.error(e.message || "Error al eliminar"),
+  });
+
+  if (rolesLoading) return null;
+  if (!isAdmin) return <Navigate to="/today" />;
+
+  const active = codes?.filter((c) => !c.archived) ?? [];
+  const archived = codes?.filter((c) => c.archived) ?? [];
+
+  const fmtDate = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+      : "—";
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <Ticket className="h-6 w-6" /> Códigos promocionales
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Descuentos sobre el precio de la habitación. Los extras nunca se descuentan.
+        </p>
+      </div>
+
+      {/* ── Create ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Nuevo código</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              create.mutate(form);
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="code">Nombre del código</Label>
+              <Input
+                id="code"
+                placeholder="VERANO15"
+                value={form.code}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                className="uppercase tracking-wide"
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Tipo de descuento</Label>
+              <Select
+                value={form.discount_type}
+                onValueChange={(v) => setForm((f) => ({ ...f, discount_type: v as DiscountType }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Porcentaje (%)</SelectItem>
+                  <SelectItem value="fixed">Importe fijo (€)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="value">
+                {form.discount_type === "percent" ? "Porcentaje" : "Importe (€)"}
+              </Label>
+              <Input
+                id="value"
+                type="number"
+                min="0"
+                step={form.discount_type === "percent" ? "1" : "0.5"}
+                placeholder={form.discount_type === "percent" ? "15" : "10"}
+                value={form.discount_value}
+                onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="from">Válido desde</Label>
+              <Input
+                id="from"
+                type="date"
+                value={form.valid_from}
+                onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="until">
+                Válido hasta <span className="text-muted-foreground">(opcional)</span>
+              </Label>
+              <Input
+                id="until"
+                type="date"
+                value={form.valid_until}
+                onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex items-end gap-3">
+              <div className="flex items-center gap-2 h-10">
+                <Switch
+                  id="single"
+                  checked={form.single_use}
+                  onCheckedChange={(single_use) => setForm((f) => ({ ...f, single_use }))}
+                />
+                <Label htmlFor="single" className="cursor-pointer">
+                  Un solo uso
+                </Label>
+              </div>
+            </div>
+
+            <div className="lg:col-span-3">
+              <Button type="submit" disabled={create.isPending}>
+                {create.isPending ? "Creando…" : "Crear código"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* ── Active codes ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Códigos activos</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {active.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No hay códigos activos.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 border-y">
+                <tr>
+                  <th className="p-2 text-left">Código</th>
+                  <th className="p-2 text-right">Descuento</th>
+                  <th className="p-2 text-center">Vigencia</th>
+                  <th className="p-2 text-center">Uso</th>
+                  <th className="p-2 text-center">Activo</th>
+                  <th className="p-2 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {active.map((c) => (
+                  <tr key={c.id} className="border-b last:border-0">
+                    <td className="p-2 font-mono font-medium tracking-wide">{c.code}</td>
+                    <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
+                    <td className="p-2 text-center text-xs text-muted-foreground">
+                      {fmtDate(c.valid_from)} →{" "}
+                      {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
+                    </td>
+                    <td className="p-2 text-center">
+                      {c.single_use ? (
+                        <Badge variant="outline">1 uso ({c.times_used}/1)</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {c.times_used}
+                          {c.max_uses ? `/${c.max_uses}` : ""} usos
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 text-center">
+                      <Switch
+                        checked={c.active}
+                        onCheckedChange={(active) => patch.mutate({ id: c.id, patch: { active } })}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Archivar"
+                          onClick={() =>
+                            patch.mutate({ id: c.id, patch: { archived: true, active: false } })
+                          }
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Eliminar"
+                          onClick={() => {
+                            if (confirm(`¿Eliminar el código ${c.code}?`)) remove.mutate(c.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Archived codes ── */}
+      {archived.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-muted-foreground">Archivados</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 border-y">
+                <tr>
+                  <th className="p-2 text-left">Código</th>
+                  <th className="p-2 text-right">Descuento</th>
+                  <th className="p-2 text-center">Vigencia</th>
+                  <th className="p-2 text-center">Usos</th>
+                  <th className="p-2 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archived.map((c) => (
+                  <tr key={c.id} className="border-b last:border-0 text-muted-foreground">
+                    <td className="p-2 font-mono tracking-wide line-through">{c.code}</td>
+                    <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
+                    <td className="p-2 text-center text-xs">
+                      {fmtDate(c.valid_from)} →{" "}
+                      {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
+                    </td>
+                    <td className="p-2 text-center">{c.times_used}</td>
+                    <td className="p-2">
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Eliminar"
+                          onClick={() => {
+                            if (confirm(`¿Eliminar definitivamente ${c.code}?`))
+                              remove.mutate(c.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

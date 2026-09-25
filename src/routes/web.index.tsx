@@ -1,0 +1,205 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { BedDouble, Crown, Users, Star, MapPin, ArrowRight, Sparkles } from "lucide-react";
+import { pms } from "@/integrations/pms";
+import { cms } from "@/integrations/cms";
+import { useBrand } from "@/lib/brand";
+import { HotelCoverArt } from "@/components/cover-art";
+import {
+  accentGradient,
+  eur0,
+  priceBand,
+  EVENT_CATEGORY_LABELS,
+  AMENITY_LABELS,
+} from "@/lib/stays";
+
+export const Route = createFileRoute("/web/")({
+  component: WebHome,
+});
+
+const ROOM_KINDS = [
+  {
+    icon: BedDouble,
+    title: "Habitaciones",
+    desc: "Estándar, Superior y Deluxe, todas con wifi, aire acondicionado y amenities.",
+  },
+  {
+    icon: Crown,
+    title: "Junior Suites",
+    desc: "Más espacio, zona de estar, bañera y minibar.",
+  },
+  {
+    icon: Users,
+    title: "Familiares",
+    desc: "Hasta 4 personas, con sofá cama y cuna bajo petición.",
+  },
+];
+
+function WebHome() {
+  const { brand, brandId } = useBrand();
+  const { data: hotels } = useQuery({
+    queryKey: ["pms", "properties-web", brandId],
+    queryFn: () => pms.listProperties({ brand: brandId }),
+  });
+  const { data: events } = useQuery({
+    queryKey: ["cms", "events-web"],
+    queryFn: () => cms.listEvents({ upcomingOnly: true }),
+  });
+  const hotelIds = new Set((hotels ?? []).map((h) => h.id));
+  const brandEvents = (events ?? []).filter((e) => hotelIds.has(e.hotelId));
+  const main = hotels?.[0];
+
+  return (
+    <div>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{ background: accentGradient(brand.heroAccent) }}
+        />
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative mx-auto max-w-6xl px-5 py-20 text-white sm:py-28">
+          <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/80">
+            {brand.eyebrow}
+          </p>
+          <h1 className="mt-3 max-w-2xl text-4xl font-bold leading-tight sm:text-5xl">
+            {brand.heroTitle}
+          </h1>
+          <p className="mt-4 max-w-xl text-lg text-white/85">{brand.heroSubtitle}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            {main && (
+              <Link
+                to="/web/hotel/$hotelId"
+                params={{ hotelId: main.id }}
+                className="inline-flex items-center gap-2 bg-white px-6 py-3 font-semibold text-neutral-900"
+              >
+                Ver habitaciones y precios <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+            <a
+              href="/stays"
+              className="inline-flex items-center gap-2 border border-white/40 px-6 py-3 font-semibold text-white"
+            >
+              Gestionar mi reserva
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Room categories */}
+      <section className="mx-auto max-w-6xl px-5 py-14">
+        <h2 className="text-2xl font-bold tracking-tight">Elige tu habitación</h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {ROOM_KINDS.map((a) => (
+            <div key={a.title} className="bg-white p-6 shadow-sm ring-1 ring-neutral-100">
+              <span className="flex h-11 w-11 items-center justify-center bg-[var(--brand-soft)] text-[var(--brand)]">
+                <a.icon className="h-5 w-5" />
+              </span>
+              <h3 className="mt-4 font-semibold">{a.title}</h3>
+              <p className="mt-1 text-sm text-neutral-500">{a.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* The hotel(s) of this brand */}
+      <section className="mx-auto max-w-6xl px-5 py-6">
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-bold tracking-tight">
+            {(hotels?.length ?? 0) > 1 ? "Nuestros hoteles" : "El hotel"}
+          </h2>
+          <Link to="/web/hotels" className="text-sm font-medium text-[var(--brand)]">
+            Ver habitaciones
+          </Link>
+        </div>
+        <div className="mt-6 grid gap-5 lg:grid-cols-2">
+          {(hotels ?? []).map((h) => (
+            <Link
+              key={h.id}
+              to="/web/hotel/$hotelId"
+              params={{ hotelId: h.id }}
+              className="group overflow-hidden bg-white shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
+            >
+              <div
+                className="relative h-44 overflow-hidden"
+                style={{ background: accentGradient(h.accent) }}
+              >
+                <HotelCoverArt />
+                <div className="absolute inset-0 bg-black/10" />
+                <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between text-white">
+                  <div>
+                    <p className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider opacity-90">
+                      <MapPin className="h-3 w-3" /> {h.city} · {h.provinceName}
+                    </p>
+                    <h3 className="text-xl font-semibold">{h.name}</h3>
+                  </div>
+                  <span className="flex items-center gap-1 bg-white/90 px-2 py-0.5 text-xs font-semibold text-neutral-800">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {h.rating.toFixed(1)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3 px-4 py-4">
+                <p className="text-sm text-neutral-600">{h.description}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {h.amenities.map((a) => (
+                      <span
+                        key={a}
+                        className="bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--brand)]"
+                      >
+                        {AMENITY_LABELS[a] ?? a}
+                      </span>
+                    ))}
+                  </div>
+                  {h.fromPrice != null && (
+                    <span className="shrink-0 text-sm font-semibold">
+                      desde {eur0(priceBand(h.fromPrice).from)}
+                      <span className="text-xs font-normal text-neutral-400">/noche</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Experiences */}
+      <section className="mx-auto max-w-6xl px-5 py-14">
+        <div className="flex items-end justify-between">
+          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+            <Sparkles className="h-6 w-6 text-[var(--brand)]" /> Próximas experiencias
+          </h2>
+          <Link to="/web/events" className="text-sm font-medium text-[var(--brand)]">
+            Ver agenda
+          </Link>
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {brandEvents.slice(0, 4).map((e) => (
+            <Link
+              key={e.id}
+              to="/web/event/$eventId"
+              params={{ eventId: e.id }}
+              className="overflow-hidden bg-white shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
+            >
+              <div className="h-20" style={{ background: accentGradient(e.accent) }} />
+              <div className="p-4">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand)]">
+                  {EVENT_CATEGORY_LABELS[e.category]}
+                </span>
+                <h3 className="mt-1 font-semibold leading-tight">{e.title}</h3>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {new Date(e.startsAt).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "short",
+                  })}{" "}
+                  · {e.location}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
