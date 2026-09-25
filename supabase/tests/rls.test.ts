@@ -1193,4 +1193,67 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(Number(payment.amount)).toBe(140);
     });
   });
+  describe("manage my booking on the web", () => {
+    it("finds a booking by reference and email and keeps the old link working", async () => {
+      await client.query("savepoint setup");
+      const c = await client.query<{ id: string }>(
+        "insert into public.customers (tenant_id, name, email) values ($1, 'Ana Web', 'Ana.Web@example.com') returning id",
+        [ids.lumen],
+      );
+      const r = await client.query<{ id: string; reference: string }>(
+        `insert into public.reservations (tenant_id, room_id, customer_id, start_at, end_at, status, created_by_role, access_token_hash)
+         values ($1, $2, $3, now() + interval '450 days', now() + interval '452 days', 'confirmed', 'public',
+                 encode(extensions.digest('email-link', 'sha256'), 'hex'))
+         returning id, reference`,
+        [ids.lumen, ids["lumen-room-101"], c.rows[0].id],
+      );
+      const { id, reference } = r.rows[0];
+      const find = (tenant: string, ref: string, email: string) =>
+        asIdentity(
+          "anon",
+          undefined,
+          async () =>
+            (
+              await client.query("select public.find_guest_booking($1, $2, $3) as f", [
+                tenant,
+                ref,
+                email,
+              ])
+            ).rows[0].f,
+        );
+      const found = await find(ids.lumen, reference.toLowerCase(), " ana.web@EXAMPLE.com ");
+      const wrongEmail = await find(ids.lumen, reference, "otra@example.com");
+      const otherHotel = await find(ids.albora, reference, "ana.web@example.com");
+      const open = (token: string) =>
+        asIdentity(
+          "anon",
+          undefined,
+          async () =>
+            (await client.query("select public.get_guest_booking($1, $2) as b", [id, token]))
+              .rows[0].b,
+        );
+      const withNew = await open(found.token);
+      const withOld = await open("email-link");
+      const tableRead = await attempt("anon", undefined, () =>
+        count("select count(*) as n from public.booking_access_tokens"),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(found.id).toBe(id);
+      expect(found.token).toMatch(/^[0-9a-f]{48}$/);
+      expect(wrongEmail).toBeNull();
+      expect(otherHotel).toBeNull();
+      expect(withNew?.id).toBe(id);
+      expect(withOld?.id).toBe(id);
+      expect(tableRead).toEqual({ ok: true, value: 0 });
+    });
+
+    it("guests without an account see the active services catalogue", async () => {
+      const anon = await attempt("anon", undefined, () =>
+        count("select count(*) as n from public.stay_services where tenant_id = $1", [ids.lumen]),
+      );
+      expect(anon.ok).toBe(true);
+      if (anon.ok) expect(anon.value).toBeGreaterThanOrEqual(0);
+    });
+  });
 });

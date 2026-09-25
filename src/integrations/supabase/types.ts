@@ -172,6 +172,48 @@ export type Database = {
           },
         ]
       }
+      booking_access_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          reservation_id: string
+          tenant_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reservation_id: string
+          tenant_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reservation_id?: string
+          tenant_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_access_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_access_tokens_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       booking_journal: {
         Row: {
           actor: string
@@ -2146,6 +2188,10 @@ export type Database = {
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number
+      }
+      find_guest_booking: {
+        Args: { p_email: string; p_reference: string; p_tenant: string }
+        Returns: Json
       }
       find_or_create_customer: {
         Args: {

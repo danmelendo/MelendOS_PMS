@@ -18,6 +18,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WebIndexRouteImport } from './routes/web.index'
 import { Route as StaysIndexRouteImport } from './routes/stays.index'
+import { Route as WebMiReservaRouteImport } from './routes/web.mi-reserva'
 import { Route as WebHotelsRouteImport } from './routes/web.hotels'
 import { Route as WebEventsRouteImport } from './routes/web.events'
 import { Route as StaysTripsRouteImport } from './routes/stays.trips'
@@ -100,6 +101,11 @@ const StaysIndexRoute = StaysIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => StaysRoute,
+} as any)
+const WebMiReservaRoute = WebMiReservaRouteImport.update({
+  id: '/mi-reserva',
+  path: '/mi-reserva',
+  getParentRoute: () => WebRoute,
 } as any)
 const WebHotelsRoute = WebHotelsRouteImport.update({
   id: '/hotels',
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/stays/trips': typeof StaysTripsRoute
   '/web/events': typeof WebEventsRoute
   '/web/hotels': typeof WebHotelsRoute
+  '/web/mi-reserva': typeof WebMiReservaRoute
   '/stays/': typeof StaysIndexRoute
   '/web/': typeof WebIndexRoute
   '/admin/manual': typeof AppAdminManualRoute
@@ -366,6 +373,7 @@ export interface FileRoutesByTo {
   '/stays/trips': typeof StaysTripsRoute
   '/web/events': typeof WebEventsRoute
   '/web/hotels': typeof WebHotelsRoute
+  '/web/mi-reserva': typeof WebMiReservaRoute
   '/stays': typeof StaysIndexRoute
   '/web': typeof WebIndexRoute
   '/admin/manual': typeof AppAdminManualRoute
@@ -416,6 +424,7 @@ export interface FileRoutesById {
   '/stays/trips': typeof StaysTripsRoute
   '/web/events': typeof WebEventsRoute
   '/web/hotels': typeof WebHotelsRoute
+  '/web/mi-reserva': typeof WebMiReservaRoute
   '/stays/': typeof StaysIndexRoute
   '/web/': typeof WebIndexRoute
   '/_app/admin/manual': typeof AppAdminManualRoute
@@ -466,6 +475,7 @@ export interface FileRouteTypes {
     | '/stays/trips'
     | '/web/events'
     | '/web/hotels'
+    | '/web/mi-reserva'
     | '/stays/'
     | '/web/'
     | '/admin/manual'
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/stays/trips'
     | '/web/events'
     | '/web/hotels'
+    | '/web/mi-reserva'
     | '/stays'
     | '/web'
     | '/admin/manual'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/stays/trips'
     | '/web/events'
     | '/web/hotels'
+    | '/web/mi-reserva'
     | '/stays/'
     | '/web/'
     | '/_app/admin/manual'
@@ -656,6 +668,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/stays/'
       preLoaderRoute: typeof StaysIndexRouteImport
       parentRoute: typeof StaysRoute
+    }
+    '/web/mi-reserva': {
+      id: '/web/mi-reserva'
+      path: '/mi-reserva'
+      fullPath: '/web/mi-reserva'
+      preLoaderRoute: typeof WebMiReservaRouteImport
+      parentRoute: typeof WebRoute
     }
     '/web/hotels': {
       id: '/web/hotels'
@@ -1001,6 +1020,7 @@ const StaysRouteWithChildren = StaysRoute._addFileChildren(StaysRouteChildren)
 interface WebRouteChildren {
   WebEventsRoute: typeof WebEventsRoute
   WebHotelsRoute: typeof WebHotelsRoute
+  WebMiReservaRoute: typeof WebMiReservaRoute
   WebIndexRoute: typeof WebIndexRoute
   WebBookRoomIdRoute: typeof WebBookRoomIdRoute
   WebBookingBookingIdRoute: typeof WebBookingBookingIdRoute
@@ -1016,6 +1036,7 @@ interface WebRouteChildren {
 const WebRouteChildren: WebRouteChildren = {
   WebEventsRoute: WebEventsRoute,
   WebHotelsRoute: WebHotelsRoute,
+  WebMiReservaRoute: WebMiReservaRoute,
   WebIndexRoute: WebIndexRoute,
   WebBookRoomIdRoute: WebBookRoomIdRoute,
   WebBookingBookingIdRoute: WebBookingBookingIdRoute,

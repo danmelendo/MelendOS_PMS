@@ -4,6 +4,7 @@
 // behave alike. Only wired in when no Supabase credentials are configured.
 import { isBlocking, type RoomReservation } from "@domain/availability.ts";
 import { ymdInZone } from "@domain/dates.ts";
+import { bookingReference } from "@domain/reference.ts";
 import { tenantFeatures } from "@domain/features.ts";
 import { reviewAuthor } from "@domain/reviews.ts";
 import {
@@ -181,8 +182,48 @@ const mockBookingStore: BookingStore = {
 // ── Guest access by token ────────────────────────────────────────────────────
 async function guestRow(id: unknown, token: unknown): Promise<Row | null> {
   const r = db().reservations.find((x) => x.id === id);
-  if (!r || !r.access_token_hash || typeof token !== "string" || !token) return null;
-  return r.access_token_hash === (await sha256Hex(token)) ? r : null;
+  if (!r || typeof token !== "string" || !token) return null;
+  const hash = await sha256Hex(token);
+  if (r.access_token_hash && r.access_token_hash === hash) return r;
+  // Tokens issued by a reference + email lookup (see find_guest_booking).
+  const extra = (db().booking_access_tokens ?? []).some(
+    (t) =>
+      t.reservation_id === r.id && t.token_hash === hash && t.expires_at > new Date().toISOString(),
+  );
+  return extra ? r : null;
+}
+
+// Same as find_guest_booking: reference + email of a booking of the hotel.
+async function findGuestBooking(args: Record<string, unknown>) {
+  const ref = String(args.p_reference ?? "")
+    .trim()
+    .toUpperCase();
+  const email = String(args.p_email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!ref || !email) return ok(null);
+  const matches = db().reservations.filter((r) => {
+    if (r.tenant_id !== args.p_tenant || r.status === "rejected") return false;
+    if ((r.reference ?? bookingReference(String(r.id))) !== ref) return false;
+    const guest =
+      db().members.find((m) => m.id === r.member_id)?.email ??
+      db().customers.find((c) => c.id === r.customer_id)?.email;
+    return String(guest ?? "").toLowerCase() === email;
+  });
+  if (matches.length !== 1) return ok(null);
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+  db().booking_access_tokens ??= [];
+  db().booking_access_tokens.push({
+    id: uid("bat"),
+    tenant_id: matches[0].tenant_id,
+    reservation_id: matches[0].id,
+    token_hash: await sha256Hex(token),
+    expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+  });
+  persist();
+  return ok({ id: matches[0].id, token });
 }
 
 function journalFor(ref: string) {
@@ -543,6 +584,8 @@ export async function mockServerRpc(
           new Date(String(args.p_to)),
         ),
       );
+    case "find_guest_booking":
+      return findGuestBooking(args);
     case "get_guest_booking":
       return getGuestBooking(args);
     case "report_stays":
