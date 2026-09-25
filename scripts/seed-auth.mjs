@@ -62,4 +62,20 @@ for (const m of GUEST.members) {
   if (error) throw error;
 }
 console.log(`guest  member    ${GUEST.email}`);
+
+// Payment gateway secrets in Vault (test environment only). The Redsys test key
+// comes from the environment so it never lives in the repository.
+const redsysKey = process.env.REDSYS_TEST_SECRET_KEY;
+if (redsysKey) {
+  for (const name of ["payments/lumen/redsys", "payments/albora/redsys"]) {
+    const { error } = await admin.rpc("upsert_payment_secret", {
+      p_name: name,
+      p_secret: redsysKey,
+    });
+    if (error) throw error;
+  }
+  console.log("vault  redsys    test key stored for both hotels");
+} else {
+  console.log("vault  redsys    REDSYS_TEST_SECRET_KEY not set; payment secrets not stored");
+}
 console.log(`\nPassword for all demo users: ${password}`);

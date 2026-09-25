@@ -413,3 +413,13 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Payment Edge Functions. payments-notify is called by Redsys/Stripe, which send
+# no JWT: its authentication is the provider signature, verified in the code.
+# payments-create is called by the public web with the publishable key (not a
+# JWT); it only starts payments for pending reservations.
+[functions.payments-create]
+verify_jwt = false
+
+[functions.payments-notify]
+verify_jwt = false

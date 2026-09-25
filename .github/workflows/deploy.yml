@@ -1,0 +1,45 @@
+name: Deploy backend
+
+# On every merge to main: apply pending migrations and deploy the Edge
+# Functions to the demo Supabase project. The frontend is deployed by the
+# hosting provider connected to the repository.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Migrations and Edge Functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: demo
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Link project
+        run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
+      - name: Apply migrations
+        run: npx supabase db push -p "$SUPABASE_DB_PASSWORD" --yes
+      - name: Deploy Edge Functions
+        run: |
+          if ls supabase/functions/*/index.ts >/dev/null 2>&1; then
+            npx supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          else
+            echo "No Edge Functions to deploy yet."
+          fi

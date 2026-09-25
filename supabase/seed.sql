@@ -169,10 +169,15 @@ insert into public.experiences (tenant_id, property_id, title, summary, category
   (pg_temp.sid('albora'), pg_temp.sid('albora-prop'), 'Taller infantil de castillos de arena', 'Para peques de 4 a 10 años', 'family', pg_temp.at_day(5, 11), 'Playa del hotel', 20, 12),
   (pg_temp.sid('albora'), pg_temp.sid('albora-prop'), 'Visita al casco antiguo de Altea', 'Paseo por las calles blancas y el mirador', 'culture', pg_temp.at_day(7, 18), 'Salida desde recepción', 18, 10);
 
--- ── Payment gateways (test mode; secrets go to Vault in the payments step) ───
-insert into public.payment_accounts (tenant_id, provider, test_mode, public_config, secret_name) values
-  (pg_temp.sid('lumen'), 'redsys', true, '{"merchant_code":"999008881","terminal":"1","environment":"test"}', 'payments/lumen/redsys'),
-  (pg_temp.sid('albora'), 'stripe', true, '{"environment":"test"}', 'payments/albora/stripe');
+-- ── Payment gateways (test mode only) ─────────────────────────────────────────
+-- Redsys test environment for both hotels. Albora also has Stripe configured
+-- but inactive until test keys are added to Vault.
+insert into public.payment_accounts (tenant_id, provider, test_mode, public_config, secret_name, active) values
+  (pg_temp.sid('lumen'), 'redsys', true, '{"merchant_code":"999008881","terminal":"1"}', 'payments/lumen/redsys', true),
+  (pg_temp.sid('albora'), 'redsys', true, '{"merchant_code":"999008881","terminal":"1"}', 'payments/albora/redsys', true),
+  (pg_temp.sid('albora'), 'stripe', true, '{}', 'payments/albora/stripe', false);
+
+-- Gateway secrets are stored in Vault by scripts/seed-auth.mjs (never in SQL).
 
 -- ── Guests and reservations around today ─────────────────────────────────────
 insert into public.customers (id, tenant_id, name, phone, email, no_contact, notes) values
