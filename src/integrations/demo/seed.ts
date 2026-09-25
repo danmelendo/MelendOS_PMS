@@ -13,11 +13,12 @@
 export type Row = Record<string, any>;
 
 import { addDays, ymdInZone, zonedHourToUtc } from "@domain/dates.ts";
-import { simCustomers, simulateHistory, type SimRoom } from "@shared/sim/history.ts";
+import { simCustomers, simReviews, simulateHistory, type SimRoom } from "@shared/sim/history.ts";
+import { reviewAuthor } from "@domain/reviews.ts";
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 21; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 22; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -1389,6 +1390,24 @@ function addSimulatedHistory(d: DemoDb, now: Date) {
     );
     const inHour = Number(t.settings?.checkin_hour ?? 15);
     const outHour = Number(t.settings?.checkout_hour ?? 12);
+    d.reviews ??= [];
+    for (const rv of simReviews(stays, profile, seed, today)) {
+      const s = stays.find((x) => x.id === rv.stayId)!;
+      d.reviews.push({
+        id: `rev-${rv.stayId}`,
+        tenant_id: t.id,
+        reservation_id: rv.stayId,
+        property_id: s.propertyId,
+        rating: rv.rating,
+        scores: rv.scores,
+        comment: rv.comment,
+        author_name: reviewAuthor(pool[s.customer].name),
+        created_at: rv.createdAt,
+        reply: null,
+        replied_at: null,
+        simulated: true,
+      });
+    }
     for (const s of stays) {
       d.reservations.push({
         id: s.id,

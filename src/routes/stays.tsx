@@ -7,6 +7,7 @@ import { MemberProvider, useMember } from "@/lib/member-session";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { GuestSignIn } from "@/components/GuestSignIn";
+import { useFeatures } from "@/lib/features";
 import { pms } from "@/integrations/pms";
 import { registerServiceWorker, showNotification } from "@/lib/notifications";
 
@@ -105,6 +106,13 @@ function StaysShell() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { brand } = useBrand();
   const { needsSignIn, memberId } = useMember();
+  const features = useFeatures();
+  // The club tab only for hotels with a loyalty club (chains, large hotels).
+  const nav = NAV.filter(
+    (item) =>
+      (item.to !== "/stays/loyalty" || features.loyalty) &&
+      (item.to !== "/stays/experiences" || features.experiences),
+  );
 
   return (
     <>
@@ -143,8 +151,11 @@ function StaysShell() {
             hidden={needsSignIn}
             className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-neutral-200 bg-white/95 backdrop-blur"
           >
-            <div className="grid grid-cols-5">
-              {NAV.map((item) => {
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
+            >
+              {nav.map((item) => {
                 const active = item.exact ? path === item.to : path.startsWith(item.to);
                 return (
                   <Link

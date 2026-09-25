@@ -4,6 +4,8 @@
 // behave alike. Only wired in when no Supabase credentials are configured.
 import { isBlocking, type RoomReservation } from "@domain/availability.ts";
 import { ymdInZone } from "@domain/dates.ts";
+import { tenantFeatures } from "@domain/features.ts";
+import { reviewAuthor } from "@domain/reviews.ts";
 import {
   BookingError,
   createBookingDraft,
@@ -244,6 +246,94 @@ function reportStays(args: Record<string, unknown>) {
   return { rooms, stays };
 }
 
+// Reviews: same rules and shapes as submit_review / reply_review / get_reviews.
+const SCORE_KEYS = ["cleanliness", "staff", "location", "comfort", "value"];
+
+function getReviews(args: Record<string, unknown>) {
+  const rows = (db().reviews ?? [])
+    .filter(
+      (r) =>
+        (args.p_property || args.p_tenant) &&
+        (!args.p_property || r.property_id === args.p_property) &&
+        (!args.p_tenant || r.tenant_id === args.p_tenant),
+    )
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const avg = (xs: number[]) =>
+    xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100 : null;
+  const distribution: Record<string, number> = {};
+  for (const r of rows) distribution[r.rating] = (distribution[r.rating] ?? 0) + 1;
+  const scores: Record<string, number | null> = {};
+  for (const k of SCORE_KEYS) {
+    const xs = rows.map((r) => r.scores?.[k]).filter((v): v is number => typeof v === "number");
+    if (xs.length) scores[k] = avg(xs);
+  }
+  const limit = Math.min(Math.max(Number(args.p_limit ?? 20), 1), 100);
+  return {
+    count: rows.length,
+    average: avg(rows.map((r) => Number(r.rating))),
+    distribution,
+    scores,
+    reviews: rows.slice(0, limit).map((r) => ({
+      id: r.id,
+      property_id: r.property_id,
+      rating: r.rating,
+      scores: r.scores,
+      comment: r.comment,
+      author_name: r.author_name,
+      created_at: r.created_at,
+      reply: r.reply,
+      replied_at: r.replied_at,
+    })),
+  };
+}
+
+async function submitReview(args: Record<string, unknown>) {
+  const r = args.p_token
+    ? await guestRow(args.p_reservation_id, args.p_token)
+    : db().reservations.find((x) => x.id === args.p_reservation_id && x.member_id);
+  if (!r) return fail("Reserva no encontrada");
+  if (r.status !== "completed") return fail("Solo se puede valorar una estancia terminada");
+  const tenant = db().tenants.find((t) => t.id === r.tenant_id);
+  if (!tenantFeatures(tenant?.plan, tenant?.settings).reviews) {
+    return fail("Este hotel no recoge valoraciones");
+  }
+  const rating = Number(args.p_rating);
+  if (!(rating >= 1 && rating <= 5)) return fail("La nota va de 1 a 5");
+  db().reviews ??= [];
+  if (db().reviews.some((x) => x.reservation_id === r.id)) {
+    return fail("Esta estancia ya tiene una valoración");
+  }
+  const raw = (args.p_scores ?? {}) as Record<string, unknown>;
+  const scores = Object.fromEntries(
+    Object.entries(raw).filter(
+      ([k, v]) => SCORE_KEYS.includes(k) && typeof v === "number" && v >= 1 && v <= 5,
+    ),
+  );
+  const name =
+    db().members.find((m) => m.id === r.member_id)?.name ??
+    db().customers.find((c) => c.id === r.customer_id)?.name;
+  const id = uid("rev");
+  db().reviews.push({
+    id,
+    tenant_id: r.tenant_id,
+    reservation_id: r.id,
+    property_id: r.property_id,
+    rating,
+    scores,
+    comment:
+      String(args.p_comment ?? "")
+        .trim()
+        .slice(0, 2000) || null,
+    author_name: reviewAuthor(name),
+    created_at: new Date().toISOString(),
+    reply: null,
+    replied_at: null,
+    simulated: false,
+  });
+  persist();
+  return ok(id);
+}
+
 // ── RPC ──────────────────────────────────────────────────────────────────────
 export async function mockServerRpc(
   fn: string,
@@ -262,6 +352,28 @@ export async function mockServerRpc(
       return getGuestBooking(args);
     case "report_stays":
       return ok(reportStays(args));
+    case "get_reviews":
+      return ok(getReviews(args));
+    case "get_my_review": {
+      const r = args.p_token
+        ? await guestRow(args.p_reservation_id, args.p_token)
+        : db().reservations.find((x) => x.id === args.p_reservation_id && x.member_id);
+      const review = r && (db().reviews ?? []).find((x) => x.reservation_id === r.id);
+      return ok(review ?? null);
+    }
+    case "submit_review":
+      return submitReview(args);
+    case "reply_review": {
+      const review = (db().reviews ?? []).find((x) => x.id === args.p_review_id);
+      if (!review) return fail("Valoración no encontrada");
+      const reply =
+        String(args.p_reply ?? "")
+          .trim()
+          .slice(0, 2000) || null;
+      Object.assign(review, { reply, replied_at: reply ? new Date().toISOString() : null });
+      persist();
+      return ok(null);
+    }
     case "sign_guest_registration": {
       const r = await guestRow(args.p_id, args.p_token);
       if (!r) return fail("Reserva no encontrada");

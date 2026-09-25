@@ -25,6 +25,7 @@ import {
   Ticket,
   Users,
   BarChart3,
+  Star,
   Wand2,
   Globe,
   BookOpenCheck,
@@ -40,6 +41,7 @@ const items = [
   { to: "/customers", label: "Clientes", icon: Users },
   { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/reports", label: "Informes", icon: BarChart3 },
+  { to: "/reviews", label: "Reseñas", icon: Star },
 ] as const;
 
 // Active item: gold inset bar + gold icon, on the navy sidebar.

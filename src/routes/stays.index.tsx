@@ -10,6 +10,7 @@ import { NightlyPrice } from "@/components/NightlyPrice";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { HotelCoverArt } from "@/components/cover-art";
 import type { AssetType } from "@/integrations/pms";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/stays/")({
   component: DiscoverScreen,
@@ -23,6 +24,7 @@ const ASSET_FILTERS: { label: string; value: AssetType | null }[] = [
 ];
 
 function DiscoverScreen() {
+  const features = useFeatures();
   const { member } = useMember();
   const { brand, brandId } = useBrand();
   const [province, setProvince] = useState<string | null>(null);
@@ -67,7 +69,7 @@ function DiscoverScreen() {
             <p className="text-sm text-neutral-500">¿Cuándo nos visitas?</p>
           </div>
           <Link
-            to="/stays/loyalty"
+            to={features.loyalty ? "/stays/loyalty" : "/stays/account"}
             className="flex h-11 w-11 items-center justify-center  bg-[var(--brand)] text-sm font-semibold text-white"
           >
             {member ? member.name.charAt(0) : "S"}

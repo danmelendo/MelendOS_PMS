@@ -11,8 +11,10 @@
 // cleaning-gap trigger stays on as a final check against double bookings.
 import pg from "pg";
 import { addDays, zonedHourToUtc, ymdInZone } from "../supabase/functions/_shared/domain/dates.ts";
+import { reviewAuthor } from "../supabase/functions/_shared/domain/reviews.ts";
 import {
   simCustomers,
+  simReviews,
   simulateHistory,
   type HotelProfile,
   type SimRoom,
@@ -148,6 +150,31 @@ try {
           [tenant.id, JSON.stringify(rows.slice(i, i + 500))],
         );
       }
+      const reviews = simReviews(stays, profile, seed, today).map((r) => {
+        const s = stays.find((x) => x.id === r.stayId)!;
+        return {
+          reservation_id: r.stayId,
+          property_id: s.propertyId,
+          rating: r.rating,
+          scores: r.scores,
+          comment: r.comment,
+          author_name: reviewAuthor(pool[s.customer].name),
+          created_at: r.createdAt,
+        };
+      });
+      for (let i = 0; i < reviews.length; i += 500) {
+        await db.query(
+          `insert into public.reviews
+             (tenant_id, reservation_id, property_id, rating, scores, comment, author_name, created_at, simulated)
+           select $1, x.reservation_id, x.property_id, x.rating, x.scores, x.comment, x.author_name,
+                  x.created_at, true
+             from jsonb_to_recordset($2::jsonb) as x(
+               reservation_id uuid, property_id uuid, rating smallint, scores jsonb, comment text,
+               author_name text, created_at timestamptz)`,
+          [tenant.id, JSON.stringify(reviews.slice(i, i + 500))],
+        );
+      }
+      console.log(`${tenant.slug}: ${reviews.length} reviews`);
       console.log(
         `${tenant.slug}: ${stays.length} stays (${stays.filter((s) => s.status === "cancelled").length} cancelled), ${pool.length} guests, ${rooms.rowCount} rooms`,
       );

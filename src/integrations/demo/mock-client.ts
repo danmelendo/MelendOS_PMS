@@ -27,7 +27,7 @@ function clone<T>(v: T): T {
 
 // ── Filters ─────────────────────────────────────────────────────────────────
 type Filter =
-  | { t: "eq" | "neq" | "gte" | "lte" | "lt" | "gt"; c: string; v: unknown }
+  | { t: "eq" | "neq" | "gte" | "lte" | "lt" | "gt" | "is"; c: string; v: unknown }
   | { t: "in" | "notin"; c: string; list: unknown[] }
   | { t: "or"; conds: Filter[] };
 
@@ -58,6 +58,8 @@ function matches(row: Row, f: Filter): boolean {
       return row[f.c] === f.v;
     case "neq":
       return row[f.c] !== f.v;
+    case "is":
+      return (row[f.c] ?? null) === f.v;
     case "gte":
       return row[f.c] >= (f.v as never);
     case "lte":
@@ -198,6 +200,10 @@ class QueryBuilder implements PromiseLike<Result> {
   }
   gte(c: string, v: unknown) {
     this.filters.push({ t: "gte", c, v });
+    return this;
+  }
+  is(c: string, v: unknown) {
+    this.filters.push({ t: "is", c, v });
     return this;
   }
   lte(c: string, v: unknown) {

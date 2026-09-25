@@ -1,3 +1,6 @@
+import { ReviewCard, ReviewSummary } from "@/components/Reviews";
+import { useReviews } from "@/lib/reviews";
+import { useFeatures } from "@/lib/features";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -271,7 +274,40 @@ function WebHotelDetail() {
             </div>
           </div>
         </div>
+
+        <HotelReviews propertyId={hotelId} hotelName={hotel?.name} />
       </div>
     </div>
+  );
+}
+
+function HotelReviews({ propertyId, hotelName }: { propertyId: string; hotelName?: string }) {
+  const features = useFeatures();
+  const [limit, setLimit] = useState(6);
+  const { data } = useReviews({ property: propertyId }, limit);
+  if (!features.reviews || !data) return null;
+  return (
+    <section className="mt-12">
+      <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
+        <Star className="h-5 w-5 text-[var(--brand)]" /> Opiniones de huéspedes
+      </h2>
+      <div className="mt-4 bg-white p-5 shadow-sm ring-1 ring-neutral-100">
+        <ReviewSummary page={data} />
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {data.reviews.map((r) => (
+          <ReviewCard key={r.id} review={r} hotelName={hotelName} />
+        ))}
+      </div>
+      {data.count > data.reviews.length && (
+        <button
+          type="button"
+          onClick={() => setLimit((n) => n + 12)}
+          className="mt-4 text-sm font-medium text-[var(--brand)] underline-offset-4 hover:underline"
+        >
+          Ver más opiniones
+        </button>
+      )}
+    </section>
   );
 }

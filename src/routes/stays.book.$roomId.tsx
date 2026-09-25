@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, Users, Clock, ShieldCheck, Sparkles } from "lu
 import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
 import { useMember } from "@/lib/member-session";
+import { useFeatures } from "@/lib/features";
 import { eur, formatDateLong } from "@/lib/stays";
 
 interface BookSearch {
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/stays/book/$roomId")({
 });
 
 function BookScreen() {
+  const features = useFeatures();
   const { roomId } = Route.useParams();
   const { checkIn, checkOut, guests } = Route.useSearch();
   const { memberId } = useMember();
@@ -150,12 +152,14 @@ function BookScreen() {
         </p>
       </div>
 
-      <Link
-        to="/stays/loyalty"
-        className="mt-4 block text-center text-xs text-neutral-400 underline"
-      >
-        Ganarás puntos del Club al confirmar
-      </Link>
+      {features.loyalty && (
+        <Link
+          to="/stays/loyalty"
+          className="mt-4 block text-center text-xs text-neutral-400 underline"
+        >
+          Ganarás puntos del Club al confirmar
+        </Link>
+      )}
     </div>
   );
 }

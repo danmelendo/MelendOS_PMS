@@ -4,6 +4,8 @@ import { Sparkles, Gift, TrendingUp, Check } from "lucide-react";
 import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
 import { useMember } from "@/lib/member-session";
+import { useFeatures } from "@/lib/features";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/stays/loyalty")({
   component: LoyaltyScreen,
@@ -12,6 +14,7 @@ export const Route = createFileRoute("/stays/loyalty")({
 function LoyaltyScreen() {
   const { memberId, member } = useMember();
   const qc = useQueryClient();
+  const features = useFeatures();
 
   const { data: account } = useQuery({
     queryKey: ["pms", "loyalty", memberId],
@@ -35,6 +38,22 @@ function LoyaltyScreen() {
     onError: (e: Error) => toast.error(e.message || "No se pudo canjear"),
   });
 
+  if (features.ready && !features.loyalty) {
+    return (
+      <div className="px-5 py-16 text-center">
+        <p className="font-semibold">Este hotel no tiene club de fidelización</p>
+        <p className="mt-1 text-sm text-neutral-500">
+          Tus datos de huésped y tus estancias están en tu cuenta.
+        </p>
+        <Link
+          to="/stays/account"
+          className="mt-4 inline-block text-sm text-[var(--brand)] underline"
+        >
+          Ir a mi cuenta
+        </Link>
+      </div>
+    );
+  }
   if (!account) return <p className="px-5 py-16 text-center text-sm text-neutral-400">Cargando…</p>;
 
   const progress = account.nextTier
