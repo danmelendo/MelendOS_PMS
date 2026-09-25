@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tansta
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
+import { AgentChat } from "@/components/AgentChat";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
 
 const GUEST_LINK = /^\/web\/(?:booking|checkout|sign|upload|chat)\/([^/]+)\/?$/;
@@ -112,6 +113,8 @@ function WebLayout() {
       <main>
         <Outlet />
       </main>
+
+      <AgentChat />
 
       <footer className="mt-16 border-t border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-neutral-500 sm:flex-row">

@@ -10,6 +10,8 @@
     "vitest.config.ts",
     "vitest.db.config.ts",
     "supabase/tests/**/*.ts",
+    "supabase/evals/**/*.ts",
+    "vitest.eval.config.ts",
     "scripts/**/*.mjs",
     "scripts/**/*.ts",
     "eslint.config.js"

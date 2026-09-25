@@ -434,3 +434,6 @@ verify_jwt = false
 
 [functions.demo-login]
 verify_jwt = false
+
+[functions.agent-chat]
+verify_jwt = false

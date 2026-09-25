@@ -48,3 +48,7 @@ dist-ssr
 __pycache__/
 .pytest_cache/
 lake/out/
+
+# Agent eval reports (local)
+supabase/evals/results/
+probe-out.txt

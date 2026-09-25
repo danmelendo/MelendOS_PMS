@@ -14,9 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_conversations: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          last_message_at: string
+          reservation_id: string | null
+          tenant_id: string
+          turns: number
+          user_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          reservation_id?: string | null
+          tenant_id: string
+          turns?: number
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          reservation_id?: string | null
+          tenant_id?: string
+          turns?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          id: number
+          role: string
+          tenant_id: string
+          tool_call_id: string | null
+          tool_calls: Json | null
+          tool_name: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: never
+          role: string
+          tenant_id: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          tool_name?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: never
+          role?: string
+          tenant_id?: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          tool_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "agent_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_runs: {
         Row: {
           channel: string
+          conversation_id: string | null
           cost_usd: number
           created_at: string
           error: string | null
@@ -31,6 +124,7 @@ export type Database = {
         }
         Insert: {
           channel: string
+          conversation_id?: string | null
           cost_usd?: number
           created_at?: string
           error?: string | null
@@ -45,6 +139,7 @@ export type Database = {
         }
         Update: {
           channel?: string
+          conversation_id?: string | null
           cost_usd?: number
           created_at?: string
           error?: string | null
@@ -58,6 +153,13 @@ export type Database = {
           tools_called?: string[]
         }
         Relationships: [
+          {
+            foreignKeyName: "agent_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "agent_conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agent_runs_tenant_id_fkey"
             columns: ["tenant_id"]
