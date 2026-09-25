@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Compass, Home, Sparkles, UserRound, Hotel, Ticket } from "lucide-react";
+import { ChevronLeft, Compass, Home, Sparkles, UserRound, Hotel, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { MemberProvider, useMember } from "@/lib/member-session";
 import { useBrand } from "@/lib/brand";
@@ -113,12 +113,18 @@ function StaysShell() {
         <div className="relative mx-auto flex min-h-[100svh] w-full max-w-md flex-col bg-[#f4f6f9] shadow-xl">
           {/* Brand bar: same app, one brand per hotel */}
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-neutral-200/70 bg-white/90 px-4 py-2 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--brand)] text-white">
+            {/* Always a way back to the hotel website */}
+            <Link
+              to="/web"
+              className="-ml-1 flex min-w-0 items-center gap-1.5 py-1 pr-2"
+              aria-label={`Volver a la web de ${brand.name}`}
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0 text-neutral-400" />
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--brand)] text-white">
                 <Hotel className="h-3.5 w-3.5" />
               </span>
-              <span className="text-sm font-semibold tracking-tight">{brand.name}</span>
-            </div>
+              <span className="truncate text-sm font-semibold tracking-tight">{brand.name}</span>
+            </Link>
             <BrandSwitcher />
           </header>
 
@@ -132,8 +138,11 @@ function StaysShell() {
             )}
           </main>
 
-          {/* Bottom tab bar */}
-          <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-neutral-200 bg-white/95 backdrop-blur">
+          {/* Bottom tab bar (every tab needs an account, so hidden until signed in) */}
+          <nav
+            hidden={needsSignIn}
+            className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-neutral-200 bg-white/95 backdrop-blur"
+          >
             <div className="grid grid-cols-5">
               {NAV.map((item) => {
                 const active = item.exact ? path === item.to : path.startsWith(item.to);

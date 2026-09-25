@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { LogIn } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { BedDouble, LogIn, Mail } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useBrand } from "@/lib/brand";
 
@@ -70,6 +71,28 @@ export function GuestSignIn() {
       <p className="mt-4 text-center text-xs text-neutral-400">
         Cuenta de demostración: alex@guest.demostays.example
       </p>
+
+      <div className="mt-8 space-y-3 border-t border-neutral-200 pt-6 text-sm">
+        <p className="flex gap-2 text-neutral-500">
+          <Mail className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            ¿Reservaste sin cuenta? Abre el enlace de tu email de confirmación para ver o gestionar
+            tu reserva.
+          </span>
+        </p>
+        <Link
+          to="/web/hotels"
+          className="flex w-full items-center justify-center gap-2 border border-neutral-300 bg-white py-3 font-semibold text-neutral-800"
+        >
+          <BedDouble className="h-4 w-4" /> Ver habitaciones y reservar
+        </Link>
+        <Link
+          to="/web"
+          className="block py-2 text-center text-neutral-500 underline-offset-4 hover:underline"
+        >
+          Volver a la web del hotel
+        </Link>
+      </div>
     </div>
   );
 }
