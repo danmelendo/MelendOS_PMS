@@ -2,8 +2,16 @@ import { describe, expect, it } from "vitest";
 import { fakeStore } from "../tools/testing.ts";
 import type { ToolContext } from "../tools/registry.ts";
 import type { ChatMessage, LlmClient, LlmResponse, ToolSpec } from "./llm.ts";
-import { stripThinking } from "./llm.ts";
-import { cleanReply, guestDataGuard, MAX_STEPS, runAgentTurn, toolSpecs } from "./loop.ts";
+import { stripThinking, toolCallsInText } from "./llm.ts";
+import {
+  cleanReply,
+  guestDataGuard,
+  looksOffTopic,
+  MAX_STEPS,
+  OFF_TOPIC_REPLY,
+  runAgentTurn,
+  toolSpecs,
+} from "./loop.ts";
 
 const ctx: ToolContext = {
   tenantId: "t1",
@@ -280,5 +288,51 @@ describe("stripThinking", () => {
   it("drops the reasoning some models print", () => {
     expect(stripThinking("<think>hmm\nvale</think>\n¡Hola!")).toBe("¡Hola!");
     expect(stripThinking(null)).toBeNull();
+  });
+});
+
+describe("staying on topic and hiding the plumbing", () => {
+  it("recovers tool calls written as text", () => {
+    const tagged = toolCallsInText(
+      'Voy a buscar. <tool_call>{"name":"search_availability","arguments":{"check_in":"2026-10-01","check_out":"2026-10-03","guests":2}}</tool_call>',
+    );
+    expect(tagged.calls[0].function.name).toBe("search_availability");
+    expect(JSON.parse(tagged.calls[0].function.arguments)).toMatchObject({ guests: 2 });
+    expect(tagged.rest).toBe("Voy a buscar.");
+    const bare = toolCallsInText('{"name":"get_unit_details","arguments":{"room_id":"r-101"}}');
+    expect(bare.calls).toHaveLength(1);
+    expect(bare.rest).toBe("");
+    expect(toolCallsInText("Hola, ¿qué fechas?").calls).toHaveLength(0);
+  });
+
+  it("removes function names, JSON and tags from the reply", () => {
+    expect(
+      cleanReply(
+        'Voy a llamar a create_payment_link({"reservation_id":"x"}) para crear el pago. `search_availability`',
+      ),
+    ).toBe("Voy a llamar a para crear el pago.");
+    expect(cleanReply("<tool_call></tool_call>Listo")).toBe("Listo");
+    // Emails and normal words survive.
+    expect(cleanReply("Escríbenos a reservas@hotel.example.")).toBe(
+      "Escríbenos a reservas@hotel.example.",
+    );
+  });
+
+  it("refuses to write code or answer off-topic requests", async () => {
+    expect(looksOffTopic("Claro:\n```python\ndef ordenar(l):\n    return sorted(l)\n```")).toBe(
+      true,
+    );
+    expect(looksOffTopic("def suma(a, b):\n    return a + b")).toBe(true);
+    expect(looksOffTopic("La habitación 101 cuesta 120,00 € la noche.")).toBe(false);
+    const { llm } = scripted([{ content: "```python\nprint('hola')\n```" }]);
+    const r = await runAgentTurn({
+      llm,
+      store: fakeStore().store,
+      ctx,
+      system: "sys",
+      history: [],
+      userMessage: "Hazme un script de Python",
+    });
+    expect(r).toMatchObject({ reply: OFF_TOPIC_REPLY, outcome: "refused" });
   });
 });
