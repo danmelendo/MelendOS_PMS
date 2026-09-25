@@ -569,6 +569,85 @@ export type Database = {
           },
         ]
       }
+      folio_charges: {
+        Row: {
+          amount: number | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          note: string | null
+          posted_at: string | null
+          qty: number
+          reservation_id: string
+          service_id: string | null
+          source: string
+          status: string
+          tenant_id: string
+          unit_price: number
+          void_reason: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          note?: string | null
+          posted_at?: string | null
+          qty?: number
+          reservation_id: string
+          service_id?: string | null
+          source?: string
+          status?: string
+          tenant_id: string
+          unit_price: number
+          void_reason?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          note?: string | null
+          posted_at?: string | null
+          qty?: number
+          reservation_id?: string
+          service_id?: string | null
+          source?: string
+          status?: string
+          tenant_id?: string
+          unit_price?: number
+          void_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folio_charges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folio_charges_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "folio_charges_tenant_id_service_id_fkey"
+            columns: ["tenant_id", "service_id"]
+            isOneToOne: false
+            referencedRelation: "stay_services"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       gift_thresholds: {
         Row: {
           active: boolean
@@ -961,6 +1040,7 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          kind: string
           provider: Database["public"]["Enums"]["payment_provider"]
           provider_ref: string
           raw_notification: Json | null
@@ -974,6 +1054,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          kind?: string
           provider: Database["public"]["Enums"]["payment_provider"]
           provider_ref: string
           raw_notification?: Json | null
@@ -987,6 +1068,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          kind?: string
           provider?: Database["public"]["Enums"]["payment_provider"]
           provider_ref?: string
           raw_notification?: Json | null
@@ -1766,6 +1848,66 @@ export type Database = {
           },
         ]
       }
+      stay_extensions: {
+        Row: {
+          amount: number
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          new_check_out: string
+          new_end_at: string
+          nights: number
+          requested_at: string
+          reservation_id: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          new_check_out: string
+          new_end_at: string
+          nights: number
+          requested_at?: string
+          reservation_id: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          new_check_out?: string
+          new_end_at?: string
+          nights?: number
+          requested_at?: string
+          reservation_id?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_extensions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_extensions_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       stay_messages: {
         Row: {
           body: string
@@ -1814,6 +1956,53 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "reservations"
             referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      stay_services: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price: number
+          sort_order: number
+          tenant_id: string
+          unit: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price: number
+          sort_order?: number
+          tenant_id?: string
+          unit?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number
+          tenant_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_services_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1950,6 +2139,10 @@ export type Database = {
         Args: { p_approve: boolean; p_note?: string; p_request_id: string }
         Returns: undefined
       }
+      decide_extension: {
+        Args: { p_approve: boolean; p_id: string; p_note?: string }
+        Returns: undefined
+      }
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number
@@ -1963,6 +2156,11 @@ export type Database = {
           p_tenant: string
         }
         Returns: string
+      }
+      folio_balance: { Args: { p_reservation_id: string }; Returns: number }
+      get_folio: {
+        Args: { p_reservation_id: string; p_token?: string }
+        Returns: Json
       }
       get_guest_booking: {
         Args: { p_id: string; p_token: string }
@@ -2089,6 +2287,20 @@ export type Database = {
         Returns: boolean
       }
       is_tenant_member: { Args: { p_tenant: string }; Returns: boolean }
+      order_service: {
+        Args: {
+          p_note?: string
+          p_qty?: number
+          p_reservation_id: string
+          p_service_id: string
+          p_token: string
+        }
+        Returns: string
+      }
+      record_desk_payment: {
+        Args: { p_amount: number; p_method: string; p_reservation_id: string }
+        Returns: undefined
+      }
       redeem_promo_code: { Args: { p_id: string }; Returns: undefined }
       redeem_reward: {
         Args: { p_member_id: string; p_reward_id: string }
@@ -2175,7 +2387,7 @@ export type Database = {
         | "experiences"
         | "services"
       message_sender: "guest" | "staff" | "assistant" | "system"
-      payment_provider: "redsys" | "stripe"
+      payment_provider: "redsys" | "stripe" | "desk"
       payment_status: "created" | "succeeded" | "failed" | "refunded"
       reservation_status:
         | "pending"
@@ -2326,7 +2538,7 @@ export const Constants = {
         "services",
       ],
       message_sender: ["guest", "staff", "assistant", "system"],
-      payment_provider: ["redsys", "stripe"],
+      payment_provider: ["redsys", "stripe", "desk"],
       payment_status: ["created", "succeeded", "failed", "refunded"],
       reservation_status: [
         "pending",

@@ -292,9 +292,19 @@ class QueryBuilder implements PromiseLike<Result> {
           if (gap) return { data: null, error: { message: gap }, count: null };
         }
       }
+      if (table === "folio_charges") {
+        // Generated column and posted_at, as in the database.
+        for (const row of inserted) {
+          row.amount = Math.round(Number(row.qty ?? 1) * Number(row.unit_price) * 100) / 100;
+          row.status ??= "posted";
+          if (row.status === "posted") row.posted_at ??= new Date().toISOString();
+        }
+      }
       store.push(...inserted);
       persist();
-      if (table === "reservations") inserted.forEach((row) => emitChange(table, row));
+      if (table === "reservations" || table === "stay_messages") {
+        inserted.forEach((row) => emitChange(table, row));
+      }
       const projected = inserted.map((r) => resolveEmbeds(table, r, this.select_));
       const data = this.single_ ? (projected[0] ?? null) : projected;
       return { data, error: null, count: projected.length };
@@ -312,6 +322,9 @@ class QueryBuilder implements PromiseLike<Result> {
       for (const row of targets) {
         const wasCancelled = row.status === "cancelled";
         Object.assign(row, patch);
+        if (table === "folio_charges" && row.status === "posted" && !row.posted_at) {
+          row.posted_at = new Date().toISOString();
+        }
         if (table === "reservations") {
           row.updated_at = new Date().toISOString();
           // Same as the stamp_cancellation trigger.

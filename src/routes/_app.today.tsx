@@ -9,11 +9,12 @@ import { eur, STATUS_LABELS, STATUS_COLORS, useRooms } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
 import { CancellationRequests } from "@/components/CancellationRequests";
+import { FolioDrawer } from "@/components/FolioDrawer";
 import {
   ReservationExtrasInfo,
   type ReservationExtraItem,
 } from "@/components/ReservationExtrasInfo";
-import { Plus, LogIn, LogOut, BedDouble } from "lucide-react";
+import { Plus, LogIn, LogOut, BedDouble, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/today")({
@@ -29,6 +30,7 @@ function TodayPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
+  const [folioId, setFolioId] = useState<string | null>(null);
   const { data: rooms } = useRooms();
 
   const today = new Date();
@@ -128,6 +130,11 @@ function TodayPage() {
             </span>
           )}
           <span className="mr-2 text-sm font-medium tabular-nums">{eur(Number(r.total))}</span>
+          {r.status !== "pending" && (
+            <Button size="sm" variant="ghost" onClick={() => setFolioId(r.id)}>
+              <Receipt className="mr-1 h-3.5 w-3.5" /> Cuenta
+            </Button>
+          )}
           {action}
         </div>
         {showExtras && (
@@ -251,6 +258,8 @@ function TodayPage() {
       >
         {inHouse.map((r) => row(r, null, false))}
       </ListCard>
+
+      <FolioDrawer reservationId={folioId} onOpenChange={(o) => !o && setFolioId(null)} />
 
       <NewReservationDialog
         open={open}

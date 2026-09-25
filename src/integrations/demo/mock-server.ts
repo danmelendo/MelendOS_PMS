@@ -11,6 +11,7 @@ import {
   createBookingDraft,
   type BookingStore,
 } from "../../../supabase/functions/_shared/tools/bookings.ts";
+import { requestExtension } from "../../../supabase/functions/_shared/tools/extensions.ts";
 import { DEMO_MEMBER_ID, type Row } from "./seed";
 import { db, persist, uid } from "./mock-db";
 
@@ -392,6 +393,142 @@ async function sendStayMessage(args: Record<string, unknown>) {
   return ok(id);
 }
 
+// Folio (the stay's bill): same rules as get_folio, order_service,
+// decide_extension, record_desk_payment and folio_balance.
+function folioBalance(r: Row) {
+  const charges = (db().folio_charges ?? [])
+    .filter((c) => c.reservation_id === r.id && c.status === "posted")
+    .reduce((sum, c) => sum + Number(c.amount), 0);
+  return Math.round((Number(r.total) + charges - Number(r.paid_amount ?? 0)) * 100) / 100;
+}
+
+export function chargeRow(fields: Row): Row {
+  const qty = Number(fields.qty ?? 1);
+  const unit = Number(fields.unit_price);
+  return {
+    id: uid("chg"),
+    created_at: new Date().toISOString(),
+    posted_at: fields.status === "posted" ? new Date().toISOString() : null,
+    void_reason: null,
+    note: null,
+    service_id: null,
+    ...fields,
+    qty,
+    unit_price: unit,
+    amount: Math.round(qty * unit * 100) / 100,
+  };
+}
+
+async function getFolio(args: Record<string, unknown>) {
+  const r = await guestStay(args);
+  if (!r) return fail("Reserva no encontrada");
+  const ext = (db().stay_extensions ?? [])
+    .filter((x) => x.reservation_id === r.id)
+    .sort((a, b) => String(b.requested_at).localeCompare(String(a.requested_at)))[0];
+  return ok({
+    reservation_id: r.id,
+    status: r.status,
+    booking_total: Number(r.total),
+    paid: Number(r.paid_amount ?? 0),
+    balance: folioBalance(r),
+    charges: (db().folio_charges ?? [])
+      .filter((c) => c.reservation_id === r.id && c.status !== "void")
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))),
+    extension: ext
+      ? {
+          id: ext.id,
+          new_check_out: ext.new_check_out,
+          nights: ext.nights,
+          amount: ext.amount,
+          status: ext.status,
+        }
+      : null,
+  });
+}
+
+async function orderService(args: Record<string, unknown>) {
+  const r = await guestStay(args);
+  if (!r) return fail("Reserva no encontrada");
+  if (!["confirmed", "in_progress"].includes(r.status)) {
+    return fail("Solo durante una estancia confirmada");
+  }
+  const svc = (db().stay_services ?? []).find(
+    (x) => x.id === args.p_service_id && x.tenant_id === r.tenant_id && x.active !== false,
+  );
+  if (!svc) return fail("Servicio no disponible");
+  const qty = Number(args.p_qty ?? 1);
+  if (!(qty > 0 && qty <= 20)) return fail("Cantidad no válida");
+  const note =
+    String(args.p_note ?? "")
+      .trim()
+      .slice(0, 500) || null;
+  db().folio_charges ??= [];
+  const row = chargeRow({
+    tenant_id: r.tenant_id,
+    reservation_id: r.id,
+    service_id: svc.id,
+    category: svc.category,
+    description: svc.name,
+    qty,
+    unit_price: svc.price,
+    status: "requested",
+    source: "guest",
+    note,
+  });
+  db().folio_charges.push(row);
+  db().stay_messages ??= [];
+  db().stay_messages.push({
+    id: uid("msg"),
+    tenant_id: r.tenant_id,
+    reservation_id: r.id,
+    sender: "guest",
+    body: `Pedido: ${qty} × ${svc.name}${note ? ` — ${note}` : ""}`,
+    category:
+      svc.category === "food" ? "room_service" : svc.category === "parking" ? "valet" : "other",
+    created_at: new Date().toISOString(),
+    read_at: null,
+  });
+  persist();
+  return ok(row.id);
+}
+
+function decideExtension(args: Record<string, unknown>) {
+  const x = (db().stay_extensions ?? []).find((e) => e.id === args.p_id);
+  if (!x) return fail("Solicitud no encontrada");
+  if (x.status !== "pending") return fail("La solicitud ya está resuelta");
+  if (args.p_approve) {
+    const r = db().reservations.find((e) => e.id === x.reservation_id);
+    if (!r || !["confirmed", "in_progress"].includes(r.status)) {
+      return fail("La reserva ya no se puede ampliar");
+    }
+    Object.assign(r, {
+      end_at: x.new_end_at,
+      base_price: Number(r.base_price) + Number(x.amount),
+      total: Number(r.total) + Number(x.amount),
+      updated_at: new Date().toISOString(),
+    });
+  }
+  Object.assign(x, {
+    status: args.p_approve ? "approved" : "rejected",
+    decided_at: new Date().toISOString(),
+    decision_note: (args.p_note as string) ?? null,
+  });
+  persist();
+  return ok(null);
+}
+
+function recordDeskPayment(args: Record<string, unknown>) {
+  const r = db().reservations.find((e) => e.id === args.p_reservation_id);
+  if (!r) return fail("Reserva no encontrada");
+  const amount = Number(args.p_amount);
+  if (!(amount > 0) || amount > Math.max(folioBalance(r), 0)) {
+    return fail("El importe debe estar entre 0 y el saldo pendiente");
+  }
+  r.paid_amount = Math.round((Number(r.paid_amount ?? 0) + amount) * 100) / 100;
+  persist();
+  return ok(null);
+}
+
 // ── RPC ──────────────────────────────────────────────────────────────────────
 export async function mockServerRpc(
   fn: string,
@@ -414,6 +551,18 @@ export async function mockServerRpc(
       return getStayMessages(args);
     case "send_stay_message":
       return sendStayMessage(args);
+    case "get_folio":
+      return getFolio(args);
+    case "order_service":
+      return orderService(args);
+    case "decide_extension":
+      return decideExtension(args);
+    case "record_desk_payment":
+      return recordDeskPayment(args);
+    case "folio_balance": {
+      const r = db().reservations.find((e) => e.id === args.p_reservation_id);
+      return ok(r ? folioBalance(r) : null);
+    }
     case "get_reviews":
       return ok(getReviews(args));
     case "get_my_review": {
@@ -532,11 +681,78 @@ export async function mockServerFunction(
       throw e;
     }
   }
+  if (name === "stays-extend") {
+    const r = await guestStay({ p_reservation_id: body.reservation_id, p_token: body.token });
+    if (!r) return fail("Reserva no encontrada", "not_found");
+    try {
+      const result = await requestExtension(
+        {
+          ...mockBookingStore,
+          async insertExtension(row) {
+            db().stay_extensions ??= [];
+            const pending = db().stay_extensions.some(
+              (e) => e.reservation_id === row.reservation_id && e.status === "pending",
+            );
+            if (pending) return "already_pending";
+            const id = uid("ext");
+            db().stay_extensions.push({
+              id,
+              ...row,
+              status: "pending",
+              requested_at: new Date().toISOString(),
+            });
+            return { id };
+          },
+          async notify(tenantId, reservationId, text) {
+            db().stay_messages ??= [];
+            db().stay_messages.push({
+              id: uid("msg"),
+              tenant_id: tenantId,
+              reservation_id: reservationId,
+              sender: "guest",
+              body: text,
+              category: "other",
+              created_at: new Date().toISOString(),
+              read_at: null,
+            });
+          },
+        },
+        {
+          id: r.id,
+          tenant_id: r.tenant_id,
+          room_id: r.room_id,
+          status: r.status,
+          end_at: r.end_at,
+          people: Number(r.people ?? 2),
+        },
+        body,
+      );
+      persist();
+      return ok(result);
+    } catch (e) {
+      if (e instanceof BookingError) return fail(e.message, e.code);
+      throw e;
+    }
+  }
   if (name === "payments-create") {
     // No real gateway in the demo: the "provider" approves at once and the
     // browser is sent straight back to the return URL.
     const r = db().reservations.find((x) => x.id === body.reservation_id);
     if (!r) return fail("Reservation not found");
+    if (body.kind === "balance") {
+      const balance = folioBalance(r);
+      if (!(balance > 0)) return fail("Nothing to pay");
+      r.paid_amount = Math.round((Number(r.paid_amount ?? 0) + balance) * 100) / 100;
+      persist();
+      const back = new URL(String(body.return_url), window.location.origin);
+      back.searchParams.set("payment", "ok");
+      back.searchParams.set("reservation", String(r.id));
+      return ok({
+        payment_id: uid("pay"),
+        provider: "demo",
+        redirect: { kind: "url", url: back.toString() },
+      });
+    }
     if (r.status !== "pending" || r.deposit_paid)
       return fail("This reservation is not awaiting payment");
     const order = `DEMO-${Date.now().toString(36)}`;

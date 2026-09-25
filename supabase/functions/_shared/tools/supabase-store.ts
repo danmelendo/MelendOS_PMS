@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { BookingStore, TenantSettings } from "./bookings.ts";
 import type { BookingLookup, CatalogRoom, ToolStore } from "./registry.ts";
+import type { ExtensionStore } from "./extensions.ts";
 
 function must<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -213,6 +214,30 @@ export function supabaseToolStore(db: SupabaseClient): ToolStore {
           .update({ access_token_hash: hash })
           .eq("tenant_id", tenantId)
           .eq("id", reservationId),
+      );
+    },
+  };
+}
+
+/** Store for stay extensions: bookings plus the request and the chat notice. */
+export function supabaseExtensionStore(db: SupabaseClient): ExtensionStore {
+  return {
+    ...supabaseBookingStore(db),
+    async insertExtension(row) {
+      const res = await db.from("stay_extensions").insert(row).select("id").single();
+      if (res.error?.code === "23505") return "already_pending";
+      if (res.error) throw new Error(res.error.message);
+      return { id: (res.data as { id: string }).id };
+    },
+    async notify(tenantId, reservationId, body) {
+      must(
+        await db.from("stay_messages").insert({
+          tenant_id: tenantId,
+          reservation_id: reservationId,
+          sender: "guest",
+          body,
+          category: "other",
+        }),
       );
     },
   };

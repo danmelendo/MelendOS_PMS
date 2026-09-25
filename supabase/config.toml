@@ -67,7 +67,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed.sql", "./seeds/*.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -427,4 +427,7 @@ verify_jwt = false
 # Called by the public web with the publishable key (not a JWT). A signed-in
 # guest's JWT, when present, is verified inside the function.
 [functions.bookings-create]
+verify_jwt = false
+
+[functions.stays-extend]
 verify_jwt = false
