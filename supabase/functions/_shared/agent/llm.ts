@@ -45,6 +45,37 @@ export function stripThinking(text: string | null): string | null {
   return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 }
 
+/**
+ * Tool calls a model wrote as text ("<tool_call>{"name":…,"arguments":…}</tool_call>"
+ * or a bare JSON object with name and arguments), so they run as real calls
+ * instead of showing up in the guest's chat.
+ */
+export function toolCallsInText(text: string): { calls: ToolCall[]; rest: string } {
+  const calls: ToolCall[] = [];
+  const take = (raw: string) => {
+    try {
+      const obj = JSON.parse(raw);
+      const name = obj?.name ?? obj?.function?.name;
+      const args = obj?.arguments ?? obj?.parameters ?? obj?.function?.arguments ?? {};
+      if (typeof name !== "string" || !name) return false;
+      calls.push({
+        id: `text_${calls.length}`,
+        type: "function",
+        function: { name, arguments: typeof args === "string" ? args : JSON.stringify(args) },
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  let rest = text.replace(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g, (all, json: string) =>
+    take(json) ? "" : all,
+  );
+  const bare = rest.trim();
+  if (!calls.length && bare.startsWith("{") && bare.endsWith("}") && take(bare)) rest = "";
+  return { calls, rest: rest.trim() };
+}
+
 export function openAiCompatible(cfg: LlmConfig): LlmClient {
   const url = `${cfg.baseUrl.replace(/\/$/, "")}/chat/completions`;
   return {
@@ -74,8 +105,21 @@ export function openAiCompatible(cfg: LlmConfig): LlmClient {
         }
         const data = await res.json();
         const msg = data.choices?.[0]?.message ?? {};
+        const content = stripThinking(msg.content ?? null);
+        // Some small models write the call as text instead of a tool call.
+        if (!msg.tool_calls?.length && content) {
+          const recovered = toolCallsInText(content);
+          if (recovered.calls.length) {
+            return {
+              content: recovered.rest || null,
+              toolCalls: recovered.calls,
+              inputTokens: data.usage?.prompt_tokens ?? 0,
+              outputTokens: data.usage?.completion_tokens ?? 0,
+            };
+          }
+        }
         return {
-          content: stripThinking(msg.content ?? null),
+          content,
           toolCalls: (msg.tool_calls ?? []).map((c: ToolCall, i: number) => ({
             id: c.id || `call_${i}`,
             type: "function",

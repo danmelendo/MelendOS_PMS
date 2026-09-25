@@ -87,6 +87,11 @@ function spanishPrices(text: string): string {
 export function cleanReply(text: string): string {
   return spanishPrices(
     text
+      // Internal plumbing the model sometimes echoes: tool-call tags, JSON
+      // arguments, function names (search_availability, create_payment_link…).
+      .replace(/<\/?tool_call>/g, "")
+      .replace(/\{[^{}]*"[a-z_]+"\s*:[^{}]*\}/g, "")
+      .replace(/`*\b[a-z]+(?:_[a-z]+)+\b(?:\([^)]*\))?`*/g, "")
       .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
       .replace(/\[([^\]]*)\]\(\s*https?:\/\/[^)]*\)/g, "$1")
       .replace(/<?https?:\/\/[^\s)>]*[^\s)>.,;:!?]>?/g, "")
@@ -97,6 +102,25 @@ export function cleanReply(text: string): string {
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim(),
+  );
+}
+
+export const OFF_TOPIC_REPLY =
+  "Solo puedo ayudarte con tu estancia en el hotel: habitaciones, precios, reservas y cancelaciones. ¿Buscas alguna fecha?";
+
+/**
+ * The agent only talks about the hotel. The prompt says so; this catches the
+ * obvious misses (it wrote code, or it was asked to act as something else).
+ */
+export function looksOffTopic(reply: string): boolean {
+  return (
+    /```/.test(reply) ||
+    /\bdef \w+\s*\(|\breturn\b|\blambda\b|\bsorted\(|\bprint\(|\bconsole\.log\(|=>\s*\{/.test(
+      reply,
+    ) ||
+    /^\s*(def |class |import |from \S+ import|function |const |let |print\(|console\.log|#include|SELECT |<\?php)/im.test(
+      reply,
+    )
   );
 }
 
@@ -174,7 +198,12 @@ export async function runAgentTurn(opts: {
     result.outputTokens += res.outputTokens;
 
     if (!res.toolCalls.length) {
-      result.reply = cleanReply(res.content ?? "") || FALLBACK;
+      if (looksOffTopic(res.content ?? "")) {
+        result.reply = OFF_TOPIC_REPLY;
+        result.outcome = "refused";
+      } else {
+        result.reply = cleanReply(res.content ?? "") || FALLBACK;
+      }
       turn.push({ role: "assistant", content: result.reply });
       break;
     }
