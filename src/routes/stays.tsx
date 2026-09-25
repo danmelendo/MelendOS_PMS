@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { MemberProvider, useMember } from "@/lib/member-session";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
+import { GuestSignIn } from "@/components/GuestSignIn";
 import { pms } from "@/integrations/pms";
 import { registerServiceWorker, showNotification } from "@/lib/notifications";
 
@@ -93,11 +94,20 @@ const NAV = [
 ] as const;
 
 function StaysLayout() {
-  const path = useRouterState({ select: (r) => r.location.pathname });
-  const { brand } = useBrand();
-
   return (
     <MemberProvider>
+      <StaysShell />
+    </MemberProvider>
+  );
+}
+
+function StaysShell() {
+  const path = useRouterState({ select: (r) => r.location.pathname });
+  const { brand } = useBrand();
+  const { needsSignIn, memberId } = useMember();
+
+  return (
+    <>
       <WatchPoller />
       <div className="stays-root min-h-[100svh] w-full bg-[#e9edf2]">
         <div className="relative mx-auto flex min-h-[100svh] w-full max-w-md flex-col bg-[#f4f6f9] shadow-xl">
@@ -113,7 +123,13 @@ function StaysLayout() {
           </header>
 
           <main className="flex-1 pb-24">
-            <Outlet />
+            {needsSignIn ? (
+              <GuestSignIn />
+            ) : memberId ? (
+              <Outlet />
+            ) : (
+              <p className="py-20 text-center text-sm text-neutral-400">Cargando…</p>
+            )}
           </main>
 
           {/* Bottom tab bar */}
@@ -138,6 +154,6 @@ function StaysLayout() {
           </nav>
         </div>
       </div>
-    </MemberProvider>
+    </>
   );
 }

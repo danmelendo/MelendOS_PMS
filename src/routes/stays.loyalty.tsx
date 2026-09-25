@@ -18,8 +18,8 @@ function LoyaltyScreen() {
     queryFn: () => pms.getLoyaltyAccount(memberId),
   });
   const { data: rewards } = useQuery({
-    queryKey: ["pms", "rewards"],
-    queryFn: () => pms.listRewards(),
+    queryKey: ["pms", "rewards", memberId],
+    queryFn: () => pms.listRewards(memberId),
   });
   const { data: txns } = useQuery({
     queryKey: ["pms", "loyalty-txns", memberId],

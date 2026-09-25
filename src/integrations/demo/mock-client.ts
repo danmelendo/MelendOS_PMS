@@ -10,7 +10,9 @@
 // credentials are present (see src/integrations/supabase/client.ts).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DEMO_USER_ID, loadDb, saveDb, type DemoDb, type Row } from "./seed";
+import { DEMO_USER_ID, type Row } from "./seed";
+import { db, persist, uid } from "./mock-db";
+import { mockServerFunction, mockServerRpc } from "./mock-server";
 import {
   findConflict,
   planCleaningShift,
@@ -18,19 +20,6 @@ import {
   type ReservationStatus,
   type RoomReservation,
 } from "@domain/availability.ts";
-
-let _db: DemoDb | null = null;
-function db(): DemoDb {
-  if (!_db) _db = loadDb();
-  return _db;
-}
-function persist() {
-  if (_db) saveDb(_db);
-}
-
-function uid(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -263,7 +252,7 @@ class QueryBuilder implements PromiseLike<Result> {
     if (this.table === "reservations") {
       r.updated_at = now;
       if (r.cleaning_minutes == null) r.cleaning_minutes = 15;
-      if (r.status == null) r.status = "confirmed"; // mirrors the DB column default
+      if (r.status == null) r.status = "pending"; // mirrors the DB column default
     }
     if (this.table === "promo_codes") {
       // Mirror the DB column defaults so freshly created codes list correctly.
@@ -580,33 +569,20 @@ async function rpc(
     return { data: archived, error: null };
   }
 
-  return { data: null, error: null };
+  return (await mockServerRpc(fn, args)) ?? { data: null, error: null };
 }
 
 // ── Edge Functions ─────────────────────────────────────────────────────────────
 const functions = {
   async invoke(name: string, options?: { body?: Record<string, unknown> }) {
     const body = options?.body ?? {};
-    if (name === "create-redsys-payment") {
-      // Simulate the REDSYS_BYPASS path: mark the deposit as paid directly and
-      // return a redirect to the confirmation screen (no real TPV in the demo).
-      const reservationId = body.reservation_id as string | undefined;
-      const res = db().reservations.find((r) => r.id === reservationId);
-      const order = `DEMO-${Date.now().toString(36)}`;
-      if (res) {
-        res.deposit_paid = true;
-        res.status = "confirmed";
-        res.redsys_order = order;
-        res.paid_amount = res.deposit_amount ?? Math.round(Number(res.total) * 0.3 * 100) / 100;
-        res.updated_at = new Date().toISOString();
-        persist();
-      }
-      return { data: { bypass: true, redirectUrl: `/reservar-ok?order=${order}` }, error: null };
-    }
+    // A booking without guest details comes from the signed-in guest app.
+    const handled = await mockServerFunction(name, body, !body.customer);
+    if (handled) return handled;
     if (name === "send-reservation-confirmation") {
       return { data: { ok: true, demo: true }, error: null };
     }
-    return { data: null, error: null };
+    return { data: null, error: { message: `Unknown function ${name}` } };
   },
 };
 

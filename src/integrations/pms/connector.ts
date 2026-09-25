@@ -26,7 +26,7 @@ import type {
   PmsRoom,
   PricePreview,
   PropertyBrand,
-  Reservation,
+  PaymentRedirect,
   Reward,
   RoomOffer,
   SignatureDoc,
@@ -35,7 +35,8 @@ import type {
 } from "./types";
 
 export interface CreatePrebookingInput {
-  memberId: string;
+  /** Signed-in guest account; omitted for anonymous bookings from the web. */
+  memberId?: string;
   propertyId: string;
   roomId: string;
   checkIn: string;
@@ -43,6 +44,9 @@ export interface CreatePrebookingInput {
   guests: number;
   /** true = hold without paying (prereserva); false = book straight away. */
   hold: boolean;
+  /** Guest details, required when booking without an account. */
+  guest?: { name: string; email: string; phone?: string };
+  extras?: { extra_id: string; qty: number }[];
 }
 
 export interface CreateWatchInput {
@@ -90,7 +94,9 @@ export interface PmsConnector {
   // ── Prebookings (prereservas) & reservations ──
   createPrebooking(input: CreatePrebookingInput): Promise<Prebooking>;
   getPrebooking(id: string): Promise<Prebooking | null>;
-  confirmPrebooking(id: string): Promise<Reservation>;
+  /** Starts the deposit payment; the browser must follow the redirect. The
+   *  booking is confirmed only by the gateway notification, never here. */
+  startPayment(id: string, returnUrl: string): Promise<PaymentRedirect>;
   cancelPrebooking(id: string): Promise<void>;
   listBookings(memberId: string): Promise<Prebooking[]>;
   getBooking(id: string): Promise<Prebooking | null>;
@@ -99,7 +105,8 @@ export interface PmsConnector {
   getMember(memberId: string): Promise<Member | null>;
   getLoyaltyAccount(memberId: string): Promise<LoyaltyAccount>;
   listLoyaltyTransactions(memberId: string): Promise<LoyaltyTransaction[]>;
-  listRewards(): Promise<Reward[]>;
+  /** Rewards of the member hotel (all hotels when no member is given). */
+  listRewards(memberId?: string): Promise<Reward[]>;
   redeemReward(memberId: string, rewardId: string): Promise<LoyaltyAccount>;
 
   // ── Digital signature ──

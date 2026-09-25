@@ -32,7 +32,11 @@ const EVENT_META: Record<
   JournalEventType,
   { label: string; icon: React.ComponentType<{ className?: string }> }
 > = {
+  created: { label: "Reserva creada", icon: Sparkles },
   prebooked: { label: "Prereserva creada", icon: Sparkles },
+  checked_out: { label: "Check-out realizado", icon: LogIn },
+  rejected: { label: "Pago no completado", icon: Ban },
+  no_show: { label: "No presentado", icon: Ban },
   confirmed: { label: "Reserva confirmada · señal pagada", icon: CheckCircle2 },
   signed: { label: "Registro de viajeros firmado", icon: PenLine },
   checked_in: { label: "Check-in realizado", icon: LogIn },
@@ -72,7 +76,8 @@ function BookingDetailScreen() {
 
   const canSign =
     ["confirmed", "in_progress"].includes(booking.status) && signature?.status !== "signed";
-  const canCancel = ["held", "confirmed"].includes(booking.status);
+  // Guests cancel only unpaid bookings; paid ones are cancelled by the hotel.
+  const canCancel = booking.status === "held";
   const timeline = [...(journal ?? [])].reverse(); // oldest → newest
 
   return (

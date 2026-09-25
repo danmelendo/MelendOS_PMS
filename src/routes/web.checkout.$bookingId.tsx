@@ -4,18 +4,21 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
+import { IS_DEMO } from "@/integrations/supabase/client";
+import { followPaymentRedirect, paymentReturnSearch } from "@/lib/payments";
 import { eur, formatDateShort } from "@/lib/stays";
 
 export const Route = createFileRoute("/web/checkout/$bookingId")({
   component: WebCheckoutScreen,
-  validateSearch: (s: Record<string, unknown>): { auto?: boolean } => ({
+  validateSearch: (s: Record<string, unknown>): { auto?: boolean; payment?: "ok" | "ko" } => ({
     auto: s.auto === true || s.auto === "true",
+    ...paymentReturnSearch(s),
   }),
 });
 
 function WebCheckoutScreen() {
   const { bookingId } = Route.useParams();
-  const { auto } = Route.useSearch();
+  const { auto, payment } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const autoFired = useRef(false);
@@ -23,17 +26,19 @@ function WebCheckoutScreen() {
   const { data: booking } = useQuery({
     queryKey: ["pms", "booking", bookingId],
     queryFn: () => pms.getBooking(bookingId),
-    refetchInterval: 15_000,
+    // Back from the gateway the confirmation arrives by server notification:
+    // poll quickly until the booking shows as confirmed.
+    refetchInterval: (q) => (payment === "ok" && q.state.data?.status === "held" ? 2_000 : 15_000),
   });
 
   const confirm = useMutation({
-    mutationFn: () => pms.confirmPrebooking(bookingId),
-    onSuccess: () => {
+    mutationFn: () =>
+      pms.startPayment(bookingId, `${window.location.origin}/web/checkout/${bookingId}`),
+    onSuccess: (redirect) => {
       qc.invalidateQueries({ queryKey: ["pms"] });
-      toast.success("Señal pagada · reserva confirmada");
-      navigate({ to: "/web/sign/$bookingId", params: { bookingId } });
+      followPaymentRedirect(redirect);
     },
-    onError: (e: Error) => toast.error(e.message || "No se pudo confirmar"),
+    onError: (e: Error) => toast.error(e.message || "No se pudo iniciar el pago"),
   });
 
   useEffect(() => {
@@ -47,6 +52,7 @@ function WebCheckoutScreen() {
 
   const expired = booking.status === "expired";
   const alreadyConfirmed = ["confirmed", "in_progress", "completed"].includes(booking.status);
+  const awaitingNotification = payment === "ok" && booking.status === "held";
 
   return (
     <div className="mx-auto max-w-xl px-5 py-10">
@@ -85,11 +91,22 @@ function WebCheckoutScreen() {
       </div>
 
       <div className="mt-3  bg-[var(--brand-soft)] px-4 py-3 text-sm text-[var(--brand)]">
-        Pago simulado (la demo no cobra). En producción la señal pasa por pasarela de pago.
+        {IS_DEMO
+          ? "Pago simulado (la demo no cobra). En producción la señal pasa por la pasarela del hotel."
+          : "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."}
       </div>
 
       <div className="mt-6">
-        {alreadyConfirmed ? (
+        {payment === "ko" && !alreadyConfirmed && (
+          <div className="mb-3 bg-rose-50 px-4 py-3 text-center text-sm font-medium text-rose-600">
+            El pago no se ha completado. Puedes intentarlo de nuevo.
+          </div>
+        )}
+        {awaitingNotification ? (
+          <div className="flex items-center justify-center gap-2 bg-sky-50 py-4 text-sm font-medium text-sky-700">
+            <Clock className="h-4 w-4 animate-pulse" /> Confirmando el pago con el banco…
+          </div>
+        ) : alreadyConfirmed ? (
           <button
             onClick={() => navigate({ to: "/web/sign/$bookingId", params: { bookingId } })}
             className="flex w-full items-center justify-center gap-2  bg-emerald-600 py-4 font-semibold text-white"
@@ -107,7 +124,7 @@ function WebCheckoutScreen() {
             className="flex w-full items-center justify-center gap-2  bg-[var(--brand)] py-4 font-semibold text-white disabled:opacity-50"
           >
             <CreditCard className="h-5 w-5" />
-            {confirm.isPending ? "Procesando…" : `Pagar señal ${eur(booking.deposit)}`}
+            {confirm.isPending ? "Redirigiendo al pago…" : `Pagar señal ${eur(booking.deposit)}`}
           </button>
         )}
       </div>

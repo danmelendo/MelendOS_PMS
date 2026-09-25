@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { useRoles } from "./roles";
 import type { Database } from "@/integrations/supabase/types";
 
 type Tables = Database["public"]["Tables"];
@@ -63,14 +64,29 @@ export const STATUS_COLORS: Record<string, string> = {
   rejected: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
 };
 
+// The catalogue is public (the web needs it), so the staff panel must scope its
+// queries to the signed-in user's hotels itself. RLS still guards every write.
+// In the backend-free demo the staff user runs both hotels: no filter.
+function useStaffTenants() {
+  const { tenantIds, loading } = useRoles();
+  return { tenantIds, ready: IS_DEMO || !loading };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function scoped<Q extends { in: (c: string, v: string[]) => any }>(q: Q, tenantIds: string[]): Q {
+  return IS_DEMO ? q : q.in("tenant_id", tenantIds);
+}
+
 export function useRooms() {
+  const { tenantIds, ready } = useStaffTenants();
   return useQuery({
-    queryKey: ["rooms"],
+    queryKey: ["rooms", tenantIds],
+    enabled: ready,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("*, rate_groups(name)")
-        .order("sort_order");
+      const { data, error } = await scoped(
+        supabase.from("rooms").select("*, rate_groups(name)"),
+        tenantIds,
+      ).order("sort_order");
       if (error) throw error;
       return data;
     },
@@ -78,10 +94,14 @@ export function useRooms() {
 }
 
 export function useExtras() {
+  const { tenantIds, ready } = useStaffTenants();
   return useQuery({
-    queryKey: ["extras"],
+    queryKey: ["extras", tenantIds],
+    enabled: ready,
     queryFn: async () => {
-      const { data, error } = await supabase.from("extras").select("*").order("sort_order");
+      const { data, error } = await scoped(supabase.from("extras").select("*"), tenantIds).order(
+        "sort_order",
+      );
       if (error) throw error;
       return data;
     },
@@ -89,10 +109,15 @@ export function useExtras() {
 }
 
 export function useRateGroups() {
+  const { tenantIds, ready } = useStaffTenants();
   return useQuery({
-    queryKey: ["rate_groups"],
+    queryKey: ["rate_groups", tenantIds],
+    enabled: ready,
     queryFn: async () => {
-      const { data, error } = await supabase.from("rate_groups").select("*").order("name");
+      const { data, error } = await scoped(
+        supabase.from("rate_groups").select("*"),
+        tenantIds,
+      ).order("name");
       if (error) throw error;
       return data;
     },
@@ -100,10 +125,15 @@ export function useRateGroups() {
 }
 
 export function useDynamicRules() {
+  const { tenantIds, ready } = useStaffTenants();
   return useQuery({
-    queryKey: ["dynamic_rules"],
+    queryKey: ["dynamic_rules", tenantIds],
+    enabled: ready,
     queryFn: async () => {
-      const { data, error } = await supabase.from("dynamic_rules").select("*").order("created_at");
+      const { data, error } = await scoped(
+        supabase.from("dynamic_rules").select("*"),
+        tenantIds,
+      ).order("created_at");
       if (error) throw error;
       return data;
     },

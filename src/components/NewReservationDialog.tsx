@@ -384,6 +384,8 @@ export function NewReservationDialog({
           .from("reservations")
           .insert({
             ...reservationFields,
+            // Staff bookings are confirmed at once (the column defaults to pending).
+            status: "confirmed",
             manual_override: isAdmin,
             created_by_role: isAdmin ? "admin" : "reception",
           })

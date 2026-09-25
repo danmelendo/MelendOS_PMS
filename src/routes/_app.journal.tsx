@@ -18,7 +18,11 @@ export const Route = createFileRoute("/_app/journal")({
 });
 
 const EVENT_LABELS: Record<JournalEventType, string> = {
+  created: "Creada",
   prebooked: "Prereserva",
+  checked_out: "Check-out",
+  rejected: "Pago fallido",
+  no_show: "No-show",
   confirmed: "Confirmada",
   signed: "Firmada",
   checked_in: "Check-in",
@@ -28,10 +32,14 @@ const EVENT_LABELS: Record<JournalEventType, string> = {
 };
 
 const EVENT_COLORS: Record<JournalEventType, string> = {
-  prebooked: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+  created: "bg-gold/15 text-gold-foreground border-gold/40",
+  prebooked: "bg-gold/15 text-gold-foreground border-gold/40",
+  checked_out: "bg-muted text-muted-foreground border-border",
+  rejected: "bg-red-500/10 text-red-600 border-red-500/30",
+  no_show: "bg-orange-500/10 text-orange-700 border-orange-500/30",
   confirmed: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
-  signed: "bg-indigo-500/15 text-indigo-700 border-indigo-500/30",
-  checked_in: "bg-sky-500/15 text-sky-700 border-sky-500/30",
+  signed: "bg-info/15 text-info-foreground border-info/40",
+  checked_in: "bg-info/15 text-info-foreground border-info/40",
   cancelled: "bg-red-500/10 text-red-600 border-red-500/30",
   points_earned: "bg-violet-500/15 text-violet-700 border-violet-500/30",
   reward_redeemed: "bg-fuchsia-500/15 text-fuchsia-700 border-fuchsia-500/30",

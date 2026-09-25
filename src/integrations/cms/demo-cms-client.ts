@@ -10,7 +10,7 @@
 import type { CmsClient } from "./client";
 import type { HotelEvent, EventCategory } from "./types";
 
-const RSVP_KEY = "stays-cms-rsvp";
+export const RSVP_KEY = "stays-cms-rsvp";
 
 const HOTEL_NAMES: Record<string, string> = {
   "prop-lumen": "Hotel Lumen",
@@ -18,7 +18,7 @@ const HOTEL_NAMES: Record<string, string> = {
 };
 
 // Muted accents that sit well next to the navy/gold palette.
-const CATEGORY_ACCENT: Record<EventCategory, string> = {
+export const CATEGORY_ACCENT: Record<EventCategory, string> = {
   gastronomy: "35 45% 38%",
   wellness: "170 30% 32%",
   culture: "260 22% 38%",
@@ -142,7 +142,7 @@ const EVENT_DEFS: EventDef[] = [
   ],
 ];
 
-function loadRsvps(): Set<string> {
+export function loadRsvps(): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
     return new Set(JSON.parse(window.localStorage.getItem(RSVP_KEY) ?? "[]") as string[]);
@@ -151,7 +151,7 @@ function loadRsvps(): Set<string> {
   }
 }
 
-function saveRsvps(set: Set<string>) {
+export function saveRsvps(set: Set<string>) {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(RSVP_KEY, JSON.stringify([...set]));
   }

@@ -14,7 +14,7 @@ export type Row = Record<string, any>;
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 18; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 19; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -289,6 +289,39 @@ const PROPERTY_DEFS: [
     "coast",
   ],
 ];
+
+// Tenants (hotels), mirror of supabase/seed.sql.
+const TENANTS = [
+  {
+    id: "tenant-lumen",
+    slug: "hotel-lumen",
+    name: "Hotel Lumen",
+    plan: "starter",
+    brand: { short: "Lumen", accent: "#1F3A5F" },
+    settings: {
+      checkin_hour: 15,
+      checkout_hour: 12,
+      deposit_pct: 30,
+      currency: "EUR",
+      timezone: "Europe/Madrid",
+    },
+  },
+  {
+    id: "tenant-albora",
+    slug: "albora-hotel-spa",
+    name: "Albora Hotel & Spa",
+    plan: "pro",
+    brand: { short: "Albora", accent: "#0F6E8C" },
+    settings: {
+      checkin_hour: 15,
+      checkout_hour: 12,
+      deposit_pct: 30,
+      currency: "EUR",
+      timezone: "Europe/Madrid",
+    },
+  },
+];
+const TENANT_BY_BRAND: Record<string, string> = { urban: "tenant-lumen", coast: "tenant-albora" };
 
 const BUILDING_TO_PROPERTY: Record<string, string> = {
   Lumen: "prop-lumen",
@@ -1008,6 +1041,7 @@ export function buildSeedDb(): DemoDb {
       amenities,
       description,
       brand,
+      tenant_id: TENANT_BY_BRAND[brand],
       image_url: null, // the web derives a hero from the destination accent + first room
       active: true,
       sort_order: i,
@@ -1226,11 +1260,19 @@ export function buildSeedDb(): DemoDb {
     occ("res-occ-albora-2", "room-albora-102", "prop-albora", 640),
   ];
 
-  const user_roles: Row[] = [
-    { id: "ur-1", user_id: DEMO_USER_ID, role: "admin", created_at: nowIso },
-  ];
+  const tenants: Row[] = TENANTS.map((t) => ({ ...t, status: "active", created_at: nowIso }));
+  // The demo staff user runs both hotels (the real backend scopes each user to
+  // their own tenant through RLS).
+  const tenant_members: Row[] = TENANTS.map((t) => ({
+    tenant_id: t.id,
+    user_id: DEMO_USER_ID,
+    role: "admin",
+    created_at: nowIso,
+  }));
 
-  return {
+  const out: DemoDb = {
+    tenants,
+    tenant_members,
     rate_groups,
     rate_nightly,
     rooms,
@@ -1239,8 +1281,8 @@ export function buildSeedDb(): DemoDb {
     dynamic_rules,
     customers,
     promo_codes,
-    // Reception-created reservations plus the demo member's mobile bookings share
-    // one `reservations` table — the connector filters by `member_id`.
+    // Reception-created reservations plus the demo member's bookings share one
+    // `reservations` table; the connector filters by `member_id`.
     reservations: [
       ...reservations,
       ...memberReservations,
@@ -1248,9 +1290,7 @@ export function buildSeedDb(): DemoDb {
       ...occupancyDemoReservations,
     ],
     reservation_extras: [...reservationExtras, ...memberExtras],
-    user_roles,
     audit_log: [],
-    // ── Mobile app / loyalty domain ──
     provinces,
     properties,
     members,
@@ -1261,14 +1301,51 @@ export function buildSeedDb(): DemoDb {
     signatures,
     booking_journal,
     availability_watches: [],
-    // ── Tenant management domain (zonas comunes, facturas, incidencias) ──
     common_spaces,
     space_bookings,
     invoices,
     incidents,
+    payments: [],
+    domain_events: [],
   };
+  assignTenants(out);
+  return out;
 }
 
+// Mirror of the real schema: every row carries tenant_id. It is derived from the
+// row's hotel (property), room, reservation or member. Catalogue tables the two
+// demo hotels share (rates, extras, rules, loyalty) keep tenant_id null, which
+// the mock treats as "any tenant".
+function assignTenants(d: DemoDb) {
+  const byProperty = new Map(d.properties.map((p) => [p.id, p.tenant_id as string]));
+  const byProvince = new Map(
+    d.properties.map((p) => [p.province_id as string, p.tenant_id as string]),
+  );
+  for (const p of d.provinces) p.tenant_id = byProvince.get(p.id as string) ?? null;
+  for (const r of d.rooms) r.tenant_id = byProperty.get(r.property_id as string) ?? null;
+  const byRoom = new Map(d.rooms.map((r) => [r.id, r.tenant_id]));
+  for (const r of d.reservations) {
+    r.tenant_id = byRoom.get(r.room_id as string) ?? null;
+    r.property_id = r.property_id ?? d.rooms.find((x) => x.id === r.room_id)?.property_id ?? null;
+  }
+  const byReservation = new Map(d.reservations.map((r) => [r.id, r.tenant_id]));
+  for (const t of ["reservation_extras", "signatures"]) {
+    for (const r of d[t]) r.tenant_id = byReservation.get(r.reservation_id as string) ?? null;
+  }
+  for (const s of d.common_spaces) s.tenant_id = byProperty.get(s.property_id as string) ?? null;
+  const lumen = TENANTS[0].id;
+  for (const m of d.members) m.tenant_id = lumen;
+  for (const t of [
+    "loyalty_accounts",
+    "loyalty_transactions",
+    "space_bookings",
+    "invoices",
+    "incidents",
+    "booking_journal",
+  ]) {
+    for (const r of d[t]) r.tenant_id = r.tenant_id ?? lumen;
+  }
+}
 // ── Persistence ────────────────────────────────────────────────────────────────
 function canPersist() {
   return typeof window !== "undefined" && !!window.localStorage;
