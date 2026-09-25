@@ -79,15 +79,14 @@ function WebLayout() {
             </nav>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <BrandSwitcher />
-              <a
-                href="/stays"
+              <Link
+                to="/web/mi-reserva"
                 aria-label="Mi reserva"
                 className="inline-flex shrink-0 items-center gap-1 bg-[var(--brand)] px-2.5 py-2 text-sm font-semibold text-white sm:px-4"
               >
                 <span className="hidden sm:inline">Mi reserva</span>
                 <UserRound className="h-4 w-4 sm:hidden" />
-                <ArrowUpRight className="hidden h-4 w-4 sm:block" />
-              </a>
+              </Link>
             </div>
           </div>
           {/* Scrollable nav row on phones + tablets */}

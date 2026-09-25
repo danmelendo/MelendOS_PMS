@@ -76,12 +76,12 @@ function WebHome() {
                 Ver habitaciones y precios <ArrowRight className="h-4 w-4" />
               </Link>
             )}
-            <a
-              href="/stays"
+            <Link
+              to="/web/mi-reserva"
               className="inline-flex items-center gap-2 border border-white/40 px-6 py-3 font-semibold text-white"
             >
               Gestionar mi reserva
-            </a>
+            </Link>
           </div>
         </div>
       </section>
