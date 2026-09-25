@@ -83,6 +83,9 @@ describe("createBookingDraft", () => {
     });
     expect(draft.breakdown.total).toBe(360); // Thu 100 + Fri 130 + Sat 130
     expect(draft.deposit).toBe(108);
+    expect(draft.access_token).toMatch(/^[0-9a-f]{48}$/);
+    expect(inserted[0].access_token_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(inserted[0].access_token_hash).not.toBe(draft.access_token);
     expect(inserted[0]).toMatchObject({
       status: "pending",
       customer_id: "c1",

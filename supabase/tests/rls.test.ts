@@ -454,4 +454,78 @@ describe.skipIf(!DB_URL)("RLS", () => {
       );
     });
   });
+
+  describe("guest booking access with a token (no account)", () => {
+    async function tokenStay() {
+      const res = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, deposit_amount, created_by_role, access_token_hash)
+         values ($1, $2, now() + interval '200 days', now() + interval '201 days', 'pending', 100, 30, 'public',
+                 encode(extensions.digest('secret-token', 'sha256'), 'hex'))
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"]],
+      );
+      return res.rows[0].id;
+    }
+
+    it("reads, signs and cancels only with the right token", async () => {
+      await client.query("savepoint setup");
+      const id = await tokenStay();
+      const read = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.get_guest_booking($1, $2) as b", [id, "secret-token"]))
+            .rows[0].b,
+      );
+      expect(read.ok && read.value?.room_name).toBe("101");
+      const wrong = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.get_guest_booking($1, $2) as b", [id, "guess"]))
+            .rows[0].b,
+      );
+      expect(wrong).toEqual({ ok: true, value: null });
+      const signWrong = await attempt("anon", undefined, () =>
+        client.query("select public.sign_guest_registration($1, $2, 'Ana', 'data:x')", [
+          id,
+          "guess",
+        ]),
+      );
+      expect(signWrong.ok).toBe(false);
+      const sign = await attempt("anon", undefined, async () => {
+        await client.query("select public.sign_guest_registration($1, $2, 'Ana Pérez', 'data:x')", [
+          id,
+          "secret-token",
+        ]);
+        return (
+          await client.query("select public.get_guest_booking($1, $2) as b", [id, "secret-token"])
+        ).rows[0].b.signature.status;
+      });
+      expect(sign).toEqual({ ok: true, value: "signed" });
+      const cancel = await attempt("anon", undefined, async () => {
+        await client.query("select public.cancel_guest_booking($1, $2)", [id, "secret-token"]);
+        return (
+          await client.query("select public.get_guest_booking($1, $2) as b", [id, "secret-token"])
+        ).rows[0].b.status;
+      });
+      expect(cancel).toEqual({ ok: true, value: "cancelled" });
+      await client.query("rollback to savepoint setup");
+    });
+
+    it("never works for bookings without a token", async () => {
+      const r = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (
+            await client.query("select public.get_guest_booking($1, $2) as b", [
+              ids["lumen-res-r2"],
+              "",
+            ])
+          ).rows[0].b,
+      );
+      expect(r).toEqual({ ok: true, value: null });
+    });
+  });
 });
