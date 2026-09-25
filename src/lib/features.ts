@@ -19,10 +19,16 @@ export function useBrandTenant() {
       if (!property) return null;
       const { data } = await supabase
         .from("tenants")
-        .select("id, name, plan, settings")
+        .select("id, slug, name, plan, settings")
         .eq("id", property.tenant_id)
         .maybeSingle();
-      return data as { id: string; name: string; plan: string; settings: unknown } | null;
+      return data as {
+        id: string;
+        slug: string;
+        name: string;
+        plan: string;
+        settings: unknown;
+      } | null;
     },
   });
 }
