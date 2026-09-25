@@ -82,6 +82,8 @@ export interface NewReservation {
   is_prebooking: boolean;
   hold_expires_at: string | null;
   created_by_role: "public" | "member" | "agent";
+  /** SHA-256 (hex) of the guest access token; the token itself is never stored. */
+  access_token_hash: string;
 }
 
 /** Everything the booking logic needs from storage. */
@@ -143,6 +145,16 @@ export interface BookingDraft {
   breakdown: PriceBreakdown;
   deposit: number;
   hold_expires_at: string | null;
+  /** Returned once: lets the guest view, sign and cancel without an account. */
+  access_token: string;
+}
+
+/** Random token for guest access, and the hash stored in the database. */
+export async function newAccessToken(): Promise<{ token: string; hash: string }> {
+  const hex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  const token = hex(crypto.getRandomValues(new Uint8Array(24)));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return { token, hash: hex(new Uint8Array(digest)) };
 }
 
 function toRules(
@@ -269,6 +281,7 @@ export async function createBookingDraft(
   const holdExpiresAt = input.hold
     ? new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString()
     : null;
+  const access = await newAccessToken();
 
   const reservation = await store.insertReservation({
     tenant_id: room.tenant_id,
@@ -289,6 +302,7 @@ export async function createBookingDraft(
     is_prebooking: input.hold,
     hold_expires_at: holdExpiresAt,
     created_by_role: ctx.channel === "agent" ? "agent" : member ? "member" : "public",
+    access_token_hash: access.hash,
   });
 
   const extraRows = extras.map((e) => ({
@@ -313,5 +327,6 @@ export async function createBookingDraft(
     breakdown,
     deposit,
     hold_expires_at: holdExpiresAt,
+    access_token: access.token,
   };
 }
