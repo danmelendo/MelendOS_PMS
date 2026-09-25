@@ -7,3 +7,4 @@ package-lock.json
 routeTree.gen.ts
 HANDOFF.md
 CLAUDE.md
+src/integrations/supabase/database.types.ts

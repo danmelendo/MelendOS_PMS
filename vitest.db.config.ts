@@ -7,7 +7,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["supabase/tests/**/*.test.ts"],
-    env: loadEnv("", process.cwd(), ""),
+    // Values already in the environment (e.g. CI secrets) win over .env.
+    env: { ...loadEnv("", process.cwd(), ""), ...(process.env as Record<string, string>) },
     testTimeout: 60_000,
     hookTimeout: 120_000,
     fileParallelism: false,

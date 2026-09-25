@@ -3,6 +3,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "supabase/functions/_shared/domain/**/*.ts",
+    "supabase/functions/_shared/payments/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.db.config.ts",
@@ -10,6 +11,8 @@
     "scripts/**/*.mjs",
     "eslint.config.js"
   ],
+  // Deno-only files (npm: imports, Deno globals) are checked at deploy time.
+  "exclude": ["supabase/functions/_shared/payments/accounts.ts"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

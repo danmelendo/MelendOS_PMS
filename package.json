@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "test:db": "vitest run --config vitest.db.config.ts"
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "db:types": "supabase gen types typescript --linked --schema public > src/integrations/supabase/database.types.ts",
+    "db:seed-auth": "node --env-file=.env scripts/seed-auth.mjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
