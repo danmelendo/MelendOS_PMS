@@ -44,3 +44,38 @@ export function dayOfWeek(day: Ymd): number {
 export function localYmd(d: Date): Ymd {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+/** Offset in minutes of a timezone at a given instant (e.g. +120 for CEST). */
+function offsetMinutes(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
+  return Math.round((asUtc - instant.getTime()) / 60_000);
+}
+
+/**
+ * The UTC instant of a local wall-clock hour on a calendar date in a timezone,
+ * e.g. check-in at 15:00 in Europe/Madrid. Works across DST changes.
+ */
+export function zonedHourToUtc(day: Ymd, hour: number, timeZone: string): Date {
+  const guess = new Date(`${day}T${String(hour).padStart(2, "0")}:00:00Z`);
+  const first = new Date(guess.getTime() - offsetMinutes(guess, timeZone) * 60_000);
+  // Re-check with the offset at the resulting instant (DST boundary days).
+  return new Date(guess.getTime() - offsetMinutes(first, timeZone) * 60_000);
+}
