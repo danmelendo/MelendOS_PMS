@@ -12,6 +12,7 @@
 
 import { IS_DEMO, supabase } from "@/integrations/supabase/client";
 import { calculateNightlyPrice } from "@/lib/pricing";
+import { bookingReference } from "@domain/reference.ts";
 import { CHECKIN_HOUR, CHECKOUT_HOUR } from "@/lib/data";
 import type {
   BookSpaceInput,
@@ -89,6 +90,14 @@ function saveToken(reservationId: string, token: string) {
   } catch {
     // storage unavailable (private mode): the booking is still created
   }
+}
+
+/**
+ * Keeps the token of a link sent to the guest (e.g. by the booking agent:
+ * /web/checkout/<id>?t=<token>) so the booking pages can open it.
+ */
+export function adoptGuestToken(reservationId: string, token: string) {
+  if (/^[0-9a-f]{32,128}$/i.test(token)) saveToken(reservationId, token);
 }
 
 export function guestToken(reservationId: string): string | null {
@@ -226,6 +235,7 @@ export class DemoStaysConnector implements PmsConnector {
     const checkOut = String(r.end_at).slice(0, 10);
     return {
       id: r.id,
+      reference: r.reference ?? bookingReference(r.id),
       memberId: r.member_id,
       propertyId: r.property_id ?? (room as Row)?.property_id ?? "",
       propertyName: (property as Row)?.name ?? "Demo Stays",

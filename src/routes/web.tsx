@@ -1,12 +1,27 @@
-import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
+import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
+
+const GUEST_LINK = /^\/web\/(?:booking|checkout|sign|upload)\/([^/]+)\/?$/;
 
 // Public hotel website. One codebase serves both hotel brands; the active one
 // drives the name, accent and copy via the brand layer (src/lib/brand). Public:
 // no guest identity needed to browse and book.
 export const Route = createFileRoute("/web")({
+  // Links sent to a guest carry their booking token (?t=...): keep it in this
+  // browser and drop it from the address bar before the page loads.
+  beforeLoad: ({ location }) => {
+    const { t, ...rest } = location.search as Record<string, unknown>;
+    const id = GUEST_LINK.exec(location.pathname)?.[1];
+    if (typeof t !== "string" || !id) return;
+    adoptGuestToken(id, t);
+    const query = new URLSearchParams(
+      Object.entries(rest).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]),
+    ).toString();
+    throw redirect({ href: location.pathname + (query ? `?${query}` : ""), replace: true });
+  },
   component: WebLayout,
   head: () => ({
     meta: [

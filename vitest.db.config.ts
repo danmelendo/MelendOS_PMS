@@ -4,6 +4,8 @@ import { defineConfig } from "vitest/config";
 // Database tests (RLS and SQL rules). They need SUPABASE_DB_URL (from .env or
 // the environment) and run inside a transaction that is always rolled back.
 export default defineConfig({
+  // Edge Function code imports supabase-js the Deno way.
+  resolve: { alias: { "npm:@supabase/supabase-js@2": "@supabase/supabase-js" } },
   test: {
     environment: "node",
     include: ["supabase/tests/**/*.test.ts"],

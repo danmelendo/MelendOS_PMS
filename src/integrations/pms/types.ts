@@ -117,6 +117,8 @@ export type BookingStatus =
 
 export interface Prebooking {
   id: string;
+  /** Short reference the guest quotes to the hotel or the booking agent. */
+  reference: string;
   memberId: string;
   propertyId: string;
   propertyName: string;

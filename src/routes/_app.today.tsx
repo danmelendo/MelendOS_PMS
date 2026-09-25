@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { eur, STATUS_LABELS, STATUS_COLORS, useRooms } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
+import { CancellationRequests } from "@/components/CancellationRequests";
 import {
   ReservationExtrasInfo,
   type ReservationExtraItem,
@@ -191,6 +192,8 @@ function TodayPage() {
           hint="Total de las estancias que entran hoy"
         />
       </div>
+
+      <CancellationRequests />
 
       <div className="grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <ListCard

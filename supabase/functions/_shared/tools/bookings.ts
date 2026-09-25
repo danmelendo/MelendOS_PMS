@@ -124,6 +124,8 @@ export interface BookingContext {
   /** Signed-in user (guest app); null for the anonymous public web. */
   userId: string | null;
   channel: "public" | "member" | "agent";
+  /** Set by the server for agent/MCP calls: only this tenant's rooms exist. */
+  tenantId?: string;
   now?: Date;
 }
 
@@ -157,7 +159,7 @@ export async function newAccessToken(): Promise<{ token: string; hash: string }>
   return { token, hash: hex(new Uint8Array(digest)) };
 }
 
-function toRules(
+export function toRules(
   rows: { name: string; type: string; multiplier: number; config: Record<string, unknown> }[],
 ): DynamicRule[] {
   const out: DynamicRule[] = [];
@@ -183,70 +185,92 @@ function toRules(
   return out;
 }
 
-export async function createBookingDraft(
-  store: BookingStore,
-  raw: unknown,
-  ctx: BookingContext,
-): Promise<BookingDraft> {
-  const parsed = bookingDraftInput.safeParse(raw);
-  if (!parsed.success) {
-    throw new BookingError("invalid", parsed.error.issues.map((i) => i.message).join("; "));
-  }
-  const input = parsed.data;
-  const now = ctx.now ?? new Date();
+export interface QuoteRequest {
+  room_id: string;
+  check_in: string;
+  check_out: string;
+  guests: number;
+  extras?: { extra_id: string; qty: number }[];
+}
 
-  const room = await store.getRoom(input.room_id);
-  if (!room || !room.active) throw new BookingError("not_found", "Habitación no encontrada");
+export interface StayQuote {
+  room: StoreRoom;
+  settings: TenantSettings;
+  startAt: Date;
+  endAt: Date;
+  nights: number;
+  breakdown: PriceBreakdown;
+  deposit: number;
+  extras: { extraId: string; qty: number; price: number }[];
+  /** False when the room is taken for those dates (price still computed). */
+  available: boolean;
+}
+
+/**
+ * Prices a stay for one room with the real engine, without writing anything.
+ * Validates tenant scope, room, capacity and dates; reports availability.
+ */
+export async function quoteStay(
+  store: BookingStore,
+  req: QuoteRequest,
+  ctx: BookingContext,
+): Promise<StayQuote> {
+  const now = ctx.now ?? new Date();
+  const room = await store.getRoom(req.room_id);
+  // A room of another tenant does not exist for this caller.
+  if (!room || !room.active || (ctx.tenantId && room.tenant_id !== ctx.tenantId)) {
+    throw new BookingError("not_found", "Habitación no encontrada");
+  }
   if (room.status === "out_of_service") {
     throw new BookingError("unavailable", "La habitación no está disponible");
   }
-  if (input.guests > room.capacity) {
+  if (req.guests > room.capacity) {
     throw new BookingError("capacity", `La habitación admite hasta ${room.capacity} personas`);
   }
   if (!room.rate_group_id) throw new BookingError("unpriced", "La habitación no tiene tarifa");
 
   const settings = await store.getTenantSettings(room.tenant_id);
-  const startAt = zonedHourToUtc(input.check_in, settings.checkin_hour, settings.timezone);
-  const endAt = zonedHourToUtc(input.check_out, settings.checkout_hour, settings.timezone);
+  const startAt = zonedHourToUtc(req.check_in, settings.checkin_hour, settings.timezone);
+  const endAt = zonedHourToUtc(req.check_out, settings.checkout_hour, settings.timezone);
   if (startAt.getTime() < now.getTime() - 24 * 3_600_000) {
     throw new BookingError("invalid", "La fecha de entrada ya ha pasado");
   }
 
-  // Availability over the stay (a day of margin for cleaning windows).
+  // Busy windows over the stay (a day of margin for cleaning windows).
   const busy = await store.getBusyWindows(
     room.tenant_id,
     new Date(startAt.getTime() - 86_400_000),
     new Date(endAt.getTime() + 86_400_000),
   );
-  const clash = busy.some(
+  const available = !busy.some(
     (b) =>
       b.room_id === room.id &&
       new Date(b.start_at).getTime() < endAt.getTime() &&
       startAt.getTime() < new Date(b.end_at).getTime(),
   );
-  if (clash) throw new BookingError("unavailable", "La habitación no está libre en esas fechas");
 
-  const [rate, ruleRows, gifts, extrasRows, totalRooms, member] = await Promise.all([
+  const wanted = req.extras ?? [];
+  const [rate, ruleRows, gifts, extrasRows, totalRooms] = await Promise.all([
     store.getRate(room.rate_group_id),
     store.getActiveRules(room.tenant_id),
     store.getActiveGifts(room.tenant_id),
     store.getExtras(
       room.tenant_id,
-      input.extras.map((e) => e.extra_id),
+      wanted.map((e) => e.extra_id),
     ),
     store.countActiveRooms(room.tenant_id),
-    ctx.userId ? store.findMember(room.tenant_id, ctx.userId) : Promise.resolve(null),
   ]);
-  if (!rate || !(rate.price > 0))
+  if (!rate || !(rate.price > 0)) {
     throw new BookingError("unpriced", "La habitación no tiene tarifa");
+  }
 
-  const extras = input.extras.map((e) => {
+  const extras = wanted.map((e) => {
     const row = extrasRows.find((x) => x.id === e.extra_id && x.active);
     if (!row) throw new BookingError("invalid", "Extra no disponible");
     return { extraId: e.extra_id, qty: e.qty, price: Number(row.price) };
   });
 
-  // Occupancy per night from the same busy windows (dates in hotel time).
+  // Occupancy per night from the same busy windows.
   const occupied = busy
     .filter((b) => b.room_id !== room.id)
     .map((b) => ({
@@ -255,8 +279,8 @@ export async function createBookingDraft(
     }));
 
   const breakdown = priceStay({
-    checkIn: input.check_in,
-    checkOut: input.check_out,
+    checkIn: req.check_in,
+    checkOut: req.check_out,
     rate: {
       price: Number(rate.price),
       weekendPrice: rate.weekend_price != null ? Number(rate.weekend_price) : null,
@@ -271,13 +295,44 @@ export async function createBookingDraft(
     })),
   });
 
+  return {
+    room,
+    settings,
+    startAt,
+    endAt,
+    nights: eachNight(req.check_in, req.check_out).length,
+    breakdown,
+    deposit: round2((breakdown.total * settings.deposit_pct) / 100),
+    extras,
+    available,
+  };
+}
+
+export async function createBookingDraft(
+  store: BookingStore,
+  raw: unknown,
+  ctx: BookingContext,
+): Promise<BookingDraft> {
+  const parsed = bookingDraftInput.safeParse(raw);
+  if (!parsed.success) {
+    throw new BookingError("invalid", parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const input = parsed.data;
+  const now = ctx.now ?? new Date();
+
+  const quote = await quoteStay(store, input, ctx);
+  if (!quote.available) {
+    throw new BookingError("unavailable", "La habitación no está libre en esas fechas");
+  }
+  const { room, breakdown, deposit } = quote;
+
+  const member = ctx.userId ? await store.findMember(room.tenant_id, ctx.userId) : null;
   if (!member && !input.customer) {
     throw new BookingError("invalid", "Nombre y email del huésped son obligatorios");
   }
   const customerId = member
     ? null
     : await store.findOrCreateCustomer(room.tenant_id, input.customer!);
-  const deposit = round2((breakdown.total * settings.deposit_pct) / 100);
   const holdExpiresAt = input.hold
     ? new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString()
     : null;
@@ -289,8 +344,8 @@ export async function createBookingDraft(
     property_id: room.property_id,
     customer_id: customerId,
     member_id: member?.id ?? null,
-    start_at: startAt.toISOString(),
-    end_at: endAt.toISOString(),
+    start_at: quote.startAt.toISOString(),
+    end_at: quote.endAt.toISOString(),
     people: input.guests,
     base_price: breakdown.base,
     dynamic_surcharge: breakdown.dynamicSurcharge,
@@ -305,7 +360,7 @@ export async function createBookingDraft(
     access_token_hash: access.hash,
   });
 
-  const extraRows = extras.map((e) => ({
+  const extraRows = quote.extras.map((e) => ({
     extra_id: e.extraId,
     qty: e.qty,
     unit_price: e.price,
@@ -323,7 +378,7 @@ export async function createBookingDraft(
     tenant_id: room.tenant_id,
     check_in: input.check_in,
     check_out: input.check_out,
-    nights: eachNight(input.check_in, input.check_out).length,
+    nights: quote.nights,
     breakdown,
     deposit,
     hold_expires_at: holdExpiresAt,

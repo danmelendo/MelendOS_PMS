@@ -14,7 +14,7 @@ export type Row = Record<string, any>;
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 19; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 20; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -1307,6 +1307,20 @@ export function buildSeedDb(): DemoDb {
     incidents,
     payments: [],
     domain_events: [],
+    // A guest asked the booking agent to cancel; reception decides on "Hoy".
+    cancellation_requests: [
+      {
+        id: "creq-1",
+        reservation_id: "res-5",
+        reason: "Nos han cambiado el vuelo y no llegamos a tiempo.",
+        channel: "web_chat",
+        status: "pending",
+        requested_at: new Date(Date.now() - 40 * 60_000).toISOString(),
+        decided_at: null,
+        decided_by: null,
+        decision_note: null,
+      },
+    ],
   };
   assignTenants(out);
   return out;
@@ -1329,7 +1343,7 @@ function assignTenants(d: DemoDb) {
     r.property_id = r.property_id ?? d.rooms.find((x) => x.id === r.room_id)?.property_id ?? null;
   }
   const byReservation = new Map(d.reservations.map((r) => [r.id, r.tenant_id]));
-  for (const t of ["reservation_extras", "signatures"]) {
+  for (const t of ["reservation_extras", "signatures", "cancellation_requests"]) {
     for (const r of d[t]) r.tenant_id = byReservation.get(r.reservation_id as string) ?? null;
   }
   for (const s of d.common_spaces) s.tenant_id = byProperty.get(s.property_id as string) ?? null;

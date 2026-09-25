@@ -24,6 +24,7 @@ import {
   formatDateShort,
 } from "@/lib/stays";
 import type { JournalEventType } from "@/integrations/pms";
+import { GuestBookingMissing } from "@/components/GuestBookingMissing";
 
 export const Route = createFileRoute("/web/booking/$bookingId")({
   component: WebBookingDetail,
@@ -51,7 +52,7 @@ function WebBookingDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const { data: booking } = useQuery({
+  const { data: booking, isPending: bookingLoading } = useQuery({
     queryKey: ["pms", "booking", bookingId],
     queryFn: () => pms.getBooking(bookingId),
   });
@@ -73,7 +74,7 @@ function WebBookingDetail() {
     onError: () => toast.error("No se pudo cancelar"),
   });
 
-  if (!booking) return <p className="py-20 text-center text-sm text-neutral-400">Cargando…</p>;
+  if (!booking) return <GuestBookingMissing loading={bookingLoading} />;
 
   const canSign =
     ["confirmed", "in_progress"].includes(booking.status) && signature?.status !== "signed";
@@ -99,6 +100,7 @@ function WebBookingDetail() {
         >
           {BOOKING_STATUS_LABELS[booking.status]}
         </span>
+        <span className="ml-2 font-mono text-xs text-neutral-500">Ref. {booking.reference}</span>
         <h2 className="mt-2 text-2xl font-semibold">{booking.roomName}</h2>
         <p className="text-neutral-500">{booking.propertyName}</p>
 

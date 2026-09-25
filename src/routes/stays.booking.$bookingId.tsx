@@ -98,6 +98,7 @@ function BookingDetailScreen() {
         >
           {BOOKING_STATUS_LABELS[booking.status]}
         </span>
+        <span className="ml-2 font-mono text-xs text-neutral-500">Ref. {booking.reference}</span>
         <h2 className="mt-2 text-xl font-semibold">{booking.roomName}</h2>
         <p className="text-sm text-neutral-500">{booking.propertyName}</p>
 

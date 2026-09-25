@@ -528,4 +528,107 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(r).toEqual({ ok: true, value: null });
     });
   });
+  describe("cancellation requests (decided by the hotel)", () => {
+    async function requestFor() {
+      const r = await client.query<{ id: string; reference: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, deposit_amount, created_by_role)
+         values ($1, $2, now() + interval '210 days', now() + interval '212 days', 'confirmed', 200, 60, 'agent')
+         returning id, reference`,
+        [ids.lumen, ids["lumen-room-101"]],
+      );
+      const q = await client.query<{ id: string }>(
+        `insert into public.cancellation_requests (tenant_id, reservation_id, reason, channel)
+         values ($1, $2, 'Cambio de planes', 'web_chat') returning id`,
+        [ids.lumen, r.rows[0].id],
+      );
+      return { reservation: r.rows[0], request: q.rows[0].id };
+    }
+
+    it("gives every booking a short reference", async () => {
+      await client.query("savepoint setup");
+      const { reservation } = await requestFor();
+      await client.query("rollback to savepoint setup");
+      expect(reservation.reference).toBe(
+        reservation.id.replace(/-/g, "").slice(0, 8).toUpperCase(),
+      );
+    });
+
+    it("are visible to the hotel staff only, and nobody writes them from the client", async () => {
+      await client.query("savepoint setup");
+      const { reservation } = await requestFor();
+      const n = (role: "anon" | "authenticated", user?: string) =>
+        attempt(role, user, () => count("select count(*) as n from public.cancellation_requests"));
+      expect(await n("authenticated", users.lumenReception)).toEqual({ ok: true, value: 1 });
+      expect(await n("authenticated", users.alboraAdmin)).toEqual({ ok: true, value: 0 });
+      expect(await n("authenticated", users.guestAlex)).toEqual({ ok: true, value: 0 });
+      expect(await n("anon")).toEqual({ ok: true, value: 0 });
+      for (const [role, user] of [
+        ["anon", undefined],
+        ["authenticated", users.lumenAdmin],
+      ] as const) {
+        const insert = await attempt(role, user, () =>
+          client.query(
+            "insert into public.cancellation_requests (tenant_id, reservation_id) values ($1, $2)",
+            [ids.lumen, reservation.id],
+          ),
+        );
+        expect(insert.ok, role).toBe(false);
+      }
+      await client.query("rollback to savepoint setup");
+    });
+
+    it("are approved by staff of the same hotel, once", async () => {
+      await client.query("savepoint setup");
+      const { reservation, request } = await requestFor();
+      const decide = (role: "anon" | "authenticated", user?: string) =>
+        attempt(role, user, () =>
+          client.query("select public.decide_cancellation($1, true, 'ok')", [request]),
+        );
+      const anon = await decide("anon");
+      expect(anon.ok).toBe(false);
+      const other = await decide("authenticated", users.alboraAdmin);
+      expect(other.ok).toBe(false);
+      if (!other.ok) expect(other.error).toMatch(/no encontrada/);
+
+      await as("authenticated", users.lumenReception);
+      await client.query("select public.decide_cancellation($1, true, 'ok')", [request]);
+      await client.query("reset role");
+      const state = (
+        await client.query(
+          `select r.status, r.cancellation_reason, c.status as request_status, c.decided_by,
+                  (select count(*) from public.domain_events e
+                    where e.entity_id = r.id and e.event_type = 'cancellation.approved') as events
+             from public.reservations r join public.cancellation_requests c on c.reservation_id = r.id
+            where c.id = $1`,
+          [request],
+        )
+      ).rows[0];
+      const twice = await decide("authenticated", users.lumenReception);
+      await client.query("rollback to savepoint setup");
+      expect(state).toMatchObject({
+        status: "cancelled",
+        cancellation_reason: "Cambio de planes",
+        request_status: "approved",
+        decided_by: users.lumenReception,
+      });
+      expect(Number(state.events)).toBe(1);
+      expect(twice.ok).toBe(false);
+      void reservation;
+    });
+
+    it("rejecting leaves the booking untouched", async () => {
+      await client.query("savepoint setup");
+      const { reservation, request } = await requestFor();
+      await as("authenticated", users.lumenAdmin);
+      await client.query("select public.decide_cancellation($1, false, 'Tarifa no reembolsable')", [
+        request,
+      ]);
+      await client.query("reset role");
+      const status = (
+        await client.query("select status from public.reservations where id = $1", [reservation.id])
+      ).rows[0].status;
+      await client.query("rollback to savepoint setup");
+      expect(status).toBe("confirmed");
+    });
+  });
 });
