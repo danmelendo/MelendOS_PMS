@@ -340,4 +340,118 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(r).toEqual({ ok: true, value: { loyalty: 0, invoices: 0 } });
     });
   });
+
+  describe("guest and staff actions", () => {
+    // Pending stay of Alex at Lumen, created as the table owner for the tests.
+    async function pendingGuestStay(dayOffset: number, paid = false) {
+      const res = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, member_id, start_at, end_at, status, deposit_paid, total, created_by_role)
+         values ($1, $2, $3, now() + make_interval(days => $4), now() + make_interval(days => $4 + 1), $5, $6, 100, 'member')
+         returning id`,
+        [
+          ids.lumen,
+          ids["lumen-room-101"],
+          ids["lumen-member-alex"],
+          dayOffset,
+          paid ? "confirmed" : "pending",
+          paid,
+        ],
+      );
+      return res.rows[0].id;
+    }
+
+    it("a guest cancels their own unpaid stay, not someone else's or a paid one", async () => {
+      await client.query("savepoint setup");
+      const pending = await pendingGuestStay(90);
+      const paid = await pendingGuestStay(95, true);
+      const own = await attempt("authenticated", users.guestAlex, () =>
+        client.query("select public.cancel_my_reservation($1)", [pending]),
+      );
+      expect(own.ok).toBe(true);
+      const other = await attempt("authenticated", users.otherGuest, () =>
+        client.query("select public.cancel_my_reservation($1)", [pending]),
+      );
+      expect(other.ok).toBe(false);
+      const paidAttempt = await attempt("authenticated", users.guestAlex, () =>
+        client.query("select public.cancel_my_reservation($1)", [paid]),
+      );
+      expect(paidAttempt.ok).toBe(false);
+      if (!paidAttempt.ok) expect(paidAttempt.error).toMatch(/hotel/);
+      await client.query("rollback to savepoint setup");
+    });
+
+    it("a guest redeems rewards with enough points only", async () => {
+      const cheap = (
+        await client.query<{ id: string }>(
+          "select id from public.rewards where tenant_id = $1 order by cost_points limit 1",
+          [ids.lumen],
+        )
+      ).rows[0].id;
+      const dear = (
+        await client.query<{ id: string }>(
+          "select id from public.rewards where tenant_id = $1 order by cost_points desc limit 1",
+          [ids.lumen],
+        )
+      ).rows[0].id;
+      const ok = await attempt("authenticated", users.guestAlex, async () =>
+        Number(
+          (
+            await client.query("select public.redeem_reward($1, $2) as left", [
+              ids["lumen-member-alex"],
+              cheap,
+            ])
+          ).rows[0].left,
+        ),
+      );
+      expect(ok).toEqual({ ok: true, value: 740 - 300 });
+      const tooDear = await attempt("authenticated", users.guestAlex, () =>
+        client.query("select public.redeem_reward($1, $2)", [ids["lumen-member-alex"], dear]),
+      );
+      expect(tooDear.ok).toBe(false);
+      const forged = await attempt("authenticated", users.otherGuest, () =>
+        client.query("select public.redeem_reward($1, $2)", [ids["lumen-member-alex"], cheap]),
+      );
+      expect(forged.ok).toBe(false);
+    });
+
+    it("reception changes a room's status but not its other fields", async () => {
+      const status = await attempt(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query("update public.rooms set status = 'cleaning' where id = $1", [
+              ids["lumen-room-101"],
+            ])
+          ).rowCount,
+      );
+      expect(status).toEqual({ ok: true, value: 1 });
+      const rename = await attempt("authenticated", users.lumenReception, () =>
+        client.query("update public.rooms set name = '999' where id = $1", [ids["lumen-room-101"]]),
+      );
+      expect(rename.ok).toBe(false);
+    });
+
+    it("a paid member stay earns points and is journaled", async () => {
+      await client.query("savepoint setup");
+      const stay = await pendingGuestStay(100);
+      await client.query(
+        "update public.reservations set deposit_paid = true, status = 'confirmed' where id = $1",
+        [stay],
+      );
+      const points = await count(
+        "select count(*) as n from public.loyalty_transactions where reservation_id = $1 and type = 'earn'",
+        [stay],
+      );
+      const journal = await client.query<{ event_type: string }>(
+        "select event_type from public.booking_journal where booking_ref = $1 order by created_at, event_type",
+        [stay],
+      );
+      await client.query("rollback to savepoint setup");
+      expect(points).toBe(1);
+      expect(journal.rows.map((r) => r.event_type).sort()).toEqual(
+        ["confirmed", "created", "points_earned"].sort(),
+      );
+    });
+  });
 });
