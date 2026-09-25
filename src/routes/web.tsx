@@ -4,7 +4,7 @@ import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
 
-const GUEST_LINK = /^\/web\/(?:booking|checkout|sign|upload)\/([^/]+)\/?$/;
+const GUEST_LINK = /^\/web\/(?:booking|checkout|sign|upload|chat)\/([^/]+)\/?$/;
 
 // Public hotel website. One codebase serves both hotel brands; the active one
 // drives the name, accent and copy via the brand layer (src/lib/brand). Public:

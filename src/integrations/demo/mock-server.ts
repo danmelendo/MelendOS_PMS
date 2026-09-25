@@ -334,6 +334,64 @@ async function submitReview(args: Record<string, unknown>) {
   return ok(id);
 }
 
+// Chat with reception: same rules as get_stay_messages / send_stay_message.
+async function guestStay(args: Record<string, unknown>) {
+  return args.p_token
+    ? await guestRow(args.p_reservation_id, args.p_token)
+    : db().reservations.find((x) => x.id === args.p_reservation_id && x.member_id);
+}
+
+async function getStayMessages(args: Record<string, unknown>) {
+  const r = await guestStay(args);
+  if (!r) return fail("Reserva no encontrada");
+  db().stay_messages ??= [];
+  const now = new Date().toISOString();
+  const thread = db().stay_messages.filter((m) => m.reservation_id === r.id);
+  for (const m of thread) if (m.sender !== "guest" && !m.read_at) m.read_at = now;
+  persist();
+  return ok(
+    thread
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+      .slice(-200)
+      .map(({ id, sender, body, category, created_at, read_at }) => ({
+        id,
+        sender,
+        body,
+        category,
+        created_at,
+        read_at,
+      })),
+  );
+}
+
+async function sendStayMessage(args: Record<string, unknown>) {
+  const r = await guestStay(args);
+  if (!r) return fail("Reserva no encontrada");
+  const recent = r.status === "completed" && Date.now() - Date.parse(r.end_at) < 3 * 86_400_000;
+  if (!["pending", "confirmed", "in_progress"].includes(r.status) && !recent) {
+    return fail("La conversación de esta reserva está cerrada");
+  }
+  const body = String(args.p_body ?? "")
+    .trim()
+    .slice(0, 2000);
+  if (!body) return fail("Escribe un mensaje");
+  db().stay_messages ??= [];
+  const id = uid("msg");
+  db().stay_messages.push({
+    id,
+    tenant_id: r.tenant_id,
+    reservation_id: r.id,
+    sender: "guest",
+    body,
+    category: (args.p_category as string | null) ?? null,
+    staff_id: null,
+    created_at: new Date().toISOString(),
+    read_at: null,
+  });
+  persist();
+  return ok(id);
+}
+
 // ── RPC ──────────────────────────────────────────────────────────────────────
 export async function mockServerRpc(
   fn: string,
@@ -352,6 +410,10 @@ export async function mockServerRpc(
       return getGuestBooking(args);
     case "report_stays":
       return ok(reportStays(args));
+    case "get_stay_messages":
+      return getStayMessages(args);
+    case "send_stay_message":
+      return sendStayMessage(args);
     case "get_reviews":
       return ok(getReviews(args));
     case "get_my_review": {

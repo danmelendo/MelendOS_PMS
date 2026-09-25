@@ -891,4 +891,111 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(reply).toEqual({ ok: true, value: "Sentimos lo ocurrido" });
     });
   });
+  describe("chat with reception", () => {
+    async function stayWithToken(status = "in_progress", endsInDays = 2) {
+      const r = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, created_by_role, access_token_hash)
+         values ($1, $2, now() + interval '400 days', now() + interval '400 days' + make_interval(days => $3), $4, 'public',
+                 encode(extensions.digest('chat-token', 'sha256'), 'hex'))
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"], endsInDays, status],
+      );
+      return r.rows[0].id;
+    }
+    const guestSays = (id: string, token: string, body = "¿Toallas, por favor?") =>
+      asIdentity("anon", undefined, () =>
+        client.query("select public.send_stay_message($1, $2, $3, 'towels') as id", [
+          id,
+          token,
+          body,
+        ]),
+      );
+
+    it("guests talk to reception with their booking token only", async () => {
+      await client.query("savepoint setup");
+      const id = await stayWithToken();
+      const wrong = await attempt("anon", undefined, () =>
+        client.query("select public.send_stay_message($1, 'guess', 'hola')", [id]),
+      );
+      await guestSays(id, "chat-token");
+      const staffSees = await attempt("authenticated", users.lumenReception, () =>
+        count("select count(*) as n from public.stay_messages where reservation_id = $1", [id]),
+      );
+      const otherHotel = await attempt("authenticated", users.alboraAdmin, () =>
+        count("select count(*) as n from public.stay_messages where reservation_id = $1", [id]),
+      );
+      const anonTable = await attempt("anon", undefined, () =>
+        count("select count(*) as n from public.stay_messages"),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(wrong.ok).toBe(false);
+      expect(staffSees).toEqual({ ok: true, value: 1 });
+      expect(otherHotel).toEqual({ ok: true, value: 0 });
+      expect(anonTable).toEqual({ ok: true, value: 0 });
+    });
+
+    it("reception answers as themselves, can only mark as read, and the guest sees it read", async () => {
+      await client.query("savepoint setup");
+      const id = await stayWithToken();
+      await guestSays(id, "chat-token");
+      const insert = (sender: string, staffId: string) =>
+        attempt("authenticated", users.lumenReception, () =>
+          client.query(
+            "insert into public.stay_messages (tenant_id, reservation_id, sender, body, staff_id) values ($1, $2, $3, 'Enseguida', $4)",
+            [ids.lumen, id, sender, staffId],
+          ),
+        );
+      const asGuest = await insert("guest", users.lumenReception);
+      const asOther = await insert("staff", users.lumenAdmin);
+      const edit = await attempt("authenticated", users.lumenReception, () =>
+        client.query(
+          "update public.stay_messages set body = 'cambiado' where reservation_id = $1",
+          [id],
+        ),
+      );
+      await asIdentity("authenticated", users.lumenReception, async () => {
+        await client.query(
+          "insert into public.stay_messages (tenant_id, reservation_id, sender, body, staff_id) values ($1, $2, 'staff', 'Enseguida', $3)",
+          [ids.lumen, id, users.lumenReception],
+        );
+        await client.query(
+          "update public.stay_messages set read_at = now() where reservation_id = $1 and sender = 'guest'",
+          [id],
+        );
+      });
+      const thread = await asIdentity(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.get_stay_messages($1, 'chat-token') as m", [id]))
+            .rows[0].m,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(asGuest.ok).toBe(false);
+      expect(asOther.ok).toBe(false);
+      expect(edit.ok).toBe(false);
+      expect(thread.map((m: { sender: string }) => m.sender)).toEqual(["guest", "staff"]);
+      expect(thread.every((m: { read_at: string | null }) => m.read_at)).toBe(true);
+      expect(thread[0].category).toBe("towels");
+    });
+
+    it("closes the conversation of old stays", async () => {
+      await client.query("savepoint setup");
+      const r = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, created_by_role, access_token_hash)
+         values ($1, $2, '2020-01-01T14:00:00Z', '2020-01-03T11:00:00Z', 'completed', 'public',
+                 encode(extensions.digest('chat-token', 'sha256'), 'hex'))
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"]],
+      );
+      const closed = await attempt("anon", undefined, () =>
+        client.query("select public.send_stay_message($1, 'chat-token', 'hola')", [r.rows[0].id]),
+      );
+      await client.query("rollback to savepoint setup");
+      expect(closed.ok).toBe(false);
+      if (!closed.ok) expect(closed.error).toMatch(/cerrada/);
+    });
+  });
 });

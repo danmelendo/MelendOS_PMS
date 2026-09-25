@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  MessagesSquare,
   Home,
   ChevronRight,
   Clock,
@@ -27,12 +28,9 @@ export const Route = createFileRoute("/stays/trips")({
 });
 
 // Front-desk requests a guest can send from the current stay card.
-type RequestType = "late_checkout" | "early_checkin";
-
 function PersonalArea() {
   const { memberId, member } = useMember();
   const navigate = useNavigate();
-  const [sentRequest, setSentRequest] = useState<RequestType | null>(null);
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ["pms", "bookings", memberId],
@@ -56,17 +54,6 @@ function PersonalArea() {
   const currentStay =
     list.find((b) => b.status === "in_progress") ?? list.find((b) => b.status === "confirmed");
 
-  const sendRequest = (type: RequestType) => {
-    setSentRequest(type);
-    const labels: Record<RequestType, string> = {
-      late_checkout: "Solicitud de late checkout enviada",
-      early_checkin: "Solicitud de early check-in enviada",
-    };
-    toast.success(labels[type], {
-      description: "Recepción te confirmará la disponibilidad en breve.",
-    });
-  };
-
   return (
     <div className="px-5 pt-6">
       <h1 className="mb-4 flex items-center gap-2 text-2xl font-semibold tracking-tight">
@@ -87,7 +74,11 @@ function PersonalArea() {
           </span>
           <span className={HUB_LABEL}>Facturas</span>
         </Link>
-        <Link to="/stays/incidents" className={HUB_CARD}>
+        <Link
+          to={currentStay ? "/stays/chat/$bookingId" : "/stays/incidents"}
+          params={currentStay ? { bookingId: currentStay.id } : undefined}
+          className={HUB_CARD}
+        >
           <span className={HUB_ICON}>
             <Wrench className="h-4 w-4" />
           </span>
@@ -134,33 +125,43 @@ function PersonalArea() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
                 Recepción
               </p>
-              {sentRequest ? (
-                <div className="flex items-center gap-2  bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  Solicitud enviada · recepción te responderá en breve
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  <PortalAction
-                    icon={Wrench}
-                    label="Hacer una petición"
-                    onClick={() => navigate({ to: "/stays/incidents" })}
-                    color="bg-sky-50 text-sky-700 ring-sky-100"
-                  />
-                  <PortalAction
-                    icon={LogIn}
-                    label="Early check-in"
-                    onClick={() => sendRequest("early_checkin")}
-                    color="bg-emerald-50 text-emerald-700 ring-emerald-100"
-                  />
-                  <PortalAction
-                    icon={LogOut}
-                    label="Late checkout"
-                    onClick={() => sendRequest("late_checkout")}
-                    color="bg-amber-50 text-amber-700 ring-amber-100"
-                  />
-                </div>
-              )}
+              <div className="grid grid-cols-3 gap-2">
+                <PortalAction
+                  icon={MessagesSquare}
+                  label="Chat con recepción"
+                  onClick={() =>
+                    navigate({
+                      to: "/stays/chat/$bookingId",
+                      params: { bookingId: currentStay.id },
+                    })
+                  }
+                  color="bg-sky-50 text-sky-700 ring-sky-100"
+                />
+                <PortalAction
+                  icon={LogIn}
+                  label="Early check-in"
+                  onClick={() =>
+                    navigate({
+                      to: "/stays/chat/$bookingId",
+                      params: { bookingId: currentStay.id },
+                      search: { request: "early_checkin" },
+                    })
+                  }
+                  color="bg-emerald-50 text-emerald-700 ring-emerald-100"
+                />
+                <PortalAction
+                  icon={LogOut}
+                  label="Late checkout"
+                  onClick={() =>
+                    navigate({
+                      to: "/stays/chat/$bookingId",
+                      params: { bookingId: currentStay.id },
+                      search: { request: "late_checkout" },
+                    })
+                  }
+                  color="bg-amber-50 text-amber-700 ring-amber-100"
+                />
+              </div>
             </div>
           </div>
         ) : (

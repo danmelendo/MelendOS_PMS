@@ -1766,6 +1766,57 @@ export type Database = {
           },
         ]
       }
+      stay_messages: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          id: string
+          read_at: string | null
+          reservation_id: string
+          sender: Database["public"]["Enums"]["message_sender"]
+          staff_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          reservation_id: string
+          sender: Database["public"]["Enums"]["message_sender"]
+          staff_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          reservation_id?: string
+          sender?: Database["public"]["Enums"]["message_sender"]
+          staff_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_messages_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -1926,7 +1977,59 @@ export type Database = {
         Args: { p_limit?: number; p_property?: string; p_tenant?: string }
         Returns: Json
       }
+      get_stay_messages: {
+        Args: { p_reservation_id: string; p_token?: string }
+        Returns: Json
+      }
       guest_booking_row: {
+        Args: { p_id: string; p_token: string }
+        Returns: {
+          access_token_hash: string | null
+          base_price: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cleaning_minutes: number
+          confirmation_email_error: string | null
+          confirmation_email_sent_at: string | null
+          created_at: string
+          created_by: string | null
+          created_by_role: string | null
+          customer_id: string | null
+          deposit_amount: number
+          deposit_paid: boolean
+          discount_amount: number
+          dynamic_reason: string | null
+          dynamic_surcharge: number
+          end_at: string
+          extras_total: number
+          hold_expires_at: string | null
+          id: string
+          internal_notes: string | null
+          is_prebooking: boolean
+          manual_override: boolean
+          member_id: string | null
+          paid_amount: number
+          people: number
+          promo_code_id: string | null
+          property_id: string | null
+          redsys_order: string | null
+          reference: string | null
+          room_id: string
+          simulated: boolean
+          start_at: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          tenant_id: string
+          total: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      guest_stay: {
         Args: { p_id: string; p_token: string }
         Returns: {
           access_token_hash: string | null
@@ -2008,6 +2111,15 @@ export type Database = {
           start_at: string
         }[]
       }
+      send_stay_message: {
+        Args: {
+          p_body: string
+          p_category?: string
+          p_reservation_id: string
+          p_token: string
+        }
+        Returns: string
+      }
       sign_guest_registration: {
         Args: {
           p_id: string
@@ -2062,6 +2174,7 @@ export type Database = {
         | "wellness"
         | "experiences"
         | "services"
+      message_sender: "guest" | "staff" | "assistant" | "system"
       payment_provider: "redsys" | "stripe"
       payment_status: "created" | "succeeded" | "failed" | "refunded"
       reservation_status:
@@ -2212,6 +2325,7 @@ export const Constants = {
         "experiences",
         "services",
       ],
+      message_sender: ["guest", "staff", "assistant", "system"],
       payment_provider: ["redsys", "stripe"],
       payment_status: ["created", "succeeded", "failed", "refunded"],
       reservation_status: [
