@@ -129,9 +129,9 @@ function CalendarPage() {
             <p className="text-xs text-muted-foreground">{rangeLabel}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Select value={buildingFilter} onValueChange={setBuildingFilter}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="min-w-0 flex-1 sm:w-44 sm:flex-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

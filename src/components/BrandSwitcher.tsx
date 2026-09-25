@@ -22,7 +22,7 @@ export function BrandSwitcher({ className = "" }: { className?: string }) {
             type="button"
             onClick={() => setBrand(id)}
             aria-pressed={active}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`rounded-full px-2 py-1 text-xs sm:px-3 font-semibold transition-colors ${
               active ? "text-white" : "text-neutral-500 hover:text-neutral-800"
             }`}
             style={active ? { backgroundColor: BRANDS[id].accent } : undefined}

@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Hotel, ArrowUpRight } from "lucide-react";
+import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 
@@ -37,11 +37,11 @@ function WebLayout() {
       <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/85 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 sm:px-5">
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-4">
-            <Link to="/web" className="flex shrink-0 items-center gap-2">
+            <Link to="/web" className="flex min-w-0 items-center gap-2">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--brand)] text-white">
                 <Hotel className="h-4 w-4" />
               </span>
-              <span className="whitespace-nowrap text-base font-semibold tracking-tight sm:text-lg">
+              <span className="truncate text-base font-semibold tracking-tight sm:text-lg">
                 {brand.name}
               </span>
             </Link>
@@ -66,11 +66,12 @@ function WebLayout() {
               <BrandSwitcher />
               <a
                 href="/stays"
-                className="inline-flex shrink-0 items-center gap-1 bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white sm:px-4"
+                aria-label="Mi reserva"
+                className="inline-flex shrink-0 items-center gap-1 bg-[var(--brand)] px-2.5 py-2 text-sm font-semibold text-white sm:px-4"
               >
                 <span className="hidden sm:inline">Mi reserva</span>
-                <span className="sm:hidden">Mi reserva</span>
-                <ArrowUpRight className="h-4 w-4" />
+                <UserRound className="h-4 w-4 sm:hidden" />
+                <ArrowUpRight className="hidden h-4 w-4 sm:block" />
               </a>
             </div>
           </div>
