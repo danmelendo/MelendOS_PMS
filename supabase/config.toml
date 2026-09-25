@@ -423,3 +423,8 @@ verify_jwt = false
 
 [functions.payments-notify]
 verify_jwt = false
+
+# Called by the public web with the publishable key (not a JWT). A signed-in
+# guest's JWT, when present, is verified inside the function.
+[functions.bookings-create]
+verify_jwt = false

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayOfWeek, eachNight, isYmd, nightsBetween } from "./dates.ts";
+import { addDays, dayOfWeek, eachNight, isYmd, nightsBetween, zonedHourToUtc } from "./dates.ts";
 
 describe("dates", () => {
   it("validates calendar dates", () => {
@@ -30,5 +30,23 @@ describe("dates", () => {
 
   it("rejects invalid input", () => {
     expect(() => nightsBetween("2026-13-01", "2026-10-01")).toThrow();
+  });
+});
+
+describe("zonedHourToUtc", () => {
+  it("converts hotel wall-clock hours to UTC in summer and winter", () => {
+    expect(zonedHourToUtc("2026-07-10", 15, "Europe/Madrid").toISOString()).toBe(
+      "2026-07-10T13:00:00.000Z",
+    );
+    expect(zonedHourToUtc("2026-12-10", 15, "Europe/Madrid").toISOString()).toBe(
+      "2026-12-10T14:00:00.000Z",
+    );
+  });
+
+  it("handles the day clocks change", () => {
+    // 25 Oct 2026: 03:00 CEST → 02:00 CET. Check-out at 12:00 is already CET.
+    expect(zonedHourToUtc("2026-10-25", 12, "Europe/Madrid").toISOString()).toBe(
+      "2026-10-25T11:00:00.000Z",
+    );
   });
 });
