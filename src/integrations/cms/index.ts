@@ -9,10 +9,13 @@
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { IS_DEMO } from "@/integrations/supabase/client";
 import { DemoCmsClient } from "./demo-cms-client";
+import { SupabaseCmsClient } from "./supabase-cms-client";
 import type { CmsClient } from "./client";
 
-export const cms: CmsClient = new DemoCmsClient();
+// Backend-free demo: in-memory agenda. Real backend: the experiences table.
+export const cms: CmsClient = IS_DEMO ? new DemoCmsClient() : new SupabaseCmsClient();
 
 export type { CmsClient } from "./client";
 export * from "./types";

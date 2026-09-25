@@ -21,6 +21,8 @@ export type PropertyBrand = "urban" | "coast";
 
 export interface PmsProperty {
   id: string;
+  /** Tenant (hotel company) the property belongs to. */
+  tenantId: string;
   name: string;
   /** Brand the property is marketed under (drives discovery filtering). */
   brand: PropertyBrand;
@@ -186,10 +188,14 @@ export interface SignatureDoc {
 }
 
 export type JournalEventType =
+  | "created"
   | "prebooked"
   | "confirmed"
   | "signed"
   | "checked_in"
+  | "checked_out"
+  | "rejected"
+  | "no_show"
   | "cancelled"
   | "points_earned"
   | "reward_redeemed";
@@ -211,6 +217,8 @@ export interface Member {
   email: string;
   phone: string | null;
   memberNumber: string;
+  /** Hotel (tenant) this guest account belongs to. */
+  tenantId: string | null;
 }
 
 // ── Hotel facilities (instalaciones) ─────────────────────────────────────────
@@ -321,3 +329,10 @@ export interface AvailabilityWatch {
   createdAt: string;
   notifiedAt: string | null;
 }
+
+// ── Payments ─────────────────────────────────────────────────────────────────
+/** Where the browser goes to pay: a form auto-posted to the gateway (Redsys)
+ *  or a URL (Stripe Checkout, or instant approval in the demo). */
+export type PaymentRedirect =
+  | { kind: "form"; url: string; fields: Record<string, string> }
+  | { kind: "url"; url: string };

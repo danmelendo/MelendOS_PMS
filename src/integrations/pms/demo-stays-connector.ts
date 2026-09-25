@@ -10,7 +10,7 @@
 // the singleton exported from ./index.ts — the mobile UI is unaffected.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { supabase } from "@/integrations/supabase/client";
+import { IS_DEMO, supabase } from "@/integrations/supabase/client";
 import { calculateNightlyPrice } from "@/lib/pricing";
 import { CHECKIN_HOUR, CHECKOUT_HOUR } from "@/lib/data";
 import type {
@@ -38,9 +38,9 @@ import type {
   PmsProperty,
   PmsProvince,
   PmsRoom,
+  PaymentRedirect,
   PricePreview,
   PropertyBrand,
-  Reservation,
   Reward,
   RoomOffer,
   SignatureDoc,
@@ -61,13 +61,52 @@ type Row = Record<string, any>;
 const sb = supabase as unknown as {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   from: (table: string) => any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: any }>;
   functions: typeof supabase.functions;
 };
 
-const HOLD_MINUTES = 30;
+// ── Guest access tokens ──────────────────────────────────────────────────────
+// Bookings made without an account are managed with the one-time token that
+// bookings-create returns (the database stores only its hash). The browser
+// keeps the tokens of its own bookings.
+const TOKENS_KEY = "stays-guest-tokens";
 
-function uid(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function readTokens(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(TOKENS_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveToken(reservationId: string, token: string) {
+  try {
+    const all = readTokens();
+    all[reservationId] = token;
+    window.localStorage.setItem(TOKENS_KEY, JSON.stringify(all));
+  } catch {
+    // storage unavailable (private mode): the booking is still created
+  }
+}
+
+export function guestToken(reservationId: string): string | null {
+  return readTokens()[reservationId] ?? null;
+}
+
+async function errorMessage(error: unknown, fallback: string): Promise<string> {
+  // Edge Function errors carry the JSON body in error.context (a Response).
+  const ctx = (error as { context?: Response })?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.json();
+      if (body?.error) return String(body.error);
+    } catch {
+      // not JSON
+    }
+  }
+  return (error as { message?: string })?.message ?? fallback;
 }
 
 function nightsBetween(checkIn: string, checkOut: string): number {
@@ -110,8 +149,9 @@ export class DemoStaysConnector implements PmsConnector {
       payload?: Row;
     } = {},
   ) {
+    // The real backend journals through triggers; only the demo writes it here.
+    if (!IS_DEMO) return;
     await sb.from("booking_journal").insert({
-      id: uid("jr"),
       booking_ref: bookingRef,
       member_id: opts.memberId ?? null,
       property_id: opts.propertyId ?? null,
@@ -124,6 +164,7 @@ export class DemoStaysConnector implements PmsConnector {
 
   /** Expired holds are released so they stop blocking their slot. */
   private async sweepExpiredHolds() {
+    if (!IS_DEMO) return; // a scheduled job does it on the real backend
     const nowIso = new Date().toISOString();
     const { data } = await sb
       .from("reservations")
@@ -255,6 +296,7 @@ export class DemoStaysConnector implements PmsConnector {
       const fromPrice = fromByProperty.get(p.id) ?? null;
       return {
         id: p.id,
+        tenantId: p.tenant_id,
         name: p.name,
         brand: (p.brand ?? "urban") as PropertyBrand,
         provinceId: p.province_id,
@@ -324,27 +366,27 @@ export class DemoStaysConnector implements PmsConnector {
   }> {
     await this.sweepExpiredHolds();
     const nights = nightsBetween(query.checkIn, query.checkOut);
-    const rooms = await this.listRooms(query.propertyId);
+    const [rooms, property] = await Promise.all([
+      this.listRooms(query.propertyId),
+      this.getProperty(query.propertyId),
+    ]);
     const start = startIso(query.checkIn);
     const end = endIso(query.checkOut);
-    // Reservations that could block any of these rooms in the window.
-    const roomIds = rooms.map((r) => r.id);
-    const { data: blockers } = await sb
-      .from("reservations")
-      .select("room_id,status,start_at,end_at,is_prebooking,hold_expires_at")
-      .in("room_id", roomIds.length ? roomIds : ["__none__"]);
-    const nowIso = new Date().toISOString();
+    // Busy windows (cleaning included) of the hotel's rooms; no guest data.
+    const { data: busy } = property
+      ? await sb.rpc("room_busy_windows", {
+          p_tenant: property.tenantId,
+          p_from: new Date(start).toISOString(),
+          p_to: new Date(end).toISOString(),
+        })
+      : { data: [] };
+    const startMs = new Date(start).getTime();
+    const endMs = new Date(end).getTime();
     const blockedRooms = new Set<string>();
-    for (const b of (blockers ?? []) as Row[]) {
-      if (b.status === "cancelled" || b.status === "no_show" || b.status === "rejected") continue;
-      if (
-        b.status === "pending" &&
-        b.is_prebooking &&
-        b.hold_expires_at &&
-        b.hold_expires_at < nowIso
-      )
-        continue;
-      if (String(b.start_at) < end && start < String(b.end_at)) blockedRooms.add(b.room_id);
+    for (const b of (busy ?? []) as Row[]) {
+      if (new Date(b.start_at).getTime() < endMs && startMs < new Date(b.end_at).getTime()) {
+        blockedRooms.add(b.room_id);
+      }
     }
 
     // Dynamic pricing: the fuller the property over the window, the higher the
@@ -380,62 +422,31 @@ export class DemoStaysConnector implements PmsConnector {
   // ── Prebookings & reservations ─────────────────────────────────────────────
 
   async createPrebooking(input: CreatePrebookingInput): Promise<Prebooking> {
-    await this.sweepExpiredHolds();
-    const { data: room } = await sb.from("rooms").select("*").eq("id", input.roomId).maybeSingle();
-    if (!room) throw new Error("Habitación no encontrada");
-    const r = room as Row;
-
-    const start = startIso(input.checkIn);
-    const end = endIso(input.checkOut);
-    const breakdown = await calculateNightlyPrice({
-      rateGroupId: r.rate_group_id,
-      checkIn: new Date(start),
-      checkOut: new Date(end),
-      extras: [],
-    });
-    const total = breakdown.total;
-    const deposit = round2(total * 0.3);
-    const holdExpiresAt = input.hold
-      ? new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString()
-      : null;
-
-    const { data: inserted, error } = await sb
-      .from("reservations")
-      .insert({
+    // Priced and validated on the server (bookings-create); never confirmed here.
+    const { data, error } = await supabase.functions.invoke("bookings-create", {
+      body: {
         room_id: input.roomId,
-        property_id: r.property_id,
-        member_id: input.memberId,
-        customer_id: null,
-        start_at: start,
-        end_at: end,
-        people: input.guests,
-        cleaning_minutes: 15,
-        base_price: breakdown.base,
-        dynamic_surcharge: breakdown.dynamicSurcharge,
-        dynamic_reason: breakdown.dynamicReason,
-        extras_total: 0,
-        total,
-        deposit_amount: deposit,
-        deposit_paid: false,
-        paid_amount: 0,
-        status: "pending",
-        is_prebooking: input.hold,
-        hold_expires_at: holdExpiresAt,
-        manual_override: false,
-        created_by_role: "member",
-        internal_notes: null,
-      })
-      .select("*")
-      .single();
-    if (error) throw new Error((error as Row).message ?? "No se pudo crear la prereserva");
-
-    const row = inserted as Row;
-    await this.appendJournal(row.id, "prebooked", {
-      memberId: input.memberId,
-      propertyId: r.property_id,
-      payload: { room: r.name, checkIn: input.checkIn, checkOut: input.checkOut, hold: input.hold },
+        check_in: input.checkIn,
+        check_out: input.checkOut,
+        guests: input.guests,
+        hold: input.hold,
+        ...(input.guest ? { customer: input.guest } : {}),
+        ...(input.extras?.length ? { extras: input.extras } : {}),
+      },
     });
-    return this.mapBooking(row);
+    if (error || !data) {
+      throw new Error(await errorMessage(error, "No se pudo crear la reserva"));
+    }
+    const draft = data as { reservation_id: string; access_token: string };
+    saveToken(draft.reservation_id, draft.access_token);
+    await this.appendJournal(draft.reservation_id, "prebooked", {
+      memberId: input.memberId ?? null,
+      propertyId: input.propertyId,
+      payload: { checkIn: input.checkIn, checkOut: input.checkOut, hold: input.hold },
+    });
+    const booking = await this.getBooking(draft.reservation_id);
+    if (!booking) throw new Error("No se pudo leer la reserva");
+    return booking;
   }
 
   async getPrebooking(id: string): Promise<Prebooking | null> {
@@ -445,51 +456,50 @@ export class DemoStaysConnector implements PmsConnector {
   async getBooking(id: string): Promise<Prebooking | null> {
     await this.sweepExpiredHolds();
     const { data } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();
-    if (!data) return null;
-    return this.mapBooking(data as Row);
+    if (data) return this.mapBooking(data as Row);
+    const guest = await this.guestBooking(id);
+    return guest ? this.mapBooking(guest) : null;
   }
 
-  async confirmPrebooking(id: string): Promise<Reservation> {
-    const { data: existing } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();
-    if (!existing) throw new Error("Reserva no encontrada");
-    const row = existing as Row;
+  /** Booking made without an account, read with its access token. */
+  private async guestBooking(id: string): Promise<Row | null> {
+    const token = guestToken(id);
+    if (!token) return null;
+    const { data } = await sb.rpc("get_guest_booking", { p_id: id, p_token: token });
+    return (data as Row | null) ?? null;
+  }
 
-    // Reuse the PMS payment path (mock marks deposit paid + status confirmed).
-    const { error } = await supabase.functions.invoke("create-redsys-payment", {
-      body: { reservation_id: id },
+  async startPayment(id: string, returnUrl: string): Promise<PaymentRedirect> {
+    const { data, error } = await supabase.functions.invoke("payments-create", {
+      body: { reservation_id: id, return_url: returnUrl },
     });
-    if (error) throw new Error("No se pudo procesar la señal");
-
-    await sb
-      .from("reservations")
-      .update({ is_prebooking: false, hold_expires_at: null })
-      .eq("id", id);
-
-    await this.appendJournal(id, "confirmed", {
-      memberId: row.member_id,
-      propertyId: row.property_id,
-      payload: { deposit: Number(row.deposit_amount ?? 0) },
-    });
-
-    // Earn loyalty points based on the member's current tier multiplier.
-    if (row.member_id) {
-      await this.earnPoints(row.member_id, Number(row.total ?? 0), id, row.property_id);
+    if (error || !data) throw new Error(await errorMessage(error, "No se pudo iniciar el pago"));
+    if (IS_DEMO) {
+      // The demo "gateway" confirms at once; mirror what the database triggers
+      // do on the real backend (journal and loyalty points).
+      const { data: row } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();
+      const r = row as Row | null;
+      if (r) {
+        await this.appendJournal(id, "confirmed", {
+          memberId: r.member_id,
+          propertyId: r.property_id,
+          payload: { deposit: Number(r.deposit_amount ?? 0) },
+        });
+        if (r.member_id) {
+          await this.earnPoints(r.member_id, Number(r.total ?? 0), id, r.property_id);
+        }
+      }
     }
-
-    const updated = await this.getBooking(id);
-    return updated!;
+    return (data as { redirect: PaymentRedirect }).redirect;
   }
 
   async cancelPrebooking(id: string): Promise<void> {
-    const { data } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();
-    const row = data as Row | null;
-    await sb.from("reservations").update({ status: "cancelled" }).eq("id", id);
-    if (row) {
-      await this.appendJournal(id, "cancelled", {
-        memberId: row.member_id,
-        propertyId: row.property_id,
-      });
-    }
+    const token = guestToken(id);
+    const { error } = token
+      ? await sb.rpc("cancel_guest_booking", { p_id: id, p_token: token })
+      : await sb.rpc("cancel_my_reservation", { p_reservation_id: id });
+    if (error) throw new Error(error.message ?? "No se pudo cancelar");
+    await this.appendJournal(id, "cancelled", {});
   }
 
   async listBookings(memberId: string): Promise<Prebooking[]> {
@@ -505,15 +515,17 @@ export class DemoStaysConnector implements PmsConnector {
 
   // ── Loyalty club ───────────────────────────────────────────────────────────
 
-  private async getTiers(): Promise<LoyaltyTier[]> {
+  private async getTiers(tenantId: string | null): Promise<LoyaltyTier[]> {
     const { data } = await sb.from("loyalty_tiers").select("*").order("min_points");
-    return ((data ?? []) as Row[]).map((t) => ({
-      id: t.id,
-      name: t.name,
-      minPoints: Number(t.min_points),
-      pointsPerEuro: Number(t.points_per_euro),
-      perks: t.perks ?? [],
-    }));
+    return ((data ?? []) as Row[])
+      .filter((r: Row) => !r.tenant_id || !tenantId || r.tenant_id === tenantId)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        minPoints: Number(t.min_points),
+        pointsPerEuro: Number(t.points_per_euro),
+        perks: t.perks ?? [],
+      }));
   }
 
   async getMember(memberId: string): Promise<Member | null> {
@@ -526,15 +538,16 @@ export class DemoStaysConnector implements PmsConnector {
       email: m.email,
       phone: m.phone ?? null,
       memberNumber: m.member_number,
+      tenantId: m.tenant_id ?? null,
     };
   }
 
   async getLoyaltyAccount(memberId: string): Promise<LoyaltyAccount> {
-    const [{ data: acct }, tiers, { data: member }] = await Promise.all([
+    const [{ data: acct }, { data: member }] = await Promise.all([
       sb.from("loyalty_accounts").select("*").eq("member_id", memberId).maybeSingle(),
-      this.getTiers(),
-      sb.from("members").select("member_number").eq("id", memberId).maybeSingle(),
+      sb.from("members").select("member_number, tenant_id").eq("id", memberId).maybeSingle(),
     ]);
+    const tiers = await this.getTiers((member as Row)?.tenant_id ?? null);
     const a = (acct as Row) ?? {
       points: 0,
       lifetime_points: 0,
@@ -578,15 +591,18 @@ export class DemoStaysConnector implements PmsConnector {
     }));
   }
 
-  async listRewards(): Promise<Reward[]> {
+  async listRewards(memberId?: string): Promise<Reward[]> {
+    const tenantId = memberId ? ((await this.getMember(memberId))?.tenantId ?? null) : null;
     const { data } = await sb.from("rewards").select("*").eq("active", true).order("cost_points");
-    return ((data ?? []) as Row[]).map((r) => ({
-      id: r.id,
-      name: r.name,
-      costPoints: Number(r.cost_points),
-      category: r.category,
-      description: r.description,
-    }));
+    return ((data ?? []) as Row[])
+      .filter((r: Row) => !r.tenant_id || !tenantId || r.tenant_id === tenantId)
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        costPoints: Number(r.cost_points),
+        category: r.category,
+        description: r.description,
+      }));
   }
 
   private async earnPoints(
@@ -606,7 +622,6 @@ export class DemoStaysConnector implements PmsConnector {
       })
       .eq("member_id", memberId);
     await sb.from("loyalty_transactions").insert({
-      id: uid("lt"),
       member_id: memberId,
       type: "earn",
       points,
@@ -622,29 +637,15 @@ export class DemoStaysConnector implements PmsConnector {
   }
 
   async redeemReward(memberId: string, rewardId: string): Promise<LoyaltyAccount> {
-    const [account, rewards] = await Promise.all([
-      this.getLoyaltyAccount(memberId),
-      this.listRewards(),
-    ]);
-    const reward = rewards.find((r) => r.id === rewardId);
-    if (!reward) throw new Error("Recompensa no encontrada");
-    if (account.points < reward.costPoints) throw new Error("Puntos insuficientes");
-    await sb
-      .from("loyalty_accounts")
-      .update({ points: account.points - reward.costPoints })
-      .eq("member_id", memberId);
-    await sb.from("loyalty_transactions").insert({
-      id: uid("lt"),
-      member_id: memberId,
-      type: "redeem",
-      points: -reward.costPoints,
-      reason: `Canje · ${reward.name}`,
-      reservation_id: null,
-      created_at: new Date().toISOString(),
+    const { error } = await sb.rpc("redeem_reward", {
+      p_member_id: memberId,
+      p_reward_id: rewardId,
     });
+    if (error) throw new Error(error.message ?? "No se pudo canjear");
+    const reward = (await this.listRewards(memberId)).find((r) => r.id === rewardId);
     await this.appendJournal(`reward-${rewardId}`, "reward_redeemed", {
       memberId,
-      payload: { reward: reward.name, points: reward.costPoints },
+      payload: { reward: reward?.name, points: reward?.costPoints },
     });
     return this.getLoyaltyAccount(memberId);
   }
@@ -658,11 +659,12 @@ export class DemoStaysConnector implements PmsConnector {
       .eq("reservation_id", reservationId)
       .order("created_at", { ascending: false })
       .maybeSingle();
-    if (!data) return null;
-    const s = data as Row;
+    const s =
+      (data as Row | null) ?? ((await this.guestBooking(reservationId))?.signature as Row | null);
+    if (!s) return null;
     return {
       id: s.id,
-      reservationId: s.reservation_id,
+      reservationId: s.reservation_id ?? reservationId,
       docType: s.doc_type,
       signerName: s.signer_name,
       signatureData: s.signature_data ?? null,
@@ -677,41 +679,33 @@ export class DemoStaysConnector implements PmsConnector {
     signerName: string,
     signatureData: string,
   ): Promise<SignatureDoc> {
-    const nowIso = new Date().toISOString();
-    const existing = await this.getSignature(reservationId);
-    if (existing) {
-      await sb
-        .from("signatures")
-        .update({
-          signature_data: signatureData,
-          signer_name: signerName,
-          status: "signed",
-          signed_at: nowIso,
-        })
-        .eq("id", existing.id);
+    const token = guestToken(reservationId);
+    if (token) {
+      const { error } = await sb.rpc("sign_guest_registration", {
+        p_id: reservationId,
+        p_token: token,
+        p_signer: signerName,
+        p_signature_data: signatureData,
+      });
+      if (error) throw new Error(error.message ?? "No se pudo firmar");
     } else {
-      await sb.from("signatures").insert({
-        id: uid("sig"),
+      const { data: res } = await sb
+        .from("reservations")
+        .select("tenant_id")
+        .eq("id", reservationId)
+        .maybeSingle();
+      const { error } = await sb.from("signatures").insert({
+        tenant_id: (res as Row | null)?.tenant_id,
         reservation_id: reservationId,
         doc_type: docType,
         signer_name: signerName,
         signature_data: signatureData,
         status: "signed",
-        signed_at: nowIso,
-        created_at: nowIso,
+        signed_at: new Date().toISOString(),
       });
+      if (error) throw new Error(error.message ?? "No se pudo firmar");
     }
-    const { data: res } = await sb
-      .from("reservations")
-      .select("member_id,property_id")
-      .eq("id", reservationId)
-      .maybeSingle();
-    const r = res as Row | null;
-    await this.appendJournal(reservationId, "signed", {
-      memberId: r?.member_id,
-      propertyId: r?.property_id,
-      payload: { doc: docType },
-    });
+    await this.appendJournal(reservationId, "signed", { payload: { doc: docType } });
     return (await this.getSignature(reservationId))!;
   }
 
@@ -754,7 +748,7 @@ export class DemoStaysConnector implements PmsConnector {
     const { data: inserted } = await sb
       .from("availability_watches")
       .insert({
-        id: uid("watch"),
+        tenant_id: (await this.getMember(input.memberId))?.tenantId,
         member_id: input.memberId,
         property_id: input.propertyId,
         room_id: input.roomId,
@@ -893,7 +887,7 @@ export class DemoStaysConnector implements PmsConnector {
     const { data: inserted } = await sb
       .from("space_bookings")
       .insert({
-        id: uid("sp"),
+        tenant_id: (await this.getMember(input.memberId))?.tenantId,
         member_id: input.memberId,
         space_id: input.spaceId,
         date: input.date,
@@ -973,7 +967,7 @@ export class DemoStaysConnector implements PmsConnector {
   async createIncident(input: CreateIncidentInput): Promise<Incident> {
     const nowIso = new Date().toISOString();
     const row: Row = {
-      id: uid("inc"),
+      tenant_id: (await this.getMember(input.memberId))?.tenantId,
       member_id: input.memberId,
       property_name: input.propertyName ?? null,
       category: input.category,
@@ -1007,7 +1001,11 @@ export class DemoStaysConnector implements PmsConnector {
     if (filter?.propertyId) q = q.eq("property_id", filter.propertyId);
     if (filter?.eventType) q = q.eq("event_type", filter.eventType);
     const { data } = await q;
-    return ((data ?? []) as Row[]).map((e) => ({
+    let rows = (data ?? []) as Row[];
+    if (!rows.length && filter?.bookingRef) {
+      rows = ((await this.guestBooking(filter.bookingRef))?.journal as Row[] | undefined) ?? [];
+    }
+    return rows.map((e) => ({
       id: e.id,
       bookingRef: e.booking_ref,
       memberId: e.member_id ?? null,
