@@ -11,10 +11,13 @@
 // The mock is schema-less at runtime: rows are plain JSON objects.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>;
+
+import { addDays, ymdInZone, zonedHourToUtc } from "@domain/dates.ts";
+import { simCustomers, simulateHistory, type SimRoom } from "@shared/sim/history.ts";
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 20; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 21; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -1323,7 +1326,97 @@ export function buildSeedDb(): DemoDb {
     ],
   };
   assignTenants(out);
+  addSimulatedHistory(out, now);
   return out;
+}
+
+// A year of simulated history per hotel plus the stays already booked ahead,
+// from the same simulator (and seeds) as scripts/simulate-history.ts, so the
+// dashboards have data. Shorter than the database history to fit in
+// localStorage.
+const SIMULATION = { "hotel-lumen": ["urban", 1], "albora-hotel-spa": ["coastal", 2] } as const;
+
+function addSimulatedHistory(d: DemoDb, now: Date) {
+  for (const t of d.tenants) {
+    const sim = SIMULATION[t.slug as keyof typeof SIMULATION];
+    if (!sim) continue;
+    const tz = String(t.settings?.timezone ?? "Europe/Madrid");
+    const today = ymdInZone(now, tz);
+    const rooms: SimRoom[] = d.rooms
+      .filter((r) => r.tenant_id === t.id && r.active !== false && r.status !== "out_of_service")
+      .flatMap((r) => {
+        const rate = d.rate_nightly.find((n) => n.rate_group_id === r.rate_group_id);
+        if (!rate) return [];
+        return [
+          {
+            id: r.id,
+            tenantId: t.id,
+            propertyId: r.property_id,
+            capacity: Number(r.capacity),
+            price: Number(rate.price),
+            weekendPrice: rate.weekend_price == null ? null : Number(rate.weekend_price),
+          },
+        ];
+      });
+    const busy = d.reservations
+      .filter(
+        (r) => r.tenant_id === t.id && !["cancelled", "no_show", "rejected"].includes(r.status),
+      )
+      .map((r) => ({
+        roomId: String(r.room_id),
+        checkIn: ymdInZone(String(r.start_at), tz),
+        checkOut: ymdInZone(String(r.end_at), tz),
+      }));
+    const [profile, seed] = sim;
+    const { stays, customers } = simulateHistory({
+      profile,
+      seed,
+      today,
+      rooms,
+      busy,
+      from: addDays(today, -365),
+      to: addDays(today, 180),
+      depositPct: Number(t.settings?.deposit_pct ?? 30),
+    });
+    const pool = simCustomers(seed, customers);
+    const firstSeen = new Map<number, string>();
+    for (const s of stays) {
+      const seen = firstSeen.get(s.customer);
+      if (!seen || s.createdAt < seen) firstSeen.set(s.customer, s.createdAt);
+    }
+    pool.forEach((c, i) =>
+      d.customers.push({ ...c, tenant_id: t.id, created_at: firstSeen.get(i), simulated: true }),
+    );
+    const inHour = Number(t.settings?.checkin_hour ?? 15);
+    const outHour = Number(t.settings?.checkout_hour ?? 12);
+    for (const s of stays) {
+      d.reservations.push({
+        id: s.id,
+        tenant_id: t.id,
+        room_id: s.roomId,
+        property_id: s.propertyId,
+        customer_id: pool[s.customer].id,
+        start_at: zonedHourToUtc(s.checkIn, inHour, tz).toISOString(),
+        end_at: zonedHourToUtc(s.checkOut, outHour, tz).toISOString(),
+        people: s.guests,
+        cleaning_minutes: 15,
+        base_price: s.roomRevenue,
+        dynamic_surcharge: 0,
+        extras_total: 0,
+        total: s.roomRevenue,
+        deposit_amount: s.deposit,
+        deposit_paid: s.depositPaid,
+        paid_amount: s.paidAmount,
+        status: s.status,
+        created_by_role: s.channel,
+        created_at: s.createdAt,
+        updated_at: s.cancelledAt ?? s.createdAt,
+        cancelled_at: s.cancelledAt,
+        cancellation_reason: s.cancelledAt ? "Cancelada por el huésped" : null,
+        simulated: true,
+      });
+    }
+  }
 }
 
 // Mirror of the real schema: every row carries tenant_id. It is derived from the

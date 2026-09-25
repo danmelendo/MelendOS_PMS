@@ -302,8 +302,14 @@ class QueryBuilder implements PromiseLike<Result> {
         }
       }
       for (const row of targets) {
+        const wasCancelled = row.status === "cancelled";
         Object.assign(row, patch);
-        if (table === "reservations") row.updated_at = new Date().toISOString();
+        if (table === "reservations") {
+          row.updated_at = new Date().toISOString();
+          // Same as the stamp_cancellation trigger.
+          if (row.status !== "cancelled") row.cancelled_at = null;
+          else if (!wasCancelled) row.cancelled_at = row.cancelled_at ?? row.updated_at;
+        }
       }
       persist();
       const projected = targets.map((r) => resolveEmbeds(table, r, this.select_));

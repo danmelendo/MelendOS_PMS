@@ -3,6 +3,7 @@
 // shared code as the real backend (e.g. createBookingDraft), so both modes
 // behave alike. Only wired in when no Supabase credentials are configured.
 import { isBlocking, type RoomReservation } from "@domain/availability.ts";
+import { ymdInZone } from "@domain/dates.ts";
 import {
   BookingError,
   createBookingDraft,
@@ -205,6 +206,44 @@ async function getGuestBooking(args: Record<string, unknown>) {
   });
 }
 
+// Stay facts for the dashboards: same projection as the report_stays SQL
+// function (dates in the hotel timezone), fed to the shared KPI code.
+function reportStays(args: Record<string, unknown>) {
+  const from = String(args.p_from);
+  const to = String(args.p_to);
+  const tenants = db().tenants.filter((t) => !args.p_tenant || t.id === args.p_tenant);
+  const rooms: Record<string, number> = {};
+  const stays: unknown[][] = [];
+  for (const t of tenants) {
+    const tz = String(t.settings?.timezone ?? "Europe/Madrid");
+    rooms[t.id] = db().rooms.filter((r) => r.tenant_id === t.id && r.active !== false).length;
+    for (const r of db().reservations) {
+      if (r.tenant_id !== t.id) continue;
+      const checkIn = ymdInZone(String(r.start_at), tz);
+      const checkOut = ymdInZone(String(r.end_at), tz);
+      const created = ymdInZone(String(r.created_at ?? r.start_at), tz);
+      const cancelledAt = r.cancelled_at ?? (r.status === "cancelled" ? r.updated_at : null);
+      const overlaps = checkIn <= to && checkOut > from;
+      if (!overlaps && (created < from || created > to)) continue;
+      stays.push([
+        t.id,
+        r.room_id,
+        checkIn,
+        checkOut,
+        created,
+        cancelledAt ? ymdInZone(String(cancelledAt), tz) : null,
+        r.status,
+        r.created_by_role ?? null,
+        Number(r.people ?? 2),
+        Number(r.base_price ?? 0) +
+          Number(r.dynamic_surcharge ?? 0) -
+          Number(r.discount_amount ?? 0),
+      ]);
+    }
+  }
+  return { rooms, stays };
+}
+
 // ── RPC ──────────────────────────────────────────────────────────────────────
 export async function mockServerRpc(
   fn: string,
@@ -221,6 +260,8 @@ export async function mockServerRpc(
       );
     case "get_guest_booking":
       return getGuestBooking(args);
+    case "report_stays":
+      return ok(reportStays(args));
     case "sign_guest_registration": {
       const r = await guestRow(args.p_id, args.p_token);
       if (!r) return fail("Reserva no encontrada");

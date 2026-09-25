@@ -5,11 +5,13 @@
     "supabase/functions/_shared/domain/**/*.ts",
     "supabase/functions/_shared/payments/**/*.ts",
     "supabase/functions/_shared/tools/**/*.ts",
+    "supabase/functions/_shared/sim/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.db.config.ts",
     "supabase/tests/**/*.ts",
     "scripts/**/*.mjs",
+    "scripts/**/*.ts",
     "eslint.config.js"
   ],
   "compilerOptions": {
@@ -35,6 +37,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@domain/*": ["./supabase/functions/_shared/domain/*"],
+      "@shared/*": ["./supabase/functions/_shared/*"],
       // Shared Edge Function code imports supabase-js the Deno way.
       "npm:@supabase/supabase-js@2": ["./node_modules/@supabase/supabase-js"]
     }
