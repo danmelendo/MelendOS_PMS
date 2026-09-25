@@ -104,7 +104,7 @@ function TodayPage() {
       <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-md border bg-card p-3">
         <button
           type="button"
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-left"
+          className="flex min-w-[15rem] flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-left"
           onClick={() => openEdit(r.id)}
         >
           <span className="font-medium">

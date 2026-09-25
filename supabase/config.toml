@@ -431,3 +431,6 @@ verify_jwt = false
 
 [functions.stays-extend]
 verify_jwt = false
+
+[functions.demo-login]
+verify_jwt = false

@@ -3,6 +3,7 @@
 // Usage: node --env-file=.env scripts/seed-auth.mjs
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { DEMO_ACCOUNTS } from "../supabase/functions/_shared/demo/accounts.ts";
 
 const url = process.env.SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY;
@@ -22,14 +23,10 @@ const admin = createClient(url, secret, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const STAFF = [
-  { email: "admin@lumen.demostays.example", tenant: "lumen", role: "admin" },
-  { email: "recepcion@lumen.demostays.example", tenant: "lumen", role: "reception" },
-  { email: "admin@albora.demostays.example", tenant: "albora", role: "admin" },
-  { email: "recepcion@albora.demostays.example", tenant: "albora", role: "reception" },
-];
+// Accounts come from the shared list (also used by demo-login and the picker).
+const STAFF = DEMO_ACCOUNTS.filter((a) => a.kind === "staff");
 const GUEST = {
-  email: "alex@guest.demostays.example",
+  email: DEMO_ACCOUNTS.find((a) => a.kind === "guest").email,
   members: ["lumen-member-alex", "albora-member-alex"],
 };
 
