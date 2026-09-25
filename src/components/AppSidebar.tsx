@@ -33,6 +33,10 @@ import {
   Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { IS_DEMO } from "@/integrations/supabase/client";
+import { DEMO_ACCESS, demoAccounts, demoSignIn } from "@/lib/demo-access";
 import { useRoles } from "@/lib/roles";
 import { useInboxLive, useUnreadCount } from "@/lib/chat";
 
@@ -66,6 +70,7 @@ export function AppSidebar() {
   const { signOut, user } = useAuth();
   const { isAdmin } = useRoles();
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   return (
     <Sidebar collapsible="icon">
@@ -174,6 +179,33 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        {/* Demo on the real backend: switch profile to see each hotel's data. */}
+        {DEMO_ACCESS && !IS_DEMO && (
+          <label className="px-2 group-data-[collapsible=icon]:hidden">
+            <span className="mb-1 block text-[11px] text-sidebar-foreground/60">Ver como</span>
+            <select
+              value={user?.email ?? ""}
+              onChange={async (e) => {
+                try {
+                  // Signing in again replaces the session (no sign-out, which
+                  // would unmount the panel halfway).
+                  await demoSignIn(e.target.value);
+                  qc.resetQueries();
+                  navigate({ to: "/today" });
+                } catch (err) {
+                  toast.error((err as Error).message);
+                }
+              }}
+              className="w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-foreground"
+            >
+              {demoAccounts("staff").map((a) => (
+                <option key={a.email} value={a.email}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="px-2 pb-1 flex items-center gap-2">
           <span
             className="text-xs text-sidebar-foreground/60 truncate flex-1"
