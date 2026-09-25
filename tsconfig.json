@@ -5,6 +5,9 @@
     "supabase/functions/_shared/domain/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
+    "vitest.db.config.ts",
+    "supabase/tests/**/*.ts",
+    "scripts/**/*.mjs",
     "eslint.config.js"
   ],
   "compilerOptions": {
