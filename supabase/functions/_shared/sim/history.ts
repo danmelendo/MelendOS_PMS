@@ -390,3 +390,91 @@ export function simulateHistory(input: SimInput): { stays: SimStay[]; customers:
   }
   return { stays, customers };
 }
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+export interface SimReview {
+  stayId: string;
+  rating: number;
+  scores: Record<string, number>;
+  comment: string | null;
+  createdAt: string;
+}
+
+const COMMENTS: Record<HotelProfile, Record<"good" | "ok" | "bad", string[]>> = {
+  urban: {
+    good: [
+      "Ubicación inmejorable, a dos pasos de todo. La habitación impecable y el personal muy atento.",
+      "Repetiremos. El desayuno con producto local es un acierto y la terraza al atardecer, preciosa.",
+      "Todo perfecto: check-in rápido, cama comodísima y muy silencioso para estar en el centro.",
+      "Nos recomendaron sitios para comer que fueron un acierto. Trato cercano y profesional.",
+      "Great location in the old town, spotless room and very friendly staff.",
+    ],
+    ok: [
+      "Buena relación calidad-precio. La habitación algo pequeña, pero muy bien aprovechada.",
+      "Bien situado y limpio. El desayuno podría tener algo más de variedad.",
+      "Correcto en general; el aire acondicionado hacía algo de ruido por la noche.",
+    ],
+    bad: [
+      "La habitación daba a la calle y hubo bastante ruido el fin de semana.",
+      "El check-in se retrasó y la habitación no estaba lista a la hora.",
+    ],
+  },
+  coastal: {
+    good: [
+      "Las vistas al mar desde la habitación son espectaculares. El spa, una maravilla.",
+      "Vacaciones perfectas en familia: piscina, playa al lado y un personal encantador.",
+      "Desayuno buenísimo en la terraza y la bahía de Altea al fondo. Volveremos seguro.",
+      "Muy tranquilo, ideal para desconectar. El circuito de spa merece mucho la pena.",
+      "Amazing sea views, lovely spa and very helpful staff. Highly recommended.",
+    ],
+    ok: [
+      "Hotel bonito y bien cuidado. En agosto la piscina estaba muy llena.",
+      "Buena estancia; el aparcamiento es algo justo en temporada alta.",
+      "Todo correcto, aunque el restaurante nos pareció algo caro.",
+    ],
+    bad: [
+      "Nos dieron una habitación sin vistas al mar pese a haberla pedido.",
+      "El wifi fallaba mucho en las habitaciones de la segunda planta.",
+    ],
+  },
+};
+
+/** Reviews left by some guests after a completed stay. */
+export function simReviews(
+  stays: SimStay[],
+  profile: HotelProfile,
+  seed: number,
+  today: Ymd,
+): SimReview[] {
+  const r = rng(seed ^ 0xbeef);
+  const out: SimReview[] = [];
+  for (const s of stays) {
+    if (s.status !== "completed" || r.next() > 0.3) continue;
+    const rating = r.weighted([
+      [5, 52],
+      [4, 32],
+      [3, 10],
+      [2, 4],
+      [1, 2],
+    ] as const);
+    const around = (bias = 0) => Math.max(1, Math.min(5, rating + bias + r.int(-1, 1)));
+    const scores: Record<string, number> = {
+      cleanliness: around(),
+      staff: around(r.next() < 0.3 ? 1 : 0),
+      location: around(profile === "urban" ? 1 : 0),
+      comfort: around(),
+      value: around(-(r.next() < 0.3 ? 1 : 0)),
+    };
+    const mood = rating >= 4 ? "good" : rating === 3 ? "ok" : "bad";
+    const day = addDays(s.checkOut, r.int(0, 10));
+    if (day > today) continue;
+    out.push({
+      stayId: s.id,
+      rating,
+      scores,
+      comment: r.next() < 0.8 ? r.pick(COMMENTS[profile][mood]) : null,
+      createdAt: at(day, r.int(9, 22), r.int(0, 59)),
+    });
+  }
+  return out;
+}

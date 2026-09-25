@@ -53,6 +53,27 @@ async function attempt<T>(
   }
 }
 
+/** Switches the loyalty club on for a hotel (tests run inside the rollback). */
+const clubOn = (tenantId: string) =>
+  client.query(
+    `update public.tenants set settings = settings || '{"features": {"loyalty": true}}'::jsonb where id = $1`,
+    [tenantId],
+  );
+
+/** Runs fn as the given identity and keeps what it did (caller rolls back). */
+async function asIdentity<T>(
+  role: "anon" | "authenticated",
+  userId: string | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await as(role, userId);
+  try {
+    return await fn();
+  } finally {
+    await client.query("reset role");
+  }
+}
+
 const count = async (sql: string, params: unknown[] = []) =>
   Number((await client.query(sql, params)).rows[0].n);
 
@@ -380,7 +401,19 @@ describe.skipIf(!DB_URL)("RLS", () => {
       await client.query("rollback to savepoint setup");
     });
 
-    it("a guest redeems rewards with enough points only", async () => {
+    it("a guest redeems rewards with enough points only, where there is a club", async () => {
+      const noClub = await attempt("authenticated", users.guestAlex, async () => {
+        const r = await client.query("select id from public.rewards where tenant_id = $1 limit 1", [
+          ids.lumen,
+        ]);
+        return client.query("select public.redeem_reward($1, $2)", [
+          ids["lumen-member-alex"],
+          r.rows[0].id,
+        ]);
+      });
+      expect(noClub.ok).toBe(false); // Lumen is on the starter plan: no club
+      await client.query("savepoint club");
+      await clubOn(ids.lumen);
       const cheap = (
         await client.query<{ id: string }>(
           "select id from public.rewards where tenant_id = $1 order by cost_points limit 1",
@@ -412,6 +445,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
         client.query("select public.redeem_reward($1, $2)", [ids["lumen-member-alex"], cheap]),
       );
       expect(forged.ok).toBe(false);
+      await client.query("rollback to savepoint club");
     });
 
     it("reception changes a room's status but not its other fields", async () => {
@@ -432,8 +466,9 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(rename.ok).toBe(false);
     });
 
-    it("a paid member stay earns points and is journaled", async () => {
+    it("a paid member stay earns points and is journaled (hotel with a club)", async () => {
       await client.query("savepoint setup");
+      await clubOn(ids.lumen);
       const stay = await pendingGuestStay(100);
       await client.query(
         "update public.reservations set deposit_paid = true, status = 'confirmed' where id = $1",
@@ -728,6 +763,132 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(admin.ok && admin.value[0].tenant_id).toBe(ids.lumen);
       expect(admin.ok && admin.value[0].bytes).toBeGreaterThanOrEqual(1234);
       expect(reception).toEqual({ ok: true, value: [] });
+    });
+  });
+  describe("modules and reviews", () => {
+    async function pastStay(status = "completed") {
+      const c = await client.query<{ id: string }>(
+        "insert into public.customers (tenant_id, name, email) values ($1, 'Laura Gómez', 'laura.rls@example.com') returning id",
+        [ids.lumen],
+      );
+      const r = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, property_id, customer_id, start_at, end_at, status, created_by_role, access_token_hash)
+         values ($1, $2, (select property_id from public.rooms where id = $2), $3,
+                 '2020-03-01T14:00:00Z', '2020-03-03T11:00:00Z', $4, 'public',
+                 encode(extensions.digest('review-token', 'sha256'), 'hex'))
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"], c.rows[0].id, status],
+      );
+      return r.rows[0].id;
+    }
+    const submit = (id: string, token: string | null, rating = 5, user?: string) =>
+      attempt(
+        user ? "authenticated" : "anon",
+        user,
+        async () =>
+          (
+            await client.query(
+              `select public.submit_review($1, $2, $3, '{"staff": 5, "value": 9, "bogus": 3}'::jsonb, 'Muy bien') as id`,
+              [id, token, rating],
+            )
+          ).rows[0].id,
+      );
+
+    it("the club comes with the pro plan: Lumen (starter) has none, Albora (pro) has it", async () => {
+      const r = await client.query(
+        "select public.tenant_feature($1, 'loyalty') as lumen, public.tenant_feature($2, 'loyalty') as albora, public.tenant_feature($1, 'reviews') as reviews",
+        [ids.lumen, ids.albora],
+      );
+      expect(r.rows[0]).toEqual({ lumen: false, albora: true, reviews: true });
+    });
+
+    it("guests review a completed stay once, with its token", async () => {
+      await client.query("savepoint setup");
+      const id = await pastStay();
+      const wrongToken = await submit(id, "guess");
+      const ok = await asIdentity("anon", undefined, () =>
+        client.query(
+          "select public.submit_review($1, 'review-token', 5, '{\"staff\": 5, \"value\": 9, \"bogus\": 3}'::jsonb, 'Muy bien')",
+          [id],
+        ),
+      ).then(() => ({ ok: true }));
+      const twice = await submit(id, "review-token");
+      const stored = (
+        await client.query(
+          "select rating, scores, author_name, comment from public.reviews where reservation_id = $1",
+          [id],
+        )
+      ).rows[0];
+      const mine = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.get_my_review($1, 'review-token') as r", [id])).rows[0]
+            .r,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(wrongToken.ok).toBe(false);
+      expect(ok.ok).toBe(true);
+      expect(twice.ok).toBe(false);
+      // Unknown and out-of-range scores dropped; public name shortened.
+      expect(stored).toEqual({
+        rating: 5,
+        scores: { staff: 5 },
+        author_name: "Laura G.",
+        comment: "Muy bien",
+      });
+      expect(mine.ok && mine.value.rating).toBe(5);
+    });
+
+    it("stays that are not finished cannot be reviewed", async () => {
+      await client.query("savepoint setup");
+      const id = await pastStay("confirmed");
+      const r = await submit(id, "review-token");
+      await client.query("rollback to savepoint setup");
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toMatch(/terminada/);
+    });
+
+    it("the public sees reviews without booking data; staff of the hotel reply", async () => {
+      await client.query("savepoint setup");
+      const id = await pastStay();
+      await asIdentity("anon", undefined, () =>
+        client.query("select public.submit_review($1, 'review-token', 2)", [id]),
+      );
+      const reviewId = (
+        await client.query("select id from public.reviews where reservation_id = $1", [id])
+      ).rows[0].id;
+      const table = await attempt("anon", undefined, () =>
+        count("select count(*) as n from public.reviews"),
+      );
+      const pub = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.get_reviews(null, $1, 100) as j", [ids.lumen])).rows[0]
+            .j,
+      );
+      const otherHotel = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.reply_review($1, 'Hola')", [reviewId]),
+      );
+      const reply = await attempt("authenticated", users.lumenReception, async () => {
+        await client.query("select public.reply_review($1, 'Sentimos lo ocurrido')", [reviewId]);
+        return (await client.query("select reply from public.reviews where id = $1", [reviewId]))
+          .rows[0].reply;
+      });
+      await client.query("rollback to savepoint setup");
+
+      expect(table).toEqual({ ok: true, value: 0 });
+      expect(pub.ok).toBe(true);
+      if (pub.ok) {
+        const mine = pub.value.reviews.find((r: { id: string }) => r.id === reviewId);
+        expect(mine).toMatchObject({ rating: 2, author_name: "Laura G." });
+        expect(mine).not.toHaveProperty("reservation_id");
+        expect(pub.value.count).toBeGreaterThanOrEqual(1);
+      }
+      expect(otherHotel.ok).toBe(false);
+      expect(reply).toEqual({ ok: true, value: "Sentimos lo ocurrido" });
     });
   });
 });

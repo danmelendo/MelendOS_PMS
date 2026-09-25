@@ -1458,6 +1458,76 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          author_name: string
+          comment: string | null
+          created_at: string
+          id: string
+          property_id: string | null
+          rating: number
+          replied_at: string | null
+          replied_by: string | null
+          reply: string | null
+          reservation_id: string
+          scores: Json
+          simulated: boolean
+          tenant_id: string
+        }
+        Insert: {
+          author_name: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          rating: number
+          replied_at?: string | null
+          replied_by?: string | null
+          reply?: string | null
+          reservation_id: string
+          scores?: Json
+          simulated?: boolean
+          tenant_id: string
+        }
+        Update: {
+          author_name?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          rating?: number
+          replied_at?: string | null
+          replied_by?: string | null
+          reply?: string | null
+          reservation_id?: string
+          scores?: Json
+          simulated?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_tenant_id_property_id_fkey"
+            columns: ["tenant_id", "property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "reviews_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       rewards: {
         Row: {
           active: boolean
@@ -1847,7 +1917,15 @@ export type Database = {
         Args: { p_id: string; p_token: string }
         Returns: Json
       }
+      get_my_review: {
+        Args: { p_reservation_id: string; p_token?: string }
+        Returns: Json
+      }
       get_payment_secret: { Args: { p_name: string }; Returns: string }
+      get_reviews: {
+        Args: { p_limit?: number; p_property?: string; p_tenant?: string }
+        Returns: Json
+      }
       guest_booking_row: {
         Args: { p_id: string; p_token: string }
         Returns: {
@@ -1913,10 +1991,15 @@ export type Database = {
         Args: { p_member_id: string; p_reward_id: string }
         Returns: number
       }
+      reply_review: {
+        Args: { p_reply: string; p_review_id: string }
+        Returns: undefined
+      }
       report_stays: {
         Args: { p_from: string; p_tenant?: string; p_to: string }
         Returns: Json
       }
+      review_author: { Args: { p_name: string }; Returns: string }
       room_busy_windows: {
         Args: { p_from: string; p_tenant: string; p_to: string }
         Returns: {
@@ -1933,6 +2016,20 @@ export type Database = {
           p_token: string
         }
         Returns: undefined
+      }
+      submit_review: {
+        Args: {
+          p_comment?: string
+          p_rating: number
+          p_reservation_id: string
+          p_scores?: Json
+          p_token: string
+        }
+        Returns: string
+      }
+      tenant_feature: {
+        Args: { p_feature: string; p_tenant: string }
+        Returns: boolean
       }
       tenant_storage_usage: {
         Args: never

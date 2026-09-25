@@ -1,3 +1,6 @@
+import { GuestReview } from "@/components/Reviews";
+import { guestToken } from "@/integrations/pms/demo-stays-connector";
+import { useFeatures } from "@/lib/features";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -49,6 +52,7 @@ const EVENT_META: Record<
 
 function WebBookingDetail() {
   const { bookingId } = Route.useParams();
+  const features = useFeatures();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -142,6 +146,12 @@ function WebBookingDetail() {
           </span>
         )}
       </div>
+
+      <GuestReview
+        reservationId={booking.id}
+        token={guestToken(booking.id)}
+        completed={booking.status === "completed" && features.reviews}
+      />
 
       {/* Timeline */}
       <div className="mt-4  bg-white p-6 shadow-sm ring-1 ring-neutral-100">
