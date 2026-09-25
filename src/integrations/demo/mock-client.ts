@@ -91,6 +91,11 @@ function resolveEmbeds(table: string, row: Row, select: string): Row {
     out.rate_groups = db().rate_groups.find((g) => g.id === row.rate_group_id) ?? null;
   }
 
+  if (table === "cancellation_requests" && has("reservations")) {
+    const r = db().reservations.find((x) => x.id === row.reservation_id);
+    out.reservations = r ? resolveEmbeds("reservations", r, select) : null;
+  }
+
   if (table === "reservations") {
     if (has("rooms")) out.rooms = clone(db().rooms.find((x) => x.id === row.room_id) ?? null);
     if (has("customers"))

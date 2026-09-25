@@ -1,12 +1,27 @@
-import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Hotel, ArrowUpRight } from "lucide-react";
+import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
+import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
+import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
+
+const GUEST_LINK = /^\/web\/(?:booking|checkout|sign|upload)\/([^/]+)\/?$/;
 
 // Public hotel website. One codebase serves both hotel brands; the active one
 // drives the name, accent and copy via the brand layer (src/lib/brand). Public:
 // no guest identity needed to browse and book.
 export const Route = createFileRoute("/web")({
+  // Links sent to a guest carry their booking token (?t=...): keep it in this
+  // browser and drop it from the address bar before the page loads.
+  beforeLoad: ({ location }) => {
+    const { t, ...rest } = location.search as Record<string, unknown>;
+    const id = GUEST_LINK.exec(location.pathname)?.[1];
+    if (typeof t !== "string" || !id) return;
+    adoptGuestToken(id, t);
+    const query = new URLSearchParams(
+      Object.entries(rest).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]),
+    ).toString();
+    throw redirect({ href: location.pathname + (query ? `?${query}` : ""), replace: true });
+  },
   component: WebLayout,
   head: () => ({
     meta: [
@@ -37,11 +52,11 @@ function WebLayout() {
       <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/85 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 sm:px-5">
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-4">
-            <Link to="/web" className="flex shrink-0 items-center gap-2">
+            <Link to="/web" className="flex min-w-0 items-center gap-2">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--brand)] text-white">
                 <Hotel className="h-4 w-4" />
               </span>
-              <span className="whitespace-nowrap text-base font-semibold tracking-tight sm:text-lg">
+              <span className="truncate text-base font-semibold tracking-tight sm:text-lg">
                 {brand.name}
               </span>
             </Link>
@@ -66,11 +81,12 @@ function WebLayout() {
               <BrandSwitcher />
               <a
                 href="/stays"
-                className="inline-flex shrink-0 items-center gap-1 bg-[var(--brand)] px-3 py-2 text-sm font-semibold text-white sm:px-4"
+                aria-label="Mi reserva"
+                className="inline-flex shrink-0 items-center gap-1 bg-[var(--brand)] px-2.5 py-2 text-sm font-semibold text-white sm:px-4"
               >
                 <span className="hidden sm:inline">Mi reserva</span>
-                <span className="sm:hidden">Mi reserva</span>
-                <ArrowUpRight className="h-4 w-4" />
+                <UserRound className="h-4 w-4 sm:hidden" />
+                <ArrowUpRight className="hidden h-4 w-4 sm:block" />
               </a>
             </div>
           </div>

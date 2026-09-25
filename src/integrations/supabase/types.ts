@@ -216,6 +216,60 @@ export type Database = {
           },
         ]
       }
+      cancellation_requests: {
+        Row: {
+          channel: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          reason: string | null
+          requested_at: string
+          reservation_id: string
+          status: Database["public"]["Enums"]["cancellation_status"]
+          tenant_id: string
+        }
+        Insert: {
+          channel?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          reason?: string | null
+          requested_at?: string
+          reservation_id: string
+          status?: Database["public"]["Enums"]["cancellation_status"]
+          tenant_id?: string
+        }
+        Update: {
+          channel?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          reason?: string | null
+          requested_at?: string
+          reservation_id?: string
+          status?: Database["public"]["Enums"]["cancellation_status"]
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cancellation_requests_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       common_spaces: {
         Row: {
           active: boolean
@@ -1268,6 +1322,7 @@ export type Database = {
           promo_code_id: string | null
           property_id: string | null
           redsys_order: string | null
+          reference: string | null
           room_id: string
           start_at: string
           status: Database["public"]["Enums"]["reservation_status"]
@@ -1304,6 +1359,7 @@ export type Database = {
           promo_code_id?: string | null
           property_id?: string | null
           redsys_order?: string | null
+          reference?: string | null
           room_id: string
           start_at: string
           status?: Database["public"]["Enums"]["reservation_status"]
@@ -1340,6 +1396,7 @@ export type Database = {
           promo_code_id?: string | null
           property_id?: string | null
           redsys_order?: string | null
+          reference?: string | null
           room_id?: string
           start_at?: string
           status?: Database["public"]["Enums"]["reservation_status"]
@@ -1759,6 +1816,10 @@ export type Database = {
         Returns: string
       }
       current_tenant_id: { Args: never; Returns: string }
+      decide_cancellation: {
+        Args: { p_approve: boolean; p_note?: string; p_request_id: string }
+        Returns: undefined
+      }
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number
@@ -1809,6 +1870,7 @@ export type Database = {
           promo_code_id: string | null
           property_id: string | null
           redsys_order: string | null
+          reference: string | null
           room_id: string
           start_at: string
           status: Database["public"]["Enums"]["reservation_status"]
@@ -1872,6 +1934,7 @@ export type Database = {
       }
     }
     Enums: {
+      cancellation_status: "pending" | "approved" | "rejected"
       dynamic_rule_type: "occupancy" | "date"
       extra_category:
         | "breakfast"
@@ -2020,6 +2083,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      cancellation_status: ["pending", "approved", "rejected"],
       dynamic_rule_type: ["occupancy", "date"],
       extra_category: [
         "breakfast",

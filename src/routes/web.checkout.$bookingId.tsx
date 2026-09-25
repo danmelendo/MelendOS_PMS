@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
 import { IS_DEMO } from "@/integrations/supabase/client";
 import { followPaymentRedirect, paymentReturnSearch } from "@/lib/payments";
+import { GuestBookingMissing } from "@/components/GuestBookingMissing";
 import { eur, formatDateShort } from "@/lib/stays";
 
 export const Route = createFileRoute("/web/checkout/$bookingId")({
@@ -23,7 +24,7 @@ function WebCheckoutScreen() {
   const qc = useQueryClient();
   const autoFired = useRef(false);
 
-  const { data: booking } = useQuery({
+  const { data: booking, isPending: bookingLoading } = useQuery({
     queryKey: ["pms", "booking", bookingId],
     queryFn: () => pms.getBooking(bookingId),
     // Back from the gateway the confirmation arrives by server notification:
@@ -48,7 +49,7 @@ function WebCheckoutScreen() {
     }
   }, [auto, booking?.status, confirm]);
 
-  if (!booking) return <p className="py-20 text-center text-sm text-neutral-400">Cargando…</p>;
+  if (!booking) return <GuestBookingMissing loading={bookingLoading} />;
 
   const expired = booking.status === "expired";
   const alreadyConfirmed = ["confirmed", "in_progress", "completed"].includes(booking.status);

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { eur, STATUS_LABELS, STATUS_COLORS, useRooms } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
+import { CancellationRequests } from "@/components/CancellationRequests";
 import {
   ReservationExtrasInfo,
   type ReservationExtraItem,
@@ -117,7 +118,7 @@ function TodayPage() {
             {STATUS_LABELS[r.status]}
           </Badge>
         </button>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {r.created_by_role === "public" && r.deposit_paid && (
             <span
               className="mr-1 text-xs text-emerald-700 dark:text-emerald-300"
@@ -163,7 +164,7 @@ function TodayPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="Llegadas"
           value={String(arrivals.length)}
@@ -192,7 +193,9 @@ function TodayPage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <CancellationRequests />
+
+      <div className="grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <ListCard
           icon={<LogIn className="h-4 w-4" />}
           title="Llegadas"

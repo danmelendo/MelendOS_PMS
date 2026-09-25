@@ -245,70 +245,74 @@ function PromosPage() {
           {active.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">No hay códigos activos.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30 border-y">
-                <tr>
-                  <th className="p-2 text-left">Código</th>
-                  <th className="p-2 text-right">Descuento</th>
-                  <th className="p-2 text-center">Vigencia</th>
-                  <th className="p-2 text-center">Uso</th>
-                  <th className="p-2 text-center">Activo</th>
-                  <th className="p-2 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {active.map((c) => (
-                  <tr key={c.id} className="border-b last:border-0">
-                    <td className="p-2 font-mono font-medium tracking-wide">{c.code}</td>
-                    <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
-                    <td className="p-2 text-center text-xs text-muted-foreground">
-                      {fmtDate(c.valid_from)} →{" "}
-                      {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
-                    </td>
-                    <td className="p-2 text-center">
-                      {c.single_use ? (
-                        <Badge variant="outline">1 uso ({c.times_used}/1)</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {c.times_used}
-                          {c.max_uses ? `/${c.max_uses}` : ""} usos
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-2 text-center">
-                      <Switch
-                        checked={c.active}
-                        onCheckedChange={(active) => patch.mutate({ id: c.id, patch: { active } })}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Archivar"
-                          onClick={() =>
-                            patch.mutate({ id: c.id, patch: { archived: true, active: false } })
-                          }
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Eliminar"
-                          onClick={() => {
-                            if (confirm(`¿Eliminar el código ${c.code}?`)) remove.mutate(c.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[34rem] text-sm">
+                <thead className="bg-muted/30 border-y">
+                  <tr>
+                    <th className="p-2 text-left">Código</th>
+                    <th className="p-2 text-right">Descuento</th>
+                    <th className="p-2 text-center">Vigencia</th>
+                    <th className="p-2 text-center">Uso</th>
+                    <th className="p-2 text-center">Activo</th>
+                    <th className="p-2 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {active.map((c) => (
+                    <tr key={c.id} className="border-b last:border-0">
+                      <td className="p-2 font-mono font-medium tracking-wide">{c.code}</td>
+                      <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
+                      <td className="p-2 text-center text-xs text-muted-foreground">
+                        {fmtDate(c.valid_from)} →{" "}
+                        {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
+                      </td>
+                      <td className="p-2 text-center">
+                        {c.single_use ? (
+                          <Badge variant="outline">1 uso ({c.times_used}/1)</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {c.times_used}
+                            {c.max_uses ? `/${c.max_uses}` : ""} usos
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-2 text-center">
+                        <Switch
+                          checked={c.active}
+                          onCheckedChange={(active) =>
+                            patch.mutate({ id: c.id, patch: { active } })
+                          }
+                        />
+                      </td>
+                      <td className="p-2">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Archivar"
+                            onClick={() =>
+                              patch.mutate({ id: c.id, patch: { archived: true, active: false } })
+                            }
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Eliminar"
+                            onClick={() => {
+                              if (confirm(`¿Eliminar el código ${c.code}?`)) remove.mutate(c.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -320,45 +324,47 @@ function PromosPage() {
             <CardTitle className="text-base text-muted-foreground">Archivados</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30 border-y">
-                <tr>
-                  <th className="p-2 text-left">Código</th>
-                  <th className="p-2 text-right">Descuento</th>
-                  <th className="p-2 text-center">Vigencia</th>
-                  <th className="p-2 text-center">Usos</th>
-                  <th className="p-2 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {archived.map((c) => (
-                  <tr key={c.id} className="border-b last:border-0 text-muted-foreground">
-                    <td className="p-2 font-mono tracking-wide line-through">{c.code}</td>
-                    <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
-                    <td className="p-2 text-center text-xs">
-                      {fmtDate(c.valid_from)} →{" "}
-                      {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
-                    </td>
-                    <td className="p-2 text-center">{c.times_used}</td>
-                    <td className="p-2">
-                      <div className="flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Eliminar"
-                          onClick={() => {
-                            if (confirm(`¿Eliminar definitivamente ${c.code}?`))
-                              remove.mutate(c.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[34rem] text-sm">
+                <thead className="bg-muted/30 border-y">
+                  <tr>
+                    <th className="p-2 text-left">Código</th>
+                    <th className="p-2 text-right">Descuento</th>
+                    <th className="p-2 text-center">Vigencia</th>
+                    <th className="p-2 text-center">Usos</th>
+                    <th className="p-2 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {archived.map((c) => (
+                    <tr key={c.id} className="border-b last:border-0 text-muted-foreground">
+                      <td className="p-2 font-mono tracking-wide line-through">{c.code}</td>
+                      <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
+                      <td className="p-2 text-center text-xs">
+                        {fmtDate(c.valid_from)} →{" "}
+                        {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
+                      </td>
+                      <td className="p-2 text-center">{c.times_used}</td>
+                      <td className="p-2">
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Eliminar"
+                            onClick={() => {
+                              if (confirm(`¿Eliminar definitivamente ${c.code}?`))
+                                remove.mutate(c.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}

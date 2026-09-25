@@ -254,6 +254,26 @@ export async function mockServerRpc(
       persist();
       return ok(null);
     }
+    case "decide_cancellation": {
+      const req = db().cancellation_requests?.find((x) => x.id === args.p_request_id);
+      if (!req) return fail("Solicitud no encontrada");
+      if (req.status !== "pending") return fail("La solicitud ya está resuelta");
+      const approve = !!args.p_approve;
+      Object.assign(req, {
+        status: approve ? "approved" : "rejected",
+        decided_at: new Date().toISOString(),
+        decided_by: "demo-staff",
+        decision_note: (args.p_note as string | null) ?? null,
+      });
+      const r = db().reservations.find((x) => x.id === req.reservation_id);
+      if (approve && r && ["pending", "confirmed"].includes(String(r.status))) {
+        r.status = "cancelled";
+        r.cancellation_reason =
+          String(req.reason ?? "").trim() || "Cancelada a petición del huésped";
+      }
+      persist();
+      return ok(null);
+    }
     case "redeem_reward": {
       const reward = db().rewards.find((x) => x.id === args.p_reward_id && x.active);
       const acc = db().loyalty_accounts.find((x) => x.member_id === args.p_member_id);
