@@ -342,6 +342,7 @@ export type Database = {
           no_contact: boolean
           notes: string | null
           phone: string | null
+          simulated: boolean
           tenant_id: string
         }
         Insert: {
@@ -352,6 +353,7 @@ export type Database = {
           no_contact?: boolean
           notes?: string | null
           phone?: string | null
+          simulated?: boolean
           tenant_id?: string
         }
         Update: {
@@ -362,6 +364,7 @@ export type Database = {
           no_contact?: boolean
           notes?: string | null
           phone?: string | null
+          simulated?: boolean
           tenant_id?: string
         }
         Relationships: [
@@ -1297,6 +1300,7 @@ export type Database = {
           access_token_hash: string | null
           base_price: number
           cancellation_reason: string | null
+          cancelled_at: string | null
           cleaning_minutes: number
           confirmation_email_error: string | null
           confirmation_email_sent_at: string | null
@@ -1324,6 +1328,7 @@ export type Database = {
           redsys_order: string | null
           reference: string | null
           room_id: string
+          simulated: boolean
           start_at: string
           status: Database["public"]["Enums"]["reservation_status"]
           tenant_id: string
@@ -1334,6 +1339,7 @@ export type Database = {
           access_token_hash?: string | null
           base_price?: number
           cancellation_reason?: string | null
+          cancelled_at?: string | null
           cleaning_minutes?: number
           confirmation_email_error?: string | null
           confirmation_email_sent_at?: string | null
@@ -1361,6 +1367,7 @@ export type Database = {
           redsys_order?: string | null
           reference?: string | null
           room_id: string
+          simulated?: boolean
           start_at: string
           status?: Database["public"]["Enums"]["reservation_status"]
           tenant_id?: string
@@ -1371,6 +1378,7 @@ export type Database = {
           access_token_hash?: string | null
           base_price?: number
           cancellation_reason?: string | null
+          cancelled_at?: string | null
           cleaning_minutes?: number
           confirmation_email_error?: string | null
           confirmation_email_sent_at?: string | null
@@ -1398,6 +1406,7 @@ export type Database = {
           redsys_order?: string | null
           reference?: string | null
           room_id?: string
+          simulated?: boolean
           start_at?: string
           status?: Database["public"]["Enums"]["reservation_status"]
           tenant_id?: string
@@ -1845,6 +1854,7 @@ export type Database = {
           access_token_hash: string | null
           base_price: number
           cancellation_reason: string | null
+          cancelled_at: string | null
           cleaning_minutes: number
           confirmation_email_error: string | null
           confirmation_email_sent_at: string | null
@@ -1872,6 +1882,7 @@ export type Database = {
           redsys_order: string | null
           reference: string | null
           room_id: string
+          simulated: boolean
           start_at: string
           status: Database["public"]["Enums"]["reservation_status"]
           tenant_id: string
@@ -1902,6 +1913,10 @@ export type Database = {
         Args: { p_member_id: string; p_reward_id: string }
         Returns: number
       }
+      report_stays: {
+        Args: { p_from: string; p_tenant?: string; p_to: string }
+        Returns: Json
+      }
       room_busy_windows: {
         Args: { p_from: string; p_tenant: string; p_to: string }
         Returns: {
@@ -1918,6 +1933,14 @@ export type Database = {
           p_token: string
         }
         Returns: undefined
+      }
+      tenant_storage_usage: {
+        Args: never
+        Returns: {
+          bytes: number
+          objects: number
+          tenant_id: string
+        }[]
       }
       upsert_payment_secret: {
         Args: { p_name: string; p_secret: string }

@@ -79,3 +79,15 @@ export function zonedHourToUtc(day: Ymd, hour: number, timeZone: string): Date {
   // Re-check with the offset at the resulting instant (DST boundary days).
   return new Date(guess.getTime() - offsetMinutes(first, timeZone) * 60_000);
 }
+
+/** Calendar date of an instant in a timezone (same as `(ts at time zone tz)::date`). */
+export function ymdInZone(instant: Date | string, timeZone: string): Ymd {
+  const d = typeof instant === "string" ? new Date(instant) : instant;
+  // en-CA formats as yyyy-MM-dd.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}

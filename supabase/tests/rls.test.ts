@@ -631,4 +631,103 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(status).toBe("confirmed");
     });
   });
+  describe("analytics and data lake", () => {
+    async function stay(status = "confirmed") {
+      const r = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, base_price, total, created_at, created_by_role)
+         values ($1, $2, '2031-10-01T13:00:00Z', '2031-10-03T10:00:00Z', $3, 200, 200, '2031-09-30T23:30:00Z', 'public')
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"], status],
+      );
+      return r.rows[0].id;
+    }
+    const report = (role: "anon" | "authenticated", user?: string) =>
+      attempt(
+        role,
+        user,
+        async () =>
+          (await client.query("select public.report_stays('2031-10-01', '2031-10-31') as j"))
+            .rows[0].j,
+      );
+
+    it("report_stays gives staff their own hotel only, in hotel time", async () => {
+      await client.query("savepoint setup");
+      const id = await stay();
+      const mine = await report("authenticated", users.lumenReception);
+      const other = await report("authenticated", users.alboraAdmin);
+      const anon = await report("anon");
+      await client.query("rollback to savepoint setup");
+
+      expect(mine.ok).toBe(true);
+      if (mine.ok) {
+        expect(Object.keys(mine.value.rooms)).toEqual([ids.lumen]);
+        const row = mine.value.stays.find((s: unknown[]) => s[1] === ids["lumen-room-101"]);
+        // 23:30 UTC on 30 Sep is already 1 Oct in Madrid.
+        expect(row).toEqual([
+          ids.lumen,
+          ids["lumen-room-101"],
+          "2031-10-01",
+          "2031-10-03",
+          "2031-10-01",
+          null,
+          "confirmed",
+          "public",
+          2,
+          200,
+        ]);
+      }
+      expect(other.ok && other.value.stays.some((s: unknown[]) => s[0] === ids.lumen)).toBe(false);
+      expect(anon.ok).toBe(false);
+      void id;
+    });
+
+    it("stamps cancelled_at when a booking is cancelled and clears it if reinstated", async () => {
+      await client.query("savepoint setup");
+      const id = await stay("pending");
+      const at = async () =>
+        (await client.query("select cancelled_at from public.reservations where id = $1", [id]))
+          .rows[0].cancelled_at;
+      const before = await at();
+      await client.query("update public.reservations set status = 'cancelled' where id = $1", [id]);
+      const cancelled = await at();
+      await client.query("update public.reservations set status = 'pending' where id = $1", [id]);
+      const reinstated = await at();
+      await client.query("rollback to savepoint setup");
+      expect(before).toBeNull();
+      expect(cancelled).toBeInstanceOf(Date);
+      expect(reinstated).toBeNull();
+    });
+
+    it("keeps the lake private and shows storage use to hotel admins only", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        `insert into storage.objects (bucket_id, name, metadata)
+         values ('lake', $1, '{"size": 1234}'::jsonb)`,
+        [`tenant=${ids.lumen}/reservations/dt=2031-10-01/reservations.parquet`],
+      );
+      const read = (role: "anon" | "authenticated", user?: string) =>
+        attempt(role, user, () =>
+          count("select count(*) as n from storage.objects where bucket_id = 'lake'"),
+        );
+      const usage = (user: string) =>
+        attempt("authenticated", user, async () =>
+          (await client.query("select * from public.tenant_storage_usage()")).rows.map((r) => ({
+            tenant_id: r.tenant_id,
+            bytes: Number(r.bytes),
+          })),
+        );
+      const anon = await read("anon");
+      const staff = await read("authenticated", users.lumenAdmin);
+      const admin = await usage(users.lumenAdmin);
+      const reception = await usage(users.lumenReception);
+      await client.query("rollback to savepoint setup");
+
+      expect(anon).toEqual({ ok: true, value: 0 });
+      expect(staff).toEqual({ ok: true, value: 0 });
+      expect(admin.ok && admin.value.length).toBe(1);
+      expect(admin.ok && admin.value[0].tenant_id).toBe(ids.lumen);
+      expect(admin.ok && admin.value[0].bytes).toBeGreaterThanOrEqual(1234);
+      expect(reception).toEqual({ ok: true, value: [] });
+    });
+  });
 });
