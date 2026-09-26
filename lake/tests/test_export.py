@@ -66,7 +66,7 @@ def test_export_day_writes_hive_partitions(tmp_path, monkeypatch):
         f"('2', '{TENANT}', 'reservation.created', '2026-09-25 10:00:00+00')"
     )
 
-    files = export.export_day(con, dt.date(2026, 9, 25), tmp_path)
+    files = export.export_day(con, dt.date(2026, 9, 25), tmp_path, [TENANT])
 
     paths = [p for p, _ in files]
     assert f"tenant={TENANT}/customers/dt=2026-09-25/customers.parquet" in paths
