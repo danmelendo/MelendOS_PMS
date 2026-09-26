@@ -21,6 +21,8 @@ export interface CalendarQuery {
   tenantId: string;
   propertyId?: string | null;
   roomId?: string | null;
+  /** Only the rooms of one room type (channel availability). */
+  rateGroupId?: string | null;
   from: Ymd;
   days: number;
   guests: number;
@@ -72,7 +74,8 @@ export async function priceCalendar(
       r.rate_group_id &&
       r.capacity >= guests &&
       (!q.propertyId || r.property_id === q.propertyId) &&
-      (!q.roomId || r.id === q.roomId),
+      (!q.roomId || r.id === q.roomId) &&
+      (!q.rateGroupId || r.rate_group_id === q.rateGroupId),
   );
   const rules = toRules(ruleRows);
   const occupied = busy.map((b) => ({

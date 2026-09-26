@@ -44,8 +44,10 @@ SNAPSHOTS: dict[str, list[str]] = {
         "promo_code_id", "total", "deposit_amount", "deposit_paid", "paid_amount",
         "status", "is_prebooking", "created_by_role", "created_at", "updated_at",
         "cancelled_at", "simulated", "payment_mode", "free_cancellation_until",
-        "late_cancellation_fee", "cancellation_category",
+        "late_cancellation_fee", "cancellation_category", "channel_id", "channel_commission",
     ],
+    # Distribution channels (OTAs, tour operators): no secrets, no mapping.
+    "channels": ["id", "tenant_id", "kind", "provider", "status", "commission_pct", "created_at"],
     "reservation_extras": [
         "id", "tenant_id", "reservation_id", "extra_id", "qty", "unit_price", "is_gift",
         "created_at",

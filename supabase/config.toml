@@ -449,3 +449,12 @@ verify_jwt = false
 
 [functions.admin-copilot]
 verify_jwt = false
+
+[functions.channel-webhook]
+verify_jwt = false
+
+[functions.channels-dispatch]
+verify_jwt = false
+
+[functions.channel-simulate]
+verify_jwt = false

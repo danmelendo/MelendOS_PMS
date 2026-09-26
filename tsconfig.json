@@ -10,6 +10,7 @@
     "supabase/functions/_shared/mcp/**/*.ts",
     "supabase/functions/_shared/copilot/**/*.ts",
     "supabase/functions/_shared/demo/**/*.ts",
+    "supabase/functions/_shared/channels/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.db.config.ts",

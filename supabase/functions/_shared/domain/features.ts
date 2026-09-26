@@ -11,7 +11,7 @@
 // One code base for every hotel: this is configuration, never a fork.
 // Mirrored in SQL by public.tenant_feature(); the server checks it too.
 
-export const PACKAGE_IDS = ["stay", "ai", "chain", "data"] as const;
+export const PACKAGE_IDS = ["stay", "ai", "chain", "data", "distribution"] as const;
 export type PackageId = (typeof PACKAGE_IDS)[number];
 
 export const FEATURES = [
@@ -25,6 +25,7 @@ export const FEATURES = [
   "loyalty",
   "reports",
   "data_lake",
+  "channels",
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 export type Features = Record<Feature, boolean>;
@@ -83,6 +84,12 @@ export const MODULES: Record<Feature, ModuleInfo> = {
     description: "Ocupación, ADR, RevPAR, antelación, cancelaciones y canales.",
     package: "data",
   },
+  channels: {
+    name: "OTAs y touroperadores",
+    description:
+      "Recibe reservas de OTAs, channel managers y touroperadores y les envía la disponibilidad.",
+    package: "distribution",
+  },
   data_lake: {
     name: "Data lake",
     description: "Exportación diaria de los datos del hotel para análisis y modelos de predicción.",
@@ -107,6 +114,10 @@ export const PACKAGES: Record<PackageId, { name: string; description: string }> 
     name: "Datos",
     description: "Métricas del negocio y datos listos para análisis y predicción.",
   },
+  distribution: {
+    name: "Distribución",
+    description: "Vende también en OTAs y a touroperadores, con todo en el mismo PMS.",
+  },
 };
 
 export const BASE_INCLUDES = [
@@ -119,8 +130,8 @@ export const BASE_INCLUDES = [
 /** Packages each plan includes when the hotel has not chosen its own. */
 export const PLAN_PACKAGES: Record<string, PackageId[]> = {
   starter: ["stay"],
-  pro: ["stay", "ai", "chain", "data"],
-  group: ["stay", "ai", "chain", "data"],
+  pro: ["stay", "ai", "chain", "data", "distribution"],
+  group: ["stay", "ai", "chain", "data", "distribution"],
 };
 
 type Settings = { packages?: unknown; features?: Partial<Record<string, unknown>> } | null;

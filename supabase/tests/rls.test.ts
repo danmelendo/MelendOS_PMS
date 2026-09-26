@@ -1814,4 +1814,77 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(reception.ok).toBe(true);
     });
   });
+
+  describe("distribution channels", () => {
+    it("admins connect channels; the secret stays in Vault; bookings queue availability", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        'update public.tenants set settings = settings || \'{"packages": ["stay", "distribution"]}\'::jsonb where id = $1',
+        [ids.lumen],
+      );
+      const byReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.create_channel($1, 'ota', 'demo', 'OTA')", [ids.lumen]),
+      );
+      const ch = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "select public.create_channel($1, 'ota', 'demo', 'OTA test', 15, jsonb_build_object('DBL', $2::text)) as c",
+              [ids.lumen, ids["lumen-rg-standard"]],
+            )
+          ).rows[0].c,
+      );
+      const readSecret = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.channel_secret($1)", [ch.id]),
+      );
+      const seen = await attempt(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (await client.query("select count(*)::int n from public.channels where id = $1", [ch.id]))
+            .rows[0].n,
+      );
+      const otherHotel = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () =>
+          (await client.query("select count(*)::int n from public.channels where id = $1", [ch.id]))
+            .rows[0].n,
+      );
+      const booking = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, channel_id, external_ref)
+           values ($1, $2, now() + interval '300 days', now() + interval '302 days', 'confirmed', 200, 'ota', $3, 'X-1')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"], ch.id],
+        )
+      ).rows[0].id;
+      const queued = Number(
+        (
+          await client.query(
+            "select count(*) as n from public.channel_outbox where channel_id = $1 and payload->>'reservation_id' = $2",
+            [ch.id, booking],
+          )
+        ).rows[0].n,
+      );
+      const duplicate = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, channel_id, external_ref)
+           values ($1, $2, now() + interval '320 days', now() + interval '322 days', 'confirmed', 200, 'ota', $3, 'X-1')`,
+          [ids.lumen, ids["lumen-room-101"], ch.id],
+        ),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(byReception.ok).toBe(false);
+      expect(ch.secret).toMatch(/^dsc_[0-9a-f]{48}$/);
+      expect(readSecret.ok).toBe(false);
+      expect(seen).toEqual({ ok: true, value: 1 });
+      expect(otherHotel).toEqual({ ok: true, value: 0 });
+      expect(queued).toBe(1);
+      expect(duplicate.ok).toBe(false);
+    });
+  });
 });
