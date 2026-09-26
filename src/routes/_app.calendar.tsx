@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,9 @@ export const Route = createFileRoute("/_app/calendar")({
 // day, so back-to-back stays (check-out 12:00, check-in 15:00) share a cell
 // without overlapping, as on a front-desk planning board.
 const DAYS = 14;
-const DAY_W = 64; // px per day column
+// Day columns share the width available (never narrower than MIN_DAY_W; below
+// that the board scrolls sideways).
+const MIN_DAY_W = 64;
 const ROOM_COL_W = 176; // px, sticky room label column
 const ROW_H = 44; // px per room row
 const DAY_MS = 86_400_000;
@@ -48,6 +50,18 @@ function CalendarPage() {
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [defaults, setDefaults] = useState<{ start?: Date; roomId?: string }>({});
   const [buildingFilter, setBuildingFilter] = useState<string>("all");
+  const board = useRef<HTMLDivElement>(null);
+  const [dayW, setDayW] = useState(MIN_DAY_W);
+  useLayoutEffect(() => {
+    const el = board.current;
+    if (!el) return;
+    const fit = () =>
+      setDayW(Math.max(MIN_DAY_W, Math.floor((el.clientWidth - ROOM_COL_W) / DAYS)));
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const to = useMemo(() => new Date(from.getTime() + DAYS * DAY_MS), [from]);
   const days = useMemo(
@@ -88,7 +102,7 @@ function CalendarPage() {
   // Horizontal position (px) of a timestamp: whole days since `from`, plus half a
   // day so arrivals/departures land mid-cell.
   const xOf = (iso: string) =>
-    ((startOfDay(new Date(iso)).getTime() - from.getTime()) / DAY_MS + 0.5) * DAY_W;
+    ((startOfDay(new Date(iso)).getTime() - from.getTime()) / DAY_MS + 0.5) * dayW;
 
   const rangeLabel = `${from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} – ${new Date(
     to.getTime() - DAY_MS,
@@ -156,8 +170,8 @@ function CalendarPage() {
       </div>
 
       <Card className="overflow-hidden">
-        <CardContent className="p-0 overflow-x-auto">
-          <div style={{ width: ROOM_COL_W + DAYS * DAY_W }}>
+        <CardContent ref={board} className="p-0 overflow-x-auto">
+          <div style={{ width: ROOM_COL_W + DAYS * dayW }}>
             {/* Day header */}
             <div className="flex border-b bg-muted/40">
               <div
@@ -177,7 +191,7 @@ function CalendarPage() {
                       weekend && "bg-info/10",
                       isToday && "bg-gold/20 font-semibold text-foreground",
                     )}
-                    style={{ width: DAY_W }}
+                    style={{ width: dayW }}
                   >
                     <div className="uppercase text-muted-foreground">
                       {d.toLocaleDateString("es-ES", { weekday: "short" }).replace(".", "")}
@@ -213,7 +227,7 @@ function CalendarPage() {
                         : ""}
                     </div>
                   </div>
-                  <div className="relative" style={{ width: DAYS * DAY_W, height: ROW_H }}>
+                  <div className="relative" style={{ width: DAYS * dayW, height: ROW_H }}>
                     {/* Clickable day cells */}
                     {days.map((d, i) => {
                       const isToday = d.getTime() === todayKey;
@@ -228,7 +242,7 @@ function CalendarPage() {
                             weekend && "bg-info/5",
                             isToday && "bg-gold/10",
                           )}
-                          style={{ left: i * DAY_W, width: DAY_W }}
+                          style={{ left: i * dayW, width: dayW }}
                           onClick={() => {
                             setEditId(undefined);
                             setDefaults({ start: d, roomId: room.id });
@@ -240,8 +254,8 @@ function CalendarPage() {
                     {/* Stays */}
                     {stays.map((r) => {
                       const left = Math.max(0, xOf(r.start_at));
-                      const right = Math.min(DAYS * DAY_W, xOf(r.end_at));
-                      if (right <= 0 || left >= DAYS * DAY_W || right - left <= 0) return null;
+                      const right = Math.min(DAYS * dayW, xOf(r.end_at));
+                      if (right <= 0 || left >= DAYS * dayW || right - left <= 0) return null;
                       const nights = Math.max(
                         1,
                         Math.round(
