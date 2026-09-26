@@ -1,3 +1,5 @@
+import { PaymentChoice } from "@/components/PaymentChoice";
+import type { PaymentMode } from "@domain/policies.ts";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -72,7 +74,7 @@ function WebBookScreen() {
   });
 
   const create = useMutation({
-    mutationFn: async (hold: boolean) => {
+    mutationFn: async ({ mode, hold }: { mode: PaymentMode; hold: boolean }) => {
       if (!room || !propertyId) throw new Error("Habitación no disponible");
       const prebooking = await pms.createPrebooking({
         guest: {
@@ -86,11 +88,15 @@ function WebBookScreen() {
         checkOut,
         guests,
         hold,
+        paymentMode: mode,
       });
-      return { prebooking, hold };
+      return { prebooking, hold, mode };
     },
-    onSuccess: ({ prebooking, hold }) => {
-      if (hold) {
+    onSuccess: ({ prebooking, hold, mode }) => {
+      if (mode === "at_hotel") {
+        toast.success("Reserva confirmada · pagas en el hotel");
+        navigate({ to: "/web/booking/$bookingId", params: { bookingId: prebooking.id } });
+      } else if (hold) {
         toast.success("Prereserva creada · tienes 30 min para confirmar");
         navigate({ to: "/web/checkout/$bookingId", params: { bookingId: prebooking.id } });
       } else {
@@ -106,7 +112,6 @@ function WebBookScreen() {
 
   const nights = offer?.nights ?? 0;
   const total = offer?.price ?? 0;
-  const deposit = Math.round(total * 0.3 * 100) / 100;
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-10">
@@ -176,40 +181,15 @@ function WebBookScreen() {
         </p>
       </div>
 
-      <div className="mt-5  bg-white p-6 shadow-sm ring-1 ring-neutral-100">
-        <div className="flex items-center justify-between text-sm text-neutral-600">
-          <span>Total estancia</span>
-          <span className="text-xl font-semibold text-neutral-900">{eur(total)}</span>
-        </div>
-        <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-500">
-          <span>Señal online (30%)</span>
-          <span className="font-medium">{eur(deposit)}</span>
-        </div>
-        <p className="mt-1 text-xs text-neutral-400">
-          Importe calculado para tus fechas; el total definitivo lo confirma el hotel al reservar.
-          El resto se abona al llegar.
-        </p>
-      </div>
-
-      <div className="mt-6 space-y-3">
-        <button
-          disabled={create.isPending || !offer?.available || !guestValid}
-          onClick={() => create.mutate(false)}
-          className="flex w-full items-center justify-center gap-2  bg-[var(--brand)] py-4 font-semibold text-white disabled:opacity-50"
-        >
-          <ShieldCheck className="h-5 w-5" /> Reservar y pagar señal
-        </button>
-        <button
-          disabled={create.isPending || !offer?.available || !guestValid}
-          onClick={() => create.mutate(true)}
-          className="flex w-full items-center justify-center gap-2  border border-[var(--brand)]/40 bg-white py-4 font-semibold text-[var(--brand)] disabled:opacity-50"
-        >
-          <Sparkles className="h-5 w-5" /> Prereservar (mantener 30 min)
-        </button>
-        <p className="text-center text-xs text-neutral-400">
-          La prereserva bloquea la habitación sin pagar; confírmala antes de que expire.
-        </p>
-      </div>
+      <PaymentChoice
+        total={total}
+        checkIn={checkIn}
+        nights={nights}
+        disabled={!offer?.available || !guestValid}
+        busy={create.isPending}
+        tone="web"
+        onBook={(mode, hold) => create.mutate({ mode, hold })}
+      />
 
       <Link to="/web" className="mt-6 block text-center text-xs text-neutral-400 underline">
         Cancelar y volver al inicio

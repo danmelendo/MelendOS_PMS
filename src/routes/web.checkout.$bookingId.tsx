@@ -85,15 +85,17 @@ function WebCheckoutScreen() {
             <span className="font-semibold">{eur(booking.total)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-neutral-500">Señal a pagar ahora</span>
-            <span className="text-xl font-bold text-[var(--brand)]">{eur(booking.deposit)}</span>
+            <span className="text-neutral-500">A pagar ahora</span>
+            <span className="text-xl font-bold text-[var(--brand)]">
+              {eur(booking.payNow || booking.total)}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="mt-3  bg-[var(--brand-soft)] px-4 py-3 text-sm text-[var(--brand)]">
         {IS_DEMO
-          ? "Pago simulado (la demo no cobra). En producción la señal pasa por la pasarela del hotel."
+          ? "Pago simulado (la demo no cobra). En producción el pago pasa por la pasarela del hotel."
           : "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."}
       </div>
 
@@ -125,7 +127,9 @@ function WebCheckoutScreen() {
             className="flex w-full items-center justify-center gap-2  bg-[var(--brand)] py-4 font-semibold text-white disabled:opacity-50"
           >
             <CreditCard className="h-5 w-5" />
-            {confirm.isPending ? "Redirigiendo al pago…" : `Pagar señal ${eur(booking.deposit)}`}
+            {confirm.isPending
+              ? "Redirigiendo al pago…"
+              : `Pagar ${eur(booking.payNow || booking.total)}`}
           </button>
         )}
       </div>

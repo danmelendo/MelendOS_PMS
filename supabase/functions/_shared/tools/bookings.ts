@@ -1,6 +1,8 @@
 // Booking draft: validates a stay request, checks availability and capacity,
-// prices it on the server and creates a *pending* reservation. It never
-// confirms anything: confirmation only comes from a verified payment.
+// prices it on the server and creates the reservation with the hotel's
+// payment and cancellation terms. Paid online ("prepay"): pending until the
+// payment provider confirms it. Paid at the hotel ("at_hotel"): confirmed at
+// once, nothing charged.
 //
 // Pure logic over a small data-access interface (BookingStore), so the same
 // code runs in the Edge Function (Supabase), in the in-browser mock and, from
@@ -8,6 +10,13 @@
 import { z } from "zod";
 import { eachNight, isYmd, nightsBetween, zonedHourToUtc } from "../domain/dates.ts";
 import { priceStay, round2, type DynamicRule, type PriceBreakdown } from "../domain/pricing.ts";
+import {
+  amountDueNow,
+  cancellationTerms,
+  type CancellationTerms,
+  type HotelPolicies,
+  type PaymentMode,
+} from "../domain/policies.ts";
 
 export const MAX_NIGHTS = 30;
 export const HOLD_MINUTES = 30;
@@ -20,8 +29,10 @@ export const bookingDraftInput = z
     check_in: ymd,
     check_out: ymd,
     guests: z.number().int().min(1).max(12),
-    /** Keep the room for 30 minutes while the guest pays. */
+    /** Keep the room for 30 minutes while the guest pays (online payment). */
     hold: z.boolean().default(false),
+    /** Pay the whole stay online now, or at the hotel. Default: the hotel's. */
+    payment_mode: z.enum(["prepay", "at_hotel"]).optional(),
     customer: z
       .object({
         name: z.string().trim().min(2).max(120),
@@ -48,8 +59,8 @@ export type BookingDraftInput = z.input<typeof bookingDraftInput>;
 export interface TenantSettings {
   checkin_hour: number;
   checkout_hour: number;
-  deposit_pct: number;
   timezone: string;
+  policies: HotelPolicies;
 }
 
 export interface StoreRoom {
@@ -77,8 +88,12 @@ export interface NewReservation {
   dynamic_reason: string | null;
   extras_total: number;
   total: number;
+  /** Amount to pay online now (legacy column name): the total, or 0 at the hotel. */
   deposit_amount: number;
-  status: "pending";
+  payment_mode: PaymentMode;
+  free_cancellation_until: string;
+  late_cancellation_fee: number;
+  status: "pending" | "confirmed";
   is_prebooking: boolean;
   hold_expires_at: string | null;
   created_by_role: "public" | "member" | "agent";
@@ -145,7 +160,12 @@ export interface BookingDraft {
   check_out: string;
   nights: number;
   breakdown: PriceBreakdown;
-  deposit: number;
+  payment_mode: PaymentMode;
+  status: "pending" | "confirmed";
+  /** What the guest pays online now: the whole stay, or 0 when paying at the hotel. */
+  amount_due_now: number;
+  free_cancellation_until: string;
+  late_cancellation_fee: number;
   hold_expires_at: string | null;
   /** Returned once: lets the guest view, sign and cancel without an account. */
   access_token: string;
@@ -200,7 +220,8 @@ export interface StayQuote {
   endAt: Date;
   nights: number;
   breakdown: PriceBreakdown;
-  deposit: number;
+  /** Cancellation terms for this stay if booked now. */
+  cancellation: CancellationTerms;
   extras: { extraId: string; qty: number; price: number }[];
   /** False when the room is taken for those dates (price still computed). */
   available: boolean;
@@ -302,7 +323,13 @@ export async function quoteStay(
     endAt,
     nights: eachNight(req.check_in, req.check_out).length,
     breakdown,
-    deposit: round2((breakdown.total * settings.deposit_pct) / 100),
+    cancellation: cancellationTerms(
+      settings.policies,
+      startAt,
+      breakdown.total,
+      eachNight(req.check_in, req.check_out).length,
+      now,
+    ),
     extras,
     available,
   };
@@ -324,7 +351,19 @@ export async function createBookingDraft(
   if (!quote.available) {
     throw new BookingError("unavailable", "La habitación no está libre en esas fechas");
   }
-  const { room, breakdown, deposit } = quote;
+  const { room, breakdown } = quote;
+  const policies = quote.settings.policies;
+  const mode = input.payment_mode ?? policies.defaultPaymentMode;
+  if (!policies.paymentModes.includes(mode)) {
+    throw new BookingError(
+      "invalid",
+      mode === "at_hotel"
+        ? "Este hotel no admite el pago en el hotel"
+        : "Este hotel no admite el pago online",
+    );
+  }
+  const status = mode === "at_hotel" ? "confirmed" : "pending";
+  const dueNow = amountDueNow(breakdown.total, mode);
 
   const member = ctx.userId ? await store.findMember(room.tenant_id, ctx.userId) : null;
   if (!member && !input.customer) {
@@ -333,9 +372,10 @@ export async function createBookingDraft(
   const customerId = member
     ? null
     : await store.findOrCreateCustomer(room.tenant_id, input.customer!);
-  const holdExpiresAt = input.hold
-    ? new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString()
-    : null;
+  const holdExpiresAt =
+    input.hold && mode === "prepay"
+      ? new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString()
+      : null;
   const access = await newAccessToken();
 
   const reservation = await store.insertReservation({
@@ -352,9 +392,18 @@ export async function createBookingDraft(
     dynamic_reason: breakdown.dynamicReason,
     extras_total: breakdown.extrasTotal,
     total: breakdown.total,
-    deposit_amount: deposit,
-    status: "pending",
-    is_prebooking: input.hold,
+    deposit_amount: dueNow,
+    payment_mode: mode,
+    free_cancellation_until: quote.cancellation.freeUntil,
+    late_cancellation_fee: round2(
+      policies.penalty === "none"
+        ? 0
+        : policies.penalty === "full"
+          ? breakdown.total
+          : breakdown.total / quote.nights,
+    ),
+    status,
+    is_prebooking: !!holdExpiresAt,
     hold_expires_at: holdExpiresAt,
     created_by_role: ctx.channel === "agent" ? "agent" : member ? "member" : "public",
     access_token_hash: access.hash,
@@ -380,7 +429,17 @@ export async function createBookingDraft(
     check_out: input.check_out,
     nights: quote.nights,
     breakdown,
-    deposit,
+    payment_mode: mode,
+    status,
+    amount_due_now: dueNow,
+    free_cancellation_until: quote.cancellation.freeUntil,
+    late_cancellation_fee: round2(
+      policies.penalty === "none"
+        ? 0
+        : policies.penalty === "full"
+          ? breakdown.total
+          : breakdown.total / quote.nights,
+    ),
     hold_expires_at: holdExpiresAt,
     access_token: access.token,
   };

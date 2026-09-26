@@ -65,7 +65,10 @@ describe("search_availability", () => {
     const data = ok(await runTool("search_availability", { ...stay, guests: 2 }, store, ctx));
     expect(data.nights).toBe(2);
     expect(data.results.map((r: { room: string }) => r.room)).toEqual(["102", "101", "201"]);
-    expect(data.results[0]).toMatchObject({ price_total: 160, price_per_night: 80, deposit: 48 });
+    expect(data.results[0]).toMatchObject({ price_total: 160, price_per_night: 80 });
+    expect(data.results[0]).not.toHaveProperty("deposit");
+    expect(data.payment_options).toEqual(["Pago online al reservar", "Pago en el hotel"]);
+    expect(data.cancellation_policy).toMatch(/^Cancelación gratuita hasta 2 días antes/);
     expect(JSON.stringify(data)).not.toContain("Hotel Dos");
   });
 
@@ -140,7 +143,12 @@ describe("room details and quotes", () => {
     const q = ok(
       await runTool("quote_price", { room_id: "r-101", ...stay, guests: 2 }, store, ctx),
     );
-    expect(q).toMatchObject({ total: 200, deposit: 60, nights: 2, available: false });
+    expect(q).toMatchObject({
+      total: 200,
+      nights: 2,
+      available: false,
+      free_cancellation_until: "2026-09-29T13:00:00.000Z",
+    });
   });
 });
 
@@ -160,7 +168,13 @@ describe("create_booking_draft", () => {
         ctx,
       ),
     );
-    expect(d).toMatchObject({ status: "pending", reference: "C0FFEE00", total: 200, deposit: 60 });
+    expect(d).toMatchObject({
+      status: "pending",
+      payment_mode: "prepay",
+      reference: "C0FFEE00",
+      total: 200,
+      to_pay_online_now: 200,
+    });
     expect(d.manage_url).toMatch(
       /^https:\/\/hotel\.example\/web\/booking\/c0ffee00-[\w-]+\?t=[0-9a-f]{48}$/,
     );
@@ -194,11 +208,20 @@ describe("create_payment_link", () => {
     const { store, tokenHashes } = fakeStore();
     const id = "b1000000-0000-0000-0000-000000000000";
     const link = ok(await runTool("create_payment_link", { reservation_id: id }, store, ctx));
-    expect(link).toMatchObject({ reference: "B1000000", amount: 60 });
+    expect(link).toMatchObject({ reference: "B1000000", amount: 200 });
     expect(link.payment_url).toMatch(
       new RegExp(`^https://hotel\\.example/web/checkout/${id}\\?t=[0-9a-f]{48}$`),
     );
     expect(tokenHashes[id]).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("never for bookings paid at the hotel", async () => {
+    const { store } = fakeStore();
+    const b = await store.getBookingById("t1", "b1000000-0000-0000-0000-000000000000");
+    Object.assign(b!, { payment_mode: "at_hotel", deposit_amount: 0 });
+    expect(
+      await runTool("create_payment_link", { reservation_id: b!.id }, store, ctx),
+    ).toMatchObject({ ok: false, error: { code: "conflict" } });
   });
 
   it("only for pending, unpaid, unexpired bookings of the tenant", async () => {

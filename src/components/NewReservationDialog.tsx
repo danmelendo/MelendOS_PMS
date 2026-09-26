@@ -384,8 +384,10 @@ export function NewReservationDialog({
           .from("reservations")
           .insert({
             ...reservationFields,
-            // Staff bookings are confirmed at once (the column defaults to pending).
+            // Staff bookings are confirmed at once and paid at the hotel.
             status: "confirmed",
+            payment_mode: "at_hotel",
+            deposit_amount: 0,
             manual_override: isAdmin,
             created_by_role: isAdmin ? "admin" : "reception",
           })

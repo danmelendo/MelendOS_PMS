@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hotelPolicies } from "../domain/policies.ts";
 import {
   BookingError,
   createBookingDraft,
@@ -28,7 +29,12 @@ function fakeStore(
       };
     },
     async getTenantSettings() {
-      return { checkin_hour: 15, checkout_hour: 12, deposit_pct: 30, timezone: "Europe/Madrid" };
+      return {
+        checkin_hour: 15,
+        checkout_hour: 12,
+        timezone: "Europe/Madrid",
+        policies: hotelPolicies({ payment: { modes: ["prepay", "at_hotel"] } }),
+      };
     },
     async getBusyWindows() {
       return over.busy ?? [];
@@ -74,7 +80,7 @@ const base = {
 };
 
 describe("createBookingDraft", () => {
-  it("prices on the server and creates a pending reservation in hotel time", async () => {
+  it("prices on the server and creates a pending prepaid reservation in hotel time", async () => {
     const { store, inserted } = fakeStore();
     const draft = await createBookingDraft(store, base, {
       userId: null,
@@ -82,7 +88,14 @@ describe("createBookingDraft", () => {
       now: NOW,
     });
     expect(draft.breakdown.total).toBe(360); // Thu 100 + Fri 130 + Sat 130
-    expect(draft.deposit).toBe(108);
+    // No deposit: the whole stay is paid online, or nothing now at the hotel.
+    expect(draft).toMatchObject({
+      payment_mode: "prepay",
+      status: "pending",
+      amount_due_now: 360,
+      free_cancellation_until: "2026-09-29T13:00:00.000Z", // 48 h before check-in
+      late_cancellation_fee: 120, // first night
+    });
     expect(draft.access_token).toMatch(/^[0-9a-f]{48}$/);
     expect(inserted[0].access_token_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(inserted[0].access_token_hash).not.toBe(draft.access_token);
@@ -93,6 +106,24 @@ describe("createBookingDraft", () => {
       start_at: "2026-10-01T13:00:00.000Z", // 15:00 CEST
       end_at: "2026-10-04T10:00:00.000Z", // 12:00 CEST
       created_by_role: "public",
+      is_prebooking: false,
+      payment_mode: "prepay",
+      deposit_amount: 360,
+    });
+  });
+
+  it("confirms at once, with nothing to pay now, when paying at the hotel", async () => {
+    const { store, inserted } = fakeStore();
+    const draft = await createBookingDraft(
+      store,
+      { ...base, payment_mode: "at_hotel", hold: true },
+      { userId: null, channel: "public", now: NOW },
+    );
+    expect(draft).toMatchObject({ status: "confirmed", amount_due_now: 0, hold_expires_at: null });
+    expect(inserted[0]).toMatchObject({
+      status: "confirmed",
+      payment_mode: "at_hotel",
+      deposit_amount: 0,
       is_prebooking: false,
     });
   });

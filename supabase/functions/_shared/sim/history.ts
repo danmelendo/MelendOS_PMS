@@ -29,7 +29,6 @@ export interface SimInput {
   /** Bookings made after this day do not exist yet. */
   today: Ymd;
   seed: number;
-  depositPct?: number;
   /** Nights already taken (e.g. the hand-written seed stays). */
   busy?: { roomId: string; checkIn: Ymd; checkOut: Ymd }[];
 }
@@ -49,8 +48,10 @@ export interface SimStay {
   channel: "public" | "admin";
   guests: number;
   roomRevenue: number;
-  deposit: number;
-  depositPaid: boolean;
+  /** Whole stay paid online when booking, or at the hotel. */
+  paymentMode: "prepay" | "at_hotel";
+  /** Paid online (gateway). */
+  paidOnline: boolean;
   paidAmount: number;
 }
 
@@ -295,7 +296,6 @@ const at = (day: Ymd, hour: number, minute: number) =>
 
 export function simulateHistory(input: SimInput): { stays: SimStay[]; customers: number } {
   const r = rng(input.seed);
-  const depositPct = input.depositPct ?? 30;
   const rooms = input.rooms;
   const taken = new Map<string, Set<Ymd>>(rooms.map((x) => [x.id, new Set<Ymd>()]));
   for (const b of input.busy ?? []) {
@@ -356,7 +356,6 @@ export function simulateHistory(input: SimInput): { stays: SimStay[]; customers:
         (s, n) => s + nightlyPrice(room, n, demand(input.profile, n, years(n)), years(n)),
         0,
       );
-      const deposit = round2((revenue * depositPct) / 100);
 
       let status: SimStay["status"];
       if (cancelledAt) status = "cancelled";
@@ -367,7 +366,20 @@ export function simulateHistory(input: SimInput): { stays: SimStay[]; customers:
       if (status !== "cancelled" && status !== "no_show") {
         for (const n of nights) taken.get(room.id)!.add(n);
       }
-      const depositPaid = status === "cancelled" ? r.next() < 0.5 : true;
+      // Reception and phone bookings are paid at the hotel; online, a share
+      // of guests prepay. Prepaid cancellations are refunded; at the hotel the
+      // stay is paid on arrival.
+      const paymentMode: SimStay["paymentMode"] =
+        channel === "admin" || r.next() < (input.profile === "urban" ? 0.45 : 0.4)
+          ? "at_hotel"
+          : "prepay";
+      const paidOnline = paymentMode === "prepay";
+      const paidAmount =
+        status === "cancelled" || status === "no_show"
+          ? 0
+          : paymentMode === "prepay" || status === "completed" || status === "in_progress"
+            ? revenue
+            : 0;
       stays.push({
         id: r.uuid(),
         tenantId: room.tenantId,
@@ -382,9 +394,9 @@ export function simulateHistory(input: SimInput): { stays: SimStay[]; customers:
         channel,
         guests,
         roomRevenue: revenue,
-        deposit,
-        depositPaid,
-        paidAmount: status === "completed" ? revenue : depositPaid ? deposit : 0,
+        paymentMode,
+        paidOnline,
+        paidAmount,
       });
     }
   }

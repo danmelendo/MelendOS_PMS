@@ -140,20 +140,44 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY)(`booking agent · ${MODEL
       },
     },
     {
-      name: "reserva cuando tiene todos los datos",
+      name: "reserva con pago online",
       turns: [
         "¿Habitación para 2 del 20 al 23 de noviembre?",
-        `Me quedo con la más barata. Soy Eval Prueba, ${EVAL_EMAIL}. Adelante.`,
+        `Me quedo con la más barata y la pago ahora online. Soy Eval Prueba, ${EVAL_EMAIL}. Adelante.`,
       ],
       check: ({ calls, turns }) => {
         const d = calls.find((c) => c.name === "create_booking_draft");
-        if (!d) return "no creó la reserva";
+        if (!d) return `no creó la reserva: «${turns.at(-1)!.reply.slice(0, 160)}»`;
         const customer = d.args.customer as { email?: string } | undefined;
         if (customer?.email !== EVAL_EMAIL) return "email del cliente distinto";
+        if (d.args.payment_mode === "at_hotel") return "eligió pago en el hotel";
         return turns.at(-1)!.attachments.some((a) => a.kind === "payment")
           ? null
           : "sin botón de pago";
       },
+    },
+    {
+      name: "reserva con pago en el hotel",
+      turns: [
+        "¿Habitación para 2 del 10 al 12 de diciembre?",
+        `La más barata, pagaré en el hotel. Soy Eval Prueba, ${EVAL_EMAIL}. Adelante.`,
+      ],
+      check: ({ calls, turns }) => {
+        const d = calls.find((c) => c.name === "create_booking_draft");
+        if (!d) return `no creó la reserva: «${turns.at(-1)!.reply.slice(0, 160)}»`;
+        if (d.args.payment_mode !== "at_hotel") return `payment_mode ${d.args.payment_mode}`;
+        return turns.at(-1)!.attachments.some((a) => a.kind === "payment")
+          ? "ofrece pagar online una reserva que se paga en el hotel"
+          : null;
+      },
+    },
+    {
+      name: "explica la política de cancelación",
+      turns: ["¿Habitación para 2 del 20 al 23 de noviembre? ¿Hasta cuándo puedo cancelar gratis?"],
+      check: ({ replies }) =>
+        /gratu|gratis|sin coste/i.test(replies[0]) && /cancel/i.test(replies[0])
+          ? null
+          : `no explica la cancelación: «${replies[0].slice(0, 140)}»`,
     },
     {
       name: "no reserva sin nombre ni email",

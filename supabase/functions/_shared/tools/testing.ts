@@ -1,6 +1,7 @@
 // Test fixtures for the domain tools: two tenants, a few rooms and bookings,
 // and an in-memory ToolStore. Used by the tool and agent tests.
 import type { NewReservation } from "./bookings.ts";
+import { hotelPolicies } from "../domain/policies.ts";
 import type { BookingLookup, CatalogRoom, ToolStore } from "./registry.ts";
 
 export const room = (over: Partial<CatalogRoom>): CatalogRoom => ({
@@ -59,7 +60,10 @@ export const booking = (over: Partial<BookingLookup>): BookingLookup => ({
   end_at: "2026-10-03T10:00:00Z",
   people: 2,
   total: 200,
-  deposit_amount: 60,
+  deposit_amount: 200,
+  payment_mode: "prepay",
+  free_cancellation_until: "2026-09-29T13:00:00Z",
+  late_cancellation_fee: 100,
   room_name: "101",
   property_name: "Hotel Uno",
   guest_email: "laura@example.com",
@@ -109,7 +113,12 @@ export function fakeStore(
         : null;
     },
     async getTenantSettings() {
-      return { checkin_hour: 15, checkout_hour: 12, deposit_pct: 30, timezone: "Europe/Madrid" };
+      return {
+        checkin_hour: 15,
+        checkout_hour: 12,
+        timezone: "Europe/Madrid",
+        policies: hotelPolicies({ payment: { modes: ["prepay", "at_hotel"] } }),
+      };
     },
     async getBusyWindows() {
       return opts.busy ?? [];

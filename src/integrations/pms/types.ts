@@ -129,7 +129,16 @@ export interface Prebooking {
   nights: number;
   guests: number;
   total: number;
-  deposit: number;
+  /** Whole stay paid online when booking, or paid at the hotel. */
+  paymentMode: "prepay" | "at_hotel";
+  /** What is due online now: the total while an online booking is unpaid, else 0. */
+  payNow: number;
+  paidAmount: number;
+  /** Paid online (gateway). */
+  paidOnline: boolean;
+  /** Free cancellation until this instant (ISO); later a fee applies. */
+  freeCancellationUntil: string | null;
+  lateCancellationFee: number;
   status: BookingStatus;
   /** ISO timestamp the hold expires (only while status === "held"). */
   holdExpiresAt: string | null;

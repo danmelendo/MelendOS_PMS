@@ -217,7 +217,7 @@ function WebRoomDetail() {
                 Reservar
               </button>
               <p className="mt-2 text-center text-xs text-neutral-400">
-                Señal del 30 % online · resto en el hotel
+                Paga online o en el hotel · cancelación gratuita según la política del hotel
               </p>
             </div>
           </div>

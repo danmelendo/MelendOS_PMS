@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hotelPolicies } from "../domain/policies.ts";
 import { requestExtension, type ExtensionStore } from "./extensions.ts";
 
 const NOW = new Date("2026-09-25T10:00:00Z");
@@ -21,7 +22,12 @@ function fakeStore(busy: { room_id: string; start_at: string; end_at: string }[]
       };
     },
     async getTenantSettings() {
-      return { checkin_hour: 15, checkout_hour: 12, deposit_pct: 30, timezone: "Europe/Madrid" };
+      return {
+        checkin_hour: 15,
+        checkout_hour: 12,
+        timezone: "Europe/Madrid",
+        policies: hotelPolicies({ payment: { modes: ["prepay", "at_hotel"] } }),
+      };
     },
     async getBusyWindows() {
       return busy;

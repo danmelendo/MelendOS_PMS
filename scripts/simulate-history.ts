@@ -55,7 +55,6 @@ try {
       const tz = String(tenant.settings.timezone ?? "Europe/Madrid");
       const checkinHour = Number(tenant.settings.checkin_hour ?? 15);
       const checkoutHour = Number(tenant.settings.checkout_hour ?? 12);
-      const depositPct = Number(tenant.settings.deposit_pct ?? 30);
       const today = ymdInZone(new Date(), tz);
 
       const rooms = await db.query<SimRoom & { price: string; weekendPrice: string | null }>(
@@ -79,7 +78,6 @@ try {
         profile,
         seed,
         today,
-        depositPct,
         from: addDays(today, -HISTORY_DAYS),
         to: addDays(today, AHEAD_DAYS),
         busy: busy.rows,
@@ -121,8 +119,9 @@ try {
         people: s.guests,
         base_price: s.roomRevenue,
         total: s.roomRevenue,
-        deposit_amount: s.deposit,
-        deposit_paid: s.depositPaid,
+        deposit_amount: s.paymentMode === "prepay" ? s.roomRevenue : 0,
+        deposit_paid: s.paidOnline,
+        payment_mode: s.paymentMode,
         paid_amount: s.paidAmount,
         status: s.status,
         created_by_role: s.channel,
@@ -135,16 +134,16 @@ try {
         await db.query(
           `insert into public.reservations
              (id, tenant_id, room_id, property_id, customer_id, start_at, end_at, people,
-              base_price, total, deposit_amount, deposit_paid, paid_amount, status,
+              base_price, total, deposit_amount, deposit_paid, payment_mode, paid_amount, status,
               created_by_role, created_at, updated_at, cancelled_at, cancellation_reason, simulated)
            select x.id, $1, x.room_id, x.property_id, x.customer_id, x.start_at, x.end_at, x.people,
-                  x.base_price, x.total, x.deposit_amount, x.deposit_paid, x.paid_amount,
+                  x.base_price, x.total, x.deposit_amount, x.deposit_paid, x.payment_mode, x.paid_amount,
                   x.status::public.reservation_status, x.created_by_role, x.created_at,
                   x.updated_at, x.cancelled_at, x.cancellation_reason, true
              from jsonb_to_recordset($2::jsonb) as x(
                id uuid, room_id uuid, property_id uuid, customer_id uuid, start_at timestamptz,
                end_at timestamptz, people int, base_price numeric, total numeric,
-               deposit_amount numeric, deposit_paid boolean, paid_amount numeric, status text,
+               deposit_amount numeric, deposit_paid boolean, payment_mode text, paid_amount numeric, status text,
                created_by_role text, created_at timestamptz, updated_at timestamptz,
                cancelled_at timestamptz, cancellation_reason text)`,
           [tenant.id, JSON.stringify(rows.slice(i, i + 500))],

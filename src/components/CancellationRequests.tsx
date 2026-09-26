@@ -33,7 +33,7 @@ export function CancellationRequests() {
       const { data, error } = await supabase
         .from("cancellation_requests")
         .select(
-          "id, reason, channel, requested_at, reservation_id, reservations(id, start_at, end_at, status, total, paid_amount, deposit_paid, rooms(name, building), customers(name, email), members(name))",
+          "id, reason, channel, requested_at, reservation_id, reservations(id, start_at, end_at, status, total, paid_amount, deposit_paid, payment_mode, free_cancellation_until, late_cancellation_fee, rooms(name, building), customers(name, email), members(name))",
         )
         .eq("status", "pending")
         .order("requested_at");
@@ -82,6 +82,10 @@ export function CancellationRequests() {
               : "";
           const confirming = pending?.id === q.id ? pending : null;
           const paid = Number(r?.paid_amount ?? 0);
+          const fee = Number(r?.late_cancellation_fee ?? 0);
+          const late =
+            !!r?.free_cancellation_until &&
+            Date.parse(q.requested_at) > Date.parse(r.free_cancellation_until);
           return (
             <div key={q.id} className="rounded-md border bg-card p-3 text-sm">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -112,10 +116,13 @@ export function CancellationRequests() {
                       ? "¿Cancelar esta reserva? No se puede deshacer."
                       : "¿Rechazar la solicitud? La reserva sigue en pie."}
                   </p>
-                  {confirming.approve && paid > 0 && (
+                  {confirming.approve && (
                     <p className="text-xs text-muted-foreground">
-                      Se pagó una señal de {eur(paid)}. El reembolso, si procede, se hace desde la
-                      pasarela de pago.
+                      {late
+                        ? `Fuera del plazo gratuito: según la política, el hotel puede cobrar ${eur(fee)}.`
+                        : "Dentro del plazo de cancelación gratuita."}
+                      {paid > 0 &&
+                        ` Pagado online: ${eur(paid)}; el reembolso se hace desde la pasarela de pago.`}
                     </p>
                   )}
                   <Textarea

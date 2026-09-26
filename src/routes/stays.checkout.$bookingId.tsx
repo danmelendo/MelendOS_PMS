@@ -41,7 +41,7 @@ function CheckoutScreen() {
     onError: (e: Error) => toast.error(e.message || "No se pudo iniciar el pago"),
   });
 
-  // "Reservar y pagar señal" path auto-confirms straight away.
+  // "Reservar y pagar" path auto-confirms straight away.
   useEffect(() => {
     if (auto && booking?.status === "held" && !autoFired.current && !confirm.isPending) {
       autoFired.current = true;
@@ -84,14 +84,16 @@ function CheckoutScreen() {
           <span className="font-semibold">{eur(booking.total)}</span>
         </div>
         <div className="mt-1 flex items-center justify-between text-sm">
-          <span className="text-neutral-500">Señal a pagar ahora</span>
-          <span className="text-lg font-semibold text-[var(--brand)]">{eur(booking.deposit)}</span>
+          <span className="text-neutral-500">A pagar ahora</span>
+          <span className="text-lg font-semibold text-[var(--brand)]">
+            {eur(booking.payNow || booking.total)}
+          </span>
         </div>
       </div>
 
       <div className="mt-3  bg-[var(--brand-soft)] px-3 py-2.5 text-xs text-[var(--brand)]">
         {IS_DEMO
-          ? "Pago simulado (la demo no cobra). En producción la señal pasa por la pasarela del hotel."
+          ? "Pago simulado (la demo no cobra). En producción el pago pasa por la pasarela del hotel."
           : "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."}
       </div>
 
@@ -123,7 +125,9 @@ function CheckoutScreen() {
             className="flex w-full items-center justify-center gap-2  bg-[var(--brand)] py-3.5 font-semibold text-white disabled:opacity-50"
           >
             <CreditCard className="h-5 w-5" />
-            {confirm.isPending ? "Redirigiendo al pago…" : `Pagar señal ${eur(booking.deposit)}`}
+            {confirm.isPending
+              ? "Redirigiendo al pago…"
+              : `Pagar ${eur(booking.payNow || booking.total)}`}
           </button>
         )}
       </div>

@@ -121,14 +121,16 @@ function TodayPage() {
           </Badge>
         </button>
         <div className="flex flex-wrap items-center gap-1">
-          {r.created_by_role === "public" && r.deposit_paid && (
+          {r.deposit_paid ? (
             <span
               className="mr-1 text-xs text-emerald-700 dark:text-emerald-300"
-              title="Señal pagada online"
+              title="Pagado online al reservar"
             >
-              señal {eur(Number(r.paid_amount))}
+              pagado online {eur(Number(r.paid_amount))}
             </span>
-          )}
+          ) : (r as { payment_mode?: string }).payment_mode === "at_hotel" ? (
+            <span className="mr-1 text-xs text-muted-foreground">paga en el hotel</span>
+          ) : null}
           <span className="mr-2 text-sm font-medium tabular-nums">{eur(Number(r.total))}</span>
           {r.status !== "pending" && (
             <Button size="sm" variant="ghost" onClick={() => setFolioId(r.id)}>

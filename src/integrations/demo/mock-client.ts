@@ -10,7 +10,7 @@
 // credentials are present (see src/integrations/supabase/client.ts).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DEMO_USER_ID, type Row } from "./seed";
+import { DEMO_USER_ID, stampBookingTerms, type Row } from "./seed";
 import { db, persist, uid } from "./mock-db";
 import { mockServerFunction, mockServerRpc } from "./mock-server";
 import {
@@ -291,6 +291,9 @@ class QueryBuilder implements PromiseLike<Result> {
           const gap = checkReservationGap(row);
           if (gap) return { data: null, error: { message: gap }, count: null };
         }
+      }
+      if (table === "reservations") {
+        for (const row of inserted) stampBookingTerms(db(), row);
       }
       if (table === "folio_charges") {
         // Generated column and posted_at, as in the database.

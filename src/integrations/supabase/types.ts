@@ -1541,13 +1541,16 @@ export type Database = {
           dynamic_surcharge: number
           end_at: string
           extras_total: number
+          free_cancellation_until: string | null
           hold_expires_at: string | null
           id: string
           internal_notes: string | null
           is_prebooking: boolean
+          late_cancellation_fee: number | null
           manual_override: boolean
           member_id: string | null
           paid_amount: number
+          payment_mode: string
           people: number
           promo_code_id: string | null
           property_id: string | null
@@ -1580,13 +1583,16 @@ export type Database = {
           dynamic_surcharge?: number
           end_at: string
           extras_total?: number
+          free_cancellation_until?: string | null
           hold_expires_at?: string | null
           id?: string
           internal_notes?: string | null
           is_prebooking?: boolean
+          late_cancellation_fee?: number | null
           manual_override?: boolean
           member_id?: string | null
           paid_amount?: number
+          payment_mode?: string
           people?: number
           promo_code_id?: string | null
           property_id?: string | null
@@ -1619,13 +1625,16 @@ export type Database = {
           dynamic_surcharge?: number
           end_at?: string
           extras_total?: number
+          free_cancellation_until?: string | null
           hold_expires_at?: string | null
           id?: string
           internal_notes?: string | null
           is_prebooking?: boolean
+          late_cancellation_fee?: number | null
           manual_override?: boolean
           member_id?: string | null
           paid_amount?: number
+          payment_mode?: string
           people?: number
           promo_code_id?: string | null
           property_id?: string | null
@@ -2259,6 +2268,13 @@ export type Database = {
     }
     Functions: {
       archive_expired_promo_codes: { Args: never; Returns: number }
+      cancel_booking_as_guest: {
+        Args: {
+          p_actor: string
+          r: Database["public"]["Tables"]["reservations"]["Row"]
+        }
+        Returns: undefined
+      }
       cancel_guest_booking: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -2348,13 +2364,16 @@ export type Database = {
           dynamic_surcharge: number
           end_at: string
           extras_total: number
+          free_cancellation_until: string | null
           hold_expires_at: string | null
           id: string
           internal_notes: string | null
           is_prebooking: boolean
+          late_cancellation_fee: number | null
           manual_override: boolean
           member_id: string | null
           paid_amount: number
+          payment_mode: string
           people: number
           promo_code_id: string | null
           property_id: string | null
@@ -2396,13 +2415,16 @@ export type Database = {
           dynamic_surcharge: number
           end_at: string
           extras_total: number
+          free_cancellation_until: string | null
           hold_expires_at: string | null
           id: string
           internal_notes: string | null
           is_prebooking: boolean
+          late_cancellation_fee: number | null
           manual_override: boolean
           member_id: string | null
           paid_amount: number
+          payment_mode: string
           people: number
           promo_code_id: string | null
           property_id: string | null
@@ -2429,6 +2451,14 @@ export type Database = {
           p_tenant: string
         }
         Returns: boolean
+      }
+      hotel_cancellation_penalty: {
+        Args: { p_tenant: string }
+        Returns: string
+      }
+      hotel_free_cancellation_hours: {
+        Args: { p_tenant: string }
+        Returns: number
       }
       is_member_user: {
         Args: { p_member: string; p_tenant: string }
@@ -2461,6 +2491,10 @@ export type Database = {
       report_stays: {
         Args: { p_from: string; p_tenant?: string; p_to: string }
         Returns: Json
+      }
+      request_guest_cancellation: {
+        Args: { p_id: string; p_reason?: string; p_token: string }
+        Returns: string
       }
       review_author: { Args: { p_name: string }; Returns: string }
       room_busy_windows: {

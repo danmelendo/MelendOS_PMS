@@ -50,10 +50,11 @@ try {
         ).data
       : null;
   check(
-    "stored as pending with the server-side price and 30 % deposit",
+    "stored as pending with the server-side price, the whole stay to pay online",
     row?.status === "pending" &&
       Number(row.total) === anon.body.breakdown.total &&
-      Number(row.deposit_amount) === anon.body.deposit &&
+      Number(row.deposit_amount) === anon.body.amount_due_now &&
+      anon.body.amount_due_now === anon.body.breakdown.total &&
       row.created_by_role === "public",
     JSON.stringify(row),
   );
@@ -128,9 +129,9 @@ try {
       Buffer.from(payBody.redirect?.fields?.Ds_MerchantParameters ?? "e30=", "base64").toString(),
     );
     check(
-      "the draft can go straight to payment for exactly the deposit",
+      "the draft can go straight to payment for exactly the total",
       pay.status === 200 &&
-        params.DS_MERCHANT_AMOUNT === String(Math.round(anon.body.deposit * 100)),
+        params.DS_MERCHANT_AMOUNT === String(Math.round(anon.body.amount_due_now * 100)),
       `HTTP ${pay.status}`,
     );
   }

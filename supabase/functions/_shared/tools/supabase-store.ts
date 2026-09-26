@@ -1,7 +1,8 @@
 // BookingStore over Supabase with the service-role client. Every query is
 // scoped by tenant explicitly because service_role bypasses RLS.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import type { BookingStore, TenantSettings } from "./bookings.ts";
+import type { BookingStore } from "./bookings.ts";
+import { hotelPolicies } from "../domain/policies.ts";
 import type { BookingLookup, CatalogRoom, ToolStore } from "./registry.ts";
 import type { ExtensionStore } from "./extensions.ts";
 
@@ -22,12 +23,12 @@ export function supabaseBookingStore(db: SupabaseClient): BookingStore {
     },
     async getTenantSettings(tenantId) {
       const t = must(await db.from("tenants").select("settings").eq("id", tenantId).single());
-      const s = (t as unknown as { settings: Partial<TenantSettings> }).settings ?? {};
+      const s = (t as unknown as { settings: Record<string, unknown> }).settings ?? {};
       return {
         checkin_hour: Number(s.checkin_hour ?? 15),
         checkout_hour: Number(s.checkout_hour ?? 12),
-        deposit_pct: Number(s.deposit_pct ?? 30),
         timezone: String(s.timezone ?? "Europe/Madrid"),
+        policies: hotelPolicies(s),
       };
     },
     async getBusyWindows(tenantId, from, to) {
@@ -121,7 +122,7 @@ export function supabaseBookingStore(db: SupabaseClient): BookingStore {
 }
 
 const BOOKING_COLUMNS =
-  "id, tenant_id, reference, status, deposit_paid, is_prebooking, hold_expires_at, start_at, end_at, people, total, deposit_amount, rooms(name), properties(name), customers(email), members(email)";
+  "id, tenant_id, reference, status, deposit_paid, is_prebooking, hold_expires_at, start_at, end_at, people, total, deposit_amount, payment_mode, free_cancellation_until, late_cancellation_fee, rooms(name), properties(name), customers(email), members(email)";
 
 type BookingRow = Omit<BookingLookup, "room_name" | "property_name" | "guest_email"> & {
   rooms: { name: string } | null;

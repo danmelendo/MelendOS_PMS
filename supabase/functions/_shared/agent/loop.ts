@@ -105,6 +105,32 @@ export function cleanReply(text: string): string {
   );
 }
 
+const FALLBACK_NOT_DONE =
+  "Todavía no he podido completar la gestión. ¿Me confirmas la habitación, las fechas, tu nombre, tu email y cómo prefieres pagar?";
+
+/**
+ * A reply that claims a booking or a cancellation request that did not happen
+ * in this turn. Returns the correction note for the model, or null.
+ */
+export function falseClaim(reply: string, done: (tool: string) => boolean): string | null {
+  const text = reply.toLowerCase();
+  const booked =
+    /\b(he|hemos) (reservado|hecho la reserva|creado (la|tu) reserva|registrado (la|tu) reserva)|\breserva (creada|hecha|realizada|registrada)\b|\bya (está|tienes) (reservad|tu reserva)/.test(
+      text,
+    );
+  if (booked && !done("create_booking_draft")) {
+    return "Nota del sistema (el cliente no la ve): la reserva NO existe porque no has llamado a create_booking_draft. Llámala ahora con los datos que te ha dado el cliente, o pídele lo que falte. No digas que está reservada.";
+  }
+  const cancelled =
+    /\b(he|hemos) (solicitado|pedido|enviado|tramitado) (la )?cancelaci|\bsolicitud de cancelación (enviada|registrada|creada)/.test(
+      text,
+    );
+  if (cancelled && !done("request_cancellation")) {
+    return "Nota del sistema (el cliente no la ve): la cancelación NO se ha solicitado porque no has llamado a request_cancellation. Llámala ahora con la referencia y el email del cliente, o pídele lo que falte.";
+  }
+  return null;
+}
+
 export const OFF_TOPIC_REPLY =
   "Solo puedo ayudarte con tu estancia en el hotel: habitaciones, precios, reservas y cancelaciones. ¿Buscas alguna fecha?";
 
@@ -179,11 +205,18 @@ export async function runAgentTurn(opts: {
     reservationId: null,
   };
 
+  // Correction notes for the model within this turn (never stored or shown).
+  let nudge: ChatMessage[] = [];
+  let nudged = false;
+  const failed = new Set<string>();
+  const done = (tool: string) => result.toolsCalled.includes(tool) && !failed.has(tool);
+
   for (let step = 0; step < MAX_STEPS; step++) {
     const messages: ChatMessage[] = [
       { role: "system", content: opts.system },
       ...opts.history,
       ...turn,
+      ...nudge,
     ];
     let res;
     try {
@@ -198,6 +231,18 @@ export async function runAgentTurn(opts: {
     result.outputTokens += res.outputTokens;
 
     if (!res.toolCalls.length) {
+      // A small model may say it booked or asked to cancel without doing it.
+      // Once per turn, tell it and let it act (or ask for what is missing).
+      const claim = falseClaim(res.content ?? "", done);
+      if (claim && !nudged) {
+        nudged = true;
+        nudge = [
+          { role: "assistant", content: res.content ?? "" },
+          { role: "user", content: claim },
+        ];
+        continue;
+      }
+      if (claim) res.content = FALLBACK_NOT_DONE;
       if (looksOffTopic(res.content ?? "")) {
         result.reply = OFF_TOPIC_REPLY;
         result.outcome = "refused";
@@ -208,6 +253,7 @@ export async function runAgentTurn(opts: {
       break;
     }
 
+    nudge = [];
     turn.push({ role: "assistant", content: res.content ?? null, tool_calls: res.toolCalls });
     for (const call of res.toolCalls) {
       const name = call.function.name;
@@ -218,6 +264,8 @@ export async function runAgentTurn(opts: {
         opts.userMessage,
       ]);
       const out = refused ?? (await runTool(name, args, store, ctx));
+      if (!out.ok) failed.add(name);
+      else failed.delete(name);
       let shown: unknown = out;
       if (out.ok) {
         const data = out.data as Record<string, unknown>;
@@ -230,17 +278,20 @@ export async function runAgentTurn(opts: {
             label: "Ver mi reserva",
             url: data.manage_url,
           });
-          // The deposit is paid on the checkout page with the same token.
-          attach(result.attachments, {
-            kind: "payment",
-            label: `Pagar la señal (${euros(data.deposit)})`,
-            url: data.manage_url.replace("/web/booking/", "/web/checkout/"),
-          });
+          // Paid online: the checkout page takes the whole stay with the same
+          // token. Paid at the hotel: already confirmed, nothing to pay now.
+          if (data.payment_mode === "prepay" && Number(data.to_pay_online_now) > 0) {
+            attach(result.attachments, {
+              kind: "payment",
+              label: `Pagar la reserva (${euros(data.to_pay_online_now)})`,
+              url: data.manage_url.replace("/web/booking/", "/web/checkout/"),
+            });
+          }
         } else if (name === "create_payment_link" && typeof data.payment_url === "string") {
           result.outcome = "payment_link";
           attach(result.attachments, {
             kind: "payment",
-            label: `Pagar la señal (${euros(data.amount)})`,
+            label: `Pagar la reserva (${euros(data.amount)})`,
             url: data.payment_url,
           });
         } else if (name === "request_cancellation" && result.outcome === "answered") {

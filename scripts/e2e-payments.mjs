@@ -130,7 +130,7 @@ try {
     .eq("id", r1)
     .single();
   check(
-    "reservation is confirmed with the deposit paid",
+    "reservation is confirmed and paid online",
     after.data.status === "confirmed" &&
       after.data.deposit_paid &&
       Number(after.data.paid_amount) === 30,

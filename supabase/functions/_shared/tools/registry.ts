@@ -15,6 +15,12 @@ import { isYmd, nightsBetween, zonedHourToUtc } from "../domain/dates.ts";
 import { priceStay, round2 } from "../domain/pricing.ts";
 import { bookingReference as referenceOf } from "../domain/reference.ts";
 import {
+  cancellationSummary,
+  PAYMENT_MODE_LABELS,
+  type HotelPolicies,
+  type PaymentMode,
+} from "../domain/policies.ts";
+import {
   BookingError,
   bookingDraftInput,
   createBookingDraft,
@@ -53,6 +59,9 @@ export interface BookingLookup {
   people: number;
   total: number;
   deposit_amount: number;
+  payment_mode: PaymentMode;
+  free_cancellation_until: string | null;
+  late_cancellation_fee: number | null;
   room_name: string;
   property_name: string;
   /** Email of the booking's guest (customer or member), for identity checks. */
@@ -97,6 +106,8 @@ class ToolError extends Error {
 }
 
 export { referenceOf };
+
+const paymentOptions = (p: HotelPolicies) => p.paymentModes.map((m) => PAYMENT_MODE_LABELS[m]);
 
 const ymd = z.string().refine(isYmd, "Date must be yyyy-MM-dd");
 const stayDates = {
@@ -215,7 +226,6 @@ const searchAvailability = defineTool({
         features: r.features,
         price_total: b.total,
         price_per_night: perNight,
-        deposit: round2((b.total * settings.deposit_pct) / 100),
         dynamic_pricing: b.dynamicReason,
       });
     }
@@ -228,6 +238,8 @@ const searchAvailability = defineTool({
       currency: "EUR",
       results: results.slice(0, input.limit),
       total_matches: results.length,
+      payment_options: paymentOptions(settings.policies),
+      cancellation_policy: cancellationSummary(settings.policies),
     };
   },
 });
@@ -256,7 +268,8 @@ const getUnitDetails = defineTool({
       weekend_price_per_night: rate?.weekend_price != null ? Number(rate.weekend_price) : null,
       check_in_time: `${settings.checkin_hour}:00`,
       check_out_time: `${settings.checkout_hour}:00`,
-      deposit_percent: settings.deposit_pct,
+      payment_options: paymentOptions(settings.policies),
+      cancellation_policy: cancellationSummary(settings.policies),
     };
   },
 });
@@ -264,7 +277,7 @@ const getUnitDetails = defineTool({
 const quotePrice = defineTool({
   name: "quote_price",
   description:
-    "Exact price of a stay in one room for given dates, guests and optional extras, with the breakdown and the deposit to pay online. Does not book anything.",
+    "Exact price of a stay in one room for given dates, guests and optional extras, with the breakdown, the payment options and until when it can be cancelled for free. Does not book anything.",
   readOnly: true,
   input: z.object({
     room_id: z.string().min(1),
@@ -296,7 +309,9 @@ const quotePrice = defineTool({
       extras: q.breakdown.extrasTotal,
       gifted_extra_ids: q.breakdown.giftedExtraIds,
       total: q.breakdown.total,
-      deposit: q.deposit,
+      payment_options: paymentOptions(q.settings.policies),
+      free_cancellation_until: q.cancellation.freeUntil,
+      cancellation_policy: cancellationSummary(q.settings.policies),
     };
   },
 });
@@ -304,7 +319,7 @@ const quotePrice = defineTool({
 const createDraft = defineTool({
   name: "create_booking_draft",
   description:
-    "Create a PENDING booking (not confirmed, not charged) once the guest has explicitly agreed to the room, dates, price and has given their name and email. Returns the booking reference and a link for the guest to manage it.",
+    "Create the booking once the guest has explicitly agreed to the room, dates and price, has chosen how to pay and has given their name and email. payment_mode 'prepay': the guest pays the whole stay online (pending until paid). 'at_hotel': confirmed now, paid at the hotel. Returns the reference; the guest gets the buttons to manage (and pay) the booking.",
   readOnly: false,
   input: bookingDraftInput,
   async run(store, input, ctx) {
@@ -317,12 +332,15 @@ const createDraft = defineTool({
     return {
       reservation_id: d.reservation_id,
       reference: referenceOf(d.reservation_id),
-      status: "pending",
+      status: d.status,
+      payment_mode: d.payment_mode,
       check_in: d.check_in,
       check_out: d.check_out,
       nights: d.nights,
       total: d.breakdown.total,
-      deposit: d.deposit,
+      to_pay_online_now: d.amount_due_now,
+      free_cancellation_until: d.free_cancellation_until,
+      late_cancellation_fee: d.late_cancellation_fee,
       hold_expires_at: d.hold_expires_at,
       manage_url: `${ctx.webUrl}/web/booking/${d.reservation_id}?t=${d.access_token}`,
     };
@@ -332,12 +350,15 @@ const createDraft = defineTool({
 const createPaymentLink = defineTool({
   name: "create_payment_link",
   description:
-    "Get the link where the guest pays the deposit of a pending booking. The guest starts the payment themselves; the booking is confirmed only when the payment provider confirms it.",
+    "Get the link where the guest pays online the whole stay of a pending booking made with payment_mode 'prepay'. The guest starts the payment; the booking is confirmed only when the payment provider confirms it.",
   readOnly: false,
   input: z.object({ reservation_id: z.string().min(1) }),
   async run(store, input, ctx) {
     const b = await store.getBookingById(ctx.tenantId, input.reservation_id);
     if (!b) throw new ToolError("not_found", "Booking not found");
+    if (b.payment_mode === "at_hotel") {
+      throw new ToolError("conflict", "This booking is paid at the hotel");
+    }
     if (b.status !== "pending" || b.deposit_paid) {
       throw new ToolError("conflict", "This booking is not awaiting payment");
     }
@@ -367,8 +388,10 @@ function publicBooking(b: BookingLookup) {
     check_out: b.end_at,
     guests: b.people,
     total: Number(b.total),
-    deposit: Number(b.deposit_amount),
-    deposit_paid: b.deposit_paid,
+    payment_mode: b.payment_mode,
+    paid_online: b.deposit_paid,
+    free_cancellation_until: b.free_cancellation_until,
+    late_cancellation_fee: Number(b.late_cancellation_fee ?? 0),
   };
 }
 
