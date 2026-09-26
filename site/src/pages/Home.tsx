@@ -23,11 +23,13 @@ import {
 import { PAGES } from "../config";
 import {
   BASE_INCLUDES,
+  ANNUAL_DISCOUNT,
   FOUNDERS,
-  GUARANTEE_DAYS,
   PACKAGE_IDS,
   PACKAGES,
   PLANS,
+  SLA_IDS,
+  SLA_TIERS,
 } from "../../supabase/functions/_shared/plans.ts";
 
 const SHOWCASE: {
@@ -106,12 +108,12 @@ const TRUST: { icon: ComponentType<{ className?: string }>; title: string; text:
   {
     icon: Undo2,
     title: "Sin permanencia",
-    text: `Pago mensual y garantía de ${GUARANTEE_DAYS} días: si no te convence, te devolvemos las cuotas.`,
+    text: "Pago mensual y baja cuando quieras. Sin contratos de años ni penalizaciones.",
   },
   {
     icon: ShieldCheck,
-    title: "SLA por contrato",
-    text: `Disponibilidad desde el ${PLANS.starter.sla.uptime.toLocaleString("es-ES")} %, con compensación si no la cumplimos.`,
+    title: "SLA a tu medida",
+    text: `Elige la urgencia que necesitas, hasta guardia 24/7 y un ${SLA_TIERS[SLA_IDS[SLA_IDS.length - 1]].uptime.toLocaleString("es-ES")} % de disponibilidad, con compensación si no la cumplimos.`,
   },
   {
     icon: FileDown,
@@ -347,9 +349,10 @@ export function HomePage() {
           </span>
           <p className="mt-3 text-lg font-semibold">Programa de hoteles fundadores</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Los {FOUNDERS.seats} primeros hoteles tienen un {FOUNDERS.discount * 100} % de descuento
-            durante {FOUNDERS.months} meses a cambio de contarnos qué mejorar y de un caso de éxito
-            si el resultado es bueno. Tu opinión decide el siguiente paso del producto.
+            Los {FOUNDERS.seats} primeros hoteles que paguen el año por adelantado tienen un{" "}
+            {FOUNDERS.annualDiscount * 100} % de descuento (en lugar del {ANNUAL_DISCOUNT * 100} %)
+            a cambio de contarnos qué mejorar y de un caso de éxito si el resultado es bueno. Tu
+            opinión decide el siguiente paso del producto.
           </p>
         </div>
         <div className="rounded-lg border bg-card p-6">

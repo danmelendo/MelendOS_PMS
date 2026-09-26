@@ -2,6 +2,8 @@
 
 Propuesta del 26/09/2026. Las cifras están en `supabase/functions/_shared/plans.ts` (una sola
 fuente para la página de precios, la calculadora y la tabla del SLA). Precios en euros, sin IVA.
+Revisada el mismo día con Dan: SLA como servicio aparte, pago anual al 5 %, sin devolución de
+cuotas y fundadores al 10 % con pago anual.
 
 ## Principio
 
@@ -9,27 +11,30 @@ Sin reputación en el sector, el riesgo percibido pesa más que el precio. La pr
 
 1. **Más barato que la competencia, pero rentable**: un 25-40 % por debajo a igualdad de
    módulos, con precios que pagan dos sueldos (ver «Rentabilidad»).
-2. **Quitar el riesgo de probar**: precio publicado (los grandes solo dan presupuesto), sin
-   permanencia, garantía de 60 días, exportación completa de datos, SLA con compensación
-   automática y un programa de hoteles fundadores. Esto convence más que bajar el precio y cuesta
-   mucho menos; un precio bajo, además, es difícil de subir después.
+2. **Quitar el riesgo de probar sin arriesgar la caja**: precio publicado (los grandes solo dan
+   presupuesto), sin permanencia con pago mensual y exportación completa de datos. Descartada la
+   garantía de devolución de cuotas (Dan: «eso puede tumbar el negocio nada más empezar»).
+3. **Cada uno paga la urgencia que necesita**: el SLA es un servicio aparte, por niveles. Un
+   hostal no paga una guardia 24/7 que no usa; un grupo que la necesita, la paga entera.
 
 ## Planes
 
-| Plan            | €/hab./mes | Mínimo/mes | Implantación                     | Incluye                                          |
-| --------------- | ---------- | ---------- | -------------------------------- | ------------------------------------------------ |
-| **Esencial**    | 4          | 69         | 149 € (gratis con el pago anual) | Base + Estancia                                  |
-| **Profesional** | 9          | 149        | 490 €                            | Todo (IA, Datos, Distribución, Cadena)           |
-| **Grupo**       | 8          | 490        | Desde 1.490 €                    | Todo, desde 2 hoteles, SLA 99,9 % y guardia 24/7 |
+| Plan            | €/hab./mes | Mínimo/mes | Implantación                     | Incluye                                     |
+| --------------- | ---------- | ---------- | -------------------------------- | ------------------------------------------- |
+| **Esencial**    | 4          | 69         | 149 € (gratis con el pago anual) | Base + Estancia                             |
+| **Profesional** | 9          | 149        | 490 €                            | Todo (IA, Datos, Distribución, Cadena)      |
+| **Grupo**       | 8          | 490        | Desde 1.490 €                    | Todo, desde 2 hoteles, con gestor de cuenta |
+
+Todos incluyen **soporte básico** (chat y email, L-V 9-18, respuesta en 2 días laborables) sin
+compromiso de disponibilidad ni compensación. El SLA se contrata aparte (abajo).
 
 - **Paquetes sueltos sobre Esencial**: IA +3 €/hab. (mín. 59), Datos +1 € (mín. 19),
   Distribución +2 € (mín. 29). Con los tres, Profesional sale más barato, y la calculadora lo
   dice.
-- **Pago anual**: −15 % (y cobro por adelantado, que a una empresa pequeña le da caja).
-- **Fundadores**: −25 % durante 12 meses para los 10 primeros hoteles, a cambio de sus
-  comentarios y un caso de éxito. No acumulable con el pago anual.
-- **Garantía de 60 días**: se devuelven las cuotas mensuales, no la implantación (es trabajo ya
-  hecho).
+- **Pago anual**: −5 %, por adelantado y sin devolución (da caja).
+- **Fundadores**: los 10 primeros hoteles tienen −10 % si pagan el año por adelantado (en lugar
+  del 5 %), a cambio de sus comentarios y un caso de éxito. Pagando al mes, precio normal.
+- **Sin garantía de devolución**: solo no permanencia en el pago mensual.
 - **IA**: 1.000 conversaciones al mes por hotel incluidas; después, 0,05 € cada una. Con un
   modelo barato de API una conversación cuesta 0,002-0,02 €.
 - **Sin comisión** sobre reservas directas. La pasarela cobra lo suyo al hotel.
@@ -49,6 +54,33 @@ activa. Si cambia allí, hay que actualizar `plans.ts` aquí (el sitio no import
 | Independiente de 40 hab.    | Profesional: 360 €/mes    | Cloudbeds ~450 € + chatbot (HiJiffy 159 €) = ~600 € |
 | Grupo, 2 hoteles, 120 hab.  | Grupo: 960 €/mes          | Mews ~1.100-1.700 €/mes (9-14 €/hab.) más módulos   |
 
+## SLA: servicio aparte, según la urgencia
+
+Se cobra como un porcentaje de la cuota (plan + paquetes) con un mínimo: un hotel más grande
+pierde más cuando el sistema cae, y lo paga en proporción. Se puede cambiar cada mes.
+
+|                   | Incluido (sin SLA)     | Prioritario            | Urgente                | 24/7                     |
+| ----------------- | ---------------------- | ---------------------- | ---------------------- | ------------------------ |
+| Precio            | —                      | +10 %, mín. 29 €/mes   | +20 %, mín. 89 €/mes   | +30 %, mín. 390 €/mes    |
+| Disponibilidad    | Sin compromiso         | 99,5 % (≤ 216 min/mes) | 99,7 % (≤ 130 min/mes) | 99,9 % (≤ 43 min/mes)    |
+| Soporte           | Chat y email, L-V 9-18 | + teléfono, L-V 9-18   | + teléfono, todos 8-22 | Guardia 24/7 en críticas |
+| Respuesta crítica | Mejor esfuerzo         | 4 h laborables         | 1 h                    | 30 min                   |
+| Respuesta alta    | 2 días laborables      | 1 día laborable        | 4 h                    | 2 h                      |
+| RPO / RTO         | Copia diaria           | 24 h / 8 h             | 24 h / 4 h             | 5 min / 2 h              |
+| Compensación      | No                     | Sí                     | Sí                     | Sí                       |
+
+Ejemplos: Esencial de 20 hab. + Prioritario = 80 + 29 €; Profesional de 40 hab. + Urgente = 360 +
+89 €; Grupo de 120 hab. + 24/7 = 960 + 390 €.
+
+**Compensación** (automática en la siguiente factura): 10 % por debajo del compromiso, 25 % por
+debajo del 99 %, 50 % por debajo del 98 % (tope). **Exclusiones**: mantenimiento avisado con 48 h
+entre 2:00 y 6:00 (máx. 4 h/mes), fallos de terceros (pasarelas, OTAs, proveedores de IA) y de
+la conexión del hotel.
+
+Coste de cada nivel (`SLA_SERVE_COST`): Prioritario 0,5 h/mes; Urgente 1 h + 10 € (línea de
+teléfono); 24/7 3 h + 150 € (compensación de guardias y PITR). El mínimo de cada nivel lo cubre
+con al menos un 50 % de margen.
+
 ## Rentabilidad (dos personas a tiempo completo)
 
 Modelo en `plans.ts` (`COSTS`, `SERVE_COST`, `TYPICAL_MIX`, `unitEconomics()`); los tests fallan si
@@ -63,23 +95,25 @@ un cambio de precios lo rompe.
 | **Total**                                                                 | **10.100** |
 
 Hora interna ≈ 35 € (equipo / ~260 h productivas al mes). Coste de atender cada contrato al mes:
-Esencial 1 h de soporte + 3 € variables; Profesional 1,5 h + 15 € (IA incluida); Grupo 6 h + 80 €
-(guardia y PITR). El mínimo de cada plan cubre ese coste con al menos un 50 % de margen.
+Esencial 1 h de soporte + 3 € variables; Profesional 1,5 h + 15 € (IA incluida); Grupo 4 h + 40 €
+(gestor de cuenta). El mínimo de cada plan cubre ese coste con al menos un 50 % de margen.
 
 **Con la mezcla esperada** (40 % Esencial de 20 hab., 50 % Profesional de 35 hab., 10 % Grupo de
-2 hoteles y 120 hab.; ingreso medio ≈ 285 €/mes por contrato):
+2 hoteles y 120 hab.; ingreso medio ≈ 285 €/mes por contrato; **sin contar ningún SLA**):
 
-- **Punto muerto: 38 hoteles** (≈ 10.800 € al mes).
-- **20 % de margen: 48 hoteles** (≈ 13.700 € al mes), con ~84 h de soporte al mes: cabe en la
+- **Punto muerto: 38 hoteles** (≈ 10.850 € al mes).
+- **20 % de margen: 47 hoteles** (≈ 13.400 € al mes), con ~73 h de soporte al mes: cabe en la
   mitad del tiempo de dos personas (150 h). El resto va a producto y ventas.
-- Si casi todos fueran hostales pequeños (70 % Esencial), harían falta ~60 para el punto muerto y
-  ~75 para el margen: el negocio depende de vender Profesional.
+- Los SLA son ingreso extra sobre esto: si un tercio de los Profesional contrata Urgente, son
+  ~700 € más al mes con 47 hoteles.
+- Si casi todos fueran hostales pequeños (70 % Esencial), harían falta ~58 para el punto muerto y
+  ~74 para el margen: el negocio depende de vender Profesional.
 - Con los precios anteriores (4/7/6 €, mínimos 49/119/390) el punto muerto estaba en 49 hoteles
   y el soporte de Esencial no se pagaba.
 
 **No incluye**: coste de captación (ferias, anuncios, comisiones de partners), impuestos sobre el
-beneficio ni sueldos por encima de 42.000 €. Los 10 fundadores (−25 % durante un año) retrasan el
-punto muerto unos pocos hoteles durante ese año.
+beneficio ni sueldos por encima de 42.000 €. Los pagos anuales (−5 %, fundadores −10 %) apenas
+mueven el punto muerto y adelantan caja.
 
 ## Competencia (septiembre 2026, fuentes públicas)
 
@@ -90,32 +124,16 @@ punto muerto unos pocos hoteles durante ese año.
 - **Chatbots de hotel** (lo que cubre nuestro paquete IA): HiJiffy 99-319 €/mes + alta; Asksuite ~150-300 $/mes. [Hotel Tech Report](https://hoteltechreport.com/marketing/hotel-chatbots/hijiffy-hotel-chatbot), [hyperleap](https://hyperleap.ai/comparison/best-asksuite-alternatives-2026)
 - **Disponibilidad habitual**: channel managers ≥ 99,5 %; los mejores, 99,9 %. [aiosell](https://aiosell.com/blog/channel-manager-slas-what-to-look-for/)
 
-## SLA
-
-|                   | Esencial               | Profesional            | Grupo                              |
-| ----------------- | ---------------------- | ---------------------- | ---------------------------------- |
-| Disponibilidad    | 99,5 % (≤ 216 min/mes) | 99,7 % (≤ 130 min/mes) | 99,9 % (≤ 43 min/mes)              |
-| Soporte           | Chat y email, L-V 9-18 | + teléfono, todos 8-22 | Guardia 24/7 en críticas           |
-| Respuesta crítica | 4 h laborables         | 1 h                    | 30 min                             |
-| Respuesta alta    | 1 día laborable        | 4 h                    | 2 h                                |
-| RPO / RTO         | 24 h / 8 h             | 24 h / 4 h             | 5 min / 2 h                        |
-| Además            |                        |                        | Gestor de cuenta, salida sin coste |
-
-**Compensación** (automática en la siguiente factura): 10 % por debajo del compromiso, 25 % por
-debajo del 99 %, 50 % por debajo del 98 % (tope). **Exclusiones**: mantenimiento avisado con 48 h
-entre 2:00 y 6:00 (máx. 4 h/mes), fallos de terceros (pasarelas, OTAs, proveedores de IA) y de
-la conexión del hotel.
-
 ## Antes de firmar el primer contrato (decisiones de Dan)
 
 1. **La infraestructura tiene que respaldar el SLA.** Supabase solo da SLA de disponibilidad en
    planes de empresa; en Pro no hay compromiso contractual. El 99,5-99,7 % es asumible (la media
-   real de Supabase suele estar por encima), el 99,9 % de Grupo lo asumimos nosotros sin respaldo.
-   Mínimo para producción: Supabase **Pro** + **PITR** (necesario para el RPO de 5 min de Grupo;
-   es un complemento de pago por proyecto). Un solo cliente Grupo lo cubre.
-2. **Guardia 24/7 con un equipo de dos personas** es un compromiso real: activarlo solo cuando
-   haya un cliente Grupo, con turnos y una alerta que despierte a alguien (monitor externo de
-   disponibilidad + página de estado pública, que además sirve para medir el SLA).
+   real de Supabase suele estar por encima), el 99,9 % del nivel 24/7 lo asumimos nosotros sin
+   respaldo. Para producción: Supabase **Pro**; **PITR** (RPO de 5 min) solo cuando alguien
+   contrate 24/7: su mínimo de 390 € lo cubre.
+2. **Guardia 24/7 con un equipo de dos personas** es un compromiso real: venderla solo con turnos
+   y una alerta que despierte a alguien (monitor externo de disponibilidad + página de estado
+   pública, que además sirve para medir el SLA).
 3. **Sueldos del modelo**: 42.000 € brutos por persona. Si al principio cobráis menos, el punto
    muerto baja; cambiad `COSTS.team` y los tests dicen si los precios siguen aguantando.
 4. **Distribución**: hoy solo existe el adaptador de pruebas. La web dice que los conectores

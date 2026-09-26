@@ -9,18 +9,22 @@ import {
   AI_EXTRA_CONVERSATION,
   ALWAYS,
   ANNUAL_DISCOUNT,
+  BASE_SUPPORT,
   FOUNDERS,
   PACKAGE_IDS,
   PACKAGES,
   PLAN_IDS,
   PLAN_PACKAGES,
   PLANS,
+  SLA_IDS,
+  SLA_TIERS,
   downtimeMinutes,
   quote,
   suggestPlan,
   type AddonId,
   type PackageId,
   type PlanId,
+  type SlaId,
 } from "../../supabase/functions/_shared/plans.ts";
 
 const INPUT =
@@ -48,10 +52,14 @@ const FAQ = [
   },
   {
     q: "¿Qué pasa si me quiero ir?",
-    a: "Te das de baja desde el mes siguiente y te llevas todos tus datos en formatos abiertos. Si pagaste un año por adelantado, te devolvemos los meses que no uses.",
+    a: "Con pago mensual no hay permanencia: te das de baja desde el mes siguiente y te llevas todos tus datos en formatos abiertos. El pago anual se abona por adelantado y no se devuelve.",
   },
   {
-    q: "¿Y si no cumplís el SLA?",
+    q: "¿Necesito un SLA?",
+    a: "Todos los planes tienen soporte por chat y email en horario laboral. Si tu hotel no puede esperar a que respondamos, contrata el nivel de urgencia que necesites; puedes subirlo o bajarlo cada mes.",
+  },
+  {
+    q: "¿Y si no cumplís el SLA contratado?",
     a: "Te descontamos automáticamente de la siguiente factura el porcentaje que corresponda. Publicamos la disponibilidad de cada mes.",
   },
   {
@@ -69,6 +77,7 @@ export function PricingPage() {
   const [hotels, setHotels] = useState(1);
   const [annual, setAnnual] = useState(false);
   const [addons, setAddons] = useState<AddonId[]>([]);
+  const [sla, setSla] = useState<SlaId | "">("");
 
   const suggested = suggestPlan(rooms, hotels, addons);
   const priceOf = (plan: PlanId) =>
@@ -77,6 +86,7 @@ export function PricingPage() {
       rooms,
       hotels: Math.max(hotels, PLANS[plan].minHotels),
       addons: plan === "starter" ? addons : [],
+      sla: sla || null,
       annual,
     });
   const toggleAddon = (id: AddonId, on: boolean) =>
@@ -91,15 +101,15 @@ export function PricingPage() {
             Un precio por habitación, publicado y sin letra pequeña
           </h1>
           <p className="mt-3 max-w-2xl text-navy-foreground/75">
-            Sin comisiones por reserva, sin permanencia y con un SLA que te compensa si fallamos.
-            Precios en euros, sin IVA.
+            Sin comisiones por reserva, sin permanencia y con el nivel de soporte que tu hotel
+            necesite. Precios en euros, sin IVA.
           </p>
         </div>
       </section>
 
       {/* Calculator */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="-mt-6 grid gap-6 rounded-xl border bg-card p-5 shadow-sm md:grid-cols-[1fr_1fr_auto] md:items-end">
+        <div className="-mt-6 grid gap-6 rounded-xl border bg-card p-5 shadow-sm md:grid-cols-[1.4fr_auto_1fr_auto] md:items-end">
           <div className="space-y-2">
             <label htmlFor="rooms" className="text-sm font-medium">
               Habitaciones en total
@@ -138,6 +148,24 @@ export function PricingPage() {
               onChange={(e) => setHotels(clampInt(e.target.value, 1, 200))}
               className={`${INPUT} block w-24`}
             />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="sla" className="text-sm font-medium">
+              SLA
+            </label>
+            <select
+              id="sla"
+              value={sla}
+              onChange={(e) => setSla(e.target.value as SlaId | "")}
+              className={`${INPUT} block w-full`}
+            >
+              <option value="">Sin SLA (soporte incluido)</option>
+              {SLA_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {SLA_TIERS[id].name} · respuesta crítica en {SLA_TIERS[id].response.critical}
+                </option>
+              ))}
+            </select>
           </div>
           <button
             type="button"
@@ -202,6 +230,11 @@ export function PricingPage() {
                       <span className="font-semibold tabular-nums">
                         {eur(q.effectiveMonthly, 2)}/mes
                       </span>
+                      {sla && (
+                        <span className="block text-xs text-muted-foreground">
+                          Incluye SLA {SLA_TIERS[sla].name}
+                        </span>
+                      )}
                       {annual && (
                         <span className="block text-xs text-muted-foreground">
                           {eur(q.yearly, 2)} al año
@@ -218,7 +251,7 @@ export function PricingPage() {
                   ))}
                   <li className="flex gap-2">
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" />
-                    SLA {pct(plan.sla.uptime)} · respuesta crítica en {plan.sla.response.critical}
+                    Soporte incluido: {BASE_SUPPORT.channels.toLowerCase()}. SLA aparte
                   </li>
                 </ul>
                 {id === "starter" && (
@@ -276,9 +309,9 @@ export function PricingPage() {
           <Sparkles className="h-5 w-5 shrink-0 text-gold-foreground" />
           <p className="text-sm">
             <span className="font-semibold">Hoteles fundadores:</span> los {FOUNDERS.seats} primeros
-            hoteles tienen un {FOUNDERS.discount * 100} % de descuento durante {FOUNDERS.months}{" "}
-            meses a cambio de sus comentarios y, si el resultado es bueno, un caso de éxito. No
-            acumulable con el descuento del pago anual. Pregúntalo en la demo.
+            hoteles que paguen el año por adelantado tienen un {FOUNDERS.annualDiscount * 100} % de
+            descuento (en lugar del {ANNUAL_DISCOUNT * 100} %), a cambio de sus comentarios y, si el
+            resultado es bueno, un caso de éxito. Pregúntalo en la demo.
           </p>
         </div>
       </section>
@@ -334,24 +367,36 @@ export function PricingPage() {
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold text-gold-foreground">
-              Acuerdo de nivel de servicio
+              Acuerdo de nivel de servicio (SLA)
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-              Lo que te garantizamos, por escrito
+              Paga la urgencia que necesitas, por escrito
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Somos un proveedor nuevo: por eso ponemos los compromisos en el contrato y los
-              compensamos en la factura si no los cumplimos.
+              Todos los planes incluyen soporte en horario laboral. Si tu hotel no puede esperar,
+              contrata un SLA: compromisos de respuesta y disponibilidad en el contrato, compensados
+              en la factura si no los cumplimos. Se cobra como un porcentaje de tu cuota, con un
+              mínimo, y puedes cambiarlo cada mes.
             </p>
           </div>
           <div className="mt-6 overflow-x-auto rounded-xl border">
-            <table className="w-full min-w-[40rem] text-sm">
+            <table className="w-full min-w-[48rem] text-sm">
               <thead>
-                <tr className="border-b bg-muted text-left">
+                <tr className="border-b bg-muted text-left align-top">
                   <th className="px-4 py-3 font-medium" />
-                  {PLAN_IDS.map((id) => (
+                  <th className="px-4 py-3 font-medium">
+                    Incluido
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      En todos los planes
+                    </span>
+                  </th>
+                  {SLA_IDS.map((id) => (
                     <th key={id} className="px-4 py-3 font-medium">
-                      {PLANS[id].name}
+                      {SLA_TIERS[id].name}
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        +{SLA_TIERS[id].share * 100} % de la cuota · mín.{" "}
+                        {eur(SLA_TIERS[id].minimum)}/mes
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -359,46 +404,53 @@ export function PricingPage() {
               <tbody className="[&_td]:px-4 [&_td]:py-3 [&_td]:align-top [&_tr]:border-b">
                 <SlaRow
                   label="Disponibilidad mensual"
+                  base="Sin compromiso"
                   cell={(id) => (
                     <>
-                      <span className="font-semibold">{pct(PLANS[id].sla.uptime)}</span>
+                      <span className="font-semibold">{pct(SLA_TIERS[id].uptime)}</span>
                       <span className="block text-xs text-muted-foreground">
-                        máx. {downtimeMinutes(PLANS[id].sla.uptime)} min sin servicio al mes
+                        máx. {downtimeMinutes(SLA_TIERS[id].uptime)} min sin servicio al mes
                       </span>
                     </>
                   )}
                 />
-                <SlaRow label="Soporte" cell={(id) => PLANS[id].sla.support} />
+                <SlaRow
+                  label="Soporte"
+                  base={BASE_SUPPORT.channels}
+                  cell={(id) => SLA_TIERS[id].support}
+                />
                 <SlaRow
                   label="Respuesta: crítica"
                   hint="No se puede reservar, hacer check-in o cobrar"
-                  cell={(id) => PLANS[id].sla.response.critical}
+                  base="Lo antes posible en horario laboral"
+                  cell={(id) => SLA_TIERS[id].response.critical}
                 />
                 <SlaRow
                   label="Respuesta: alta"
                   hint="Una función importante falla, hay alternativa"
-                  cell={(id) => PLANS[id].sla.response.high}
+                  base={BASE_SUPPORT.response.replace("Respuesta en ", "")}
+                  cell={(id) => SLA_TIERS[id].response.high}
                 />
                 <SlaRow
                   label="Respuesta: normal"
                   hint="Dudas y peticiones"
-                  cell={(id) => PLANS[id].sla.response.normal}
+                  base={BASE_SUPPORT.response.replace("Respuesta en ", "")}
+                  cell={(id) => SLA_TIERS[id].response.normal}
                 />
-                <SlaRow label="Pérdida máxima de datos (RPO)" cell={(id) => PLANS[id].sla.rpo} />
-                <SlaRow label="Tiempo de recuperación (RTO)" cell={(id) => PLANS[id].sla.rto} />
                 <SlaRow
-                  label="Además"
-                  cell={(id) =>
-                    PLANS[id].sla.extras.length ? (
-                      <ul className="space-y-1">
-                        {PLANS[id].sla.extras.map((e) => (
-                          <li key={e}>{e}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <Minus className="h-4 w-4 text-muted-foreground" />
-                    )
-                  }
+                  label="Pérdida máxima de datos (RPO)"
+                  base="Copia diaria, sin compromiso"
+                  cell={(id) => SLA_TIERS[id].rpo}
+                />
+                <SlaRow
+                  label="Tiempo de recuperación (RTO)"
+                  base="Sin compromiso"
+                  cell={(id) => SLA_TIERS[id].rto}
+                />
+                <SlaRow
+                  label="Compensación si fallamos"
+                  base={<Minus className="h-4 w-4 text-muted-foreground" aria-label="No" />}
+                  cell={() => <Check className="h-4 w-4 text-info-foreground" aria-label="Sí" />}
                 />
               </tbody>
             </table>
@@ -504,11 +556,14 @@ function PackageRows({ pkg }: { pkg: PackageId }) {
 function SlaRow({
   label,
   hint,
+  base,
   cell,
 }: {
   label: string;
   hint?: string;
-  cell: (id: PlanId) => ReactNode;
+  /** What the support included in every plan offers. */
+  base: ReactNode;
+  cell: (id: SlaId) => ReactNode;
 }) {
   return (
     <tr>
@@ -516,7 +571,8 @@ function SlaRow({
         {label}
         {hint && <span className="block text-xs font-normal text-muted-foreground">{hint}</span>}
       </td>
-      {PLAN_IDS.map((id) => (
+      <td className="text-muted-foreground">{base}</td>
+      {SLA_IDS.map((id) => (
         <td key={id}>{cell(id)}</td>
       ))}
     </tr>

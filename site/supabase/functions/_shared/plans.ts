@@ -73,20 +73,7 @@ export interface Plan {
   onboardingNote: string;
   /** Hotels the plan is meant for; group needs at least two. */
   minHotels: number;
-  sla: Sla;
   highlights: string[];
-}
-
-export interface Sla {
-  /** Monthly availability commitment, percent. */
-  uptime: number;
-  support: string;
-  /** First response per priority (critical: the hotel cannot book or check in). */
-  response: { critical: string; high: string; normal: string };
-  /** Recovery point / time objectives. */
-  rpo: string;
-  rto: string;
-  extras: string[];
 }
 
 export const PLANS: Record<PlanId, Plan> = {
@@ -99,18 +86,6 @@ export const PLANS: Record<PlanId, Plan> = {
     onboardingFreeAnnual: true,
     onboardingNote: "Alta guiada e importación de habitaciones y reservas desde Excel o CSV.",
     minHotels: 1,
-    sla: {
-      uptime: 99.5,
-      support: "Chat y email, lunes a viernes de 9:00 a 18:00",
-      response: {
-        critical: "4 h laborables",
-        high: "1 día laborable",
-        normal: "2 días laborables",
-      },
-      rpo: "24 h",
-      rto: "8 h",
-      extras: [],
-    },
     highlights: [
       "PMS, web de reserva directa y app del huésped",
       "Chat con recepción, cuenta de la estancia y reseñas",
@@ -127,14 +102,6 @@ export const PLANS: Record<PlanId, Plan> = {
     onboardingNote:
       "Migración de datos desde tu sistema actual, configuración de tarifas y canales y 2 h de formación.",
     minHotels: 1,
-    sla: {
-      uptime: 99.7,
-      support: "Chat, email y teléfono, todos los días de 8:00 a 22:00",
-      response: { critical: "1 h", high: "4 h", normal: "1 día laborable" },
-      rpo: "24 h",
-      rto: "4 h",
-      extras: [],
-    },
     highlights: [
       "Todo lo de Esencial",
       "Asistente de reservas IA, copiloto de gestión y MCP",
@@ -149,23 +116,12 @@ export const PLANS: Record<PlanId, Plan> = {
     onboarding: 1490,
     onboardingFreeAnnual: false,
     onboardingNote:
-      "Desde 990 €: proyecto de implantación por hotel, integraciones a medida y formación por equipos.",
+      "Proyecto de implantación por hotel, integraciones a medida y formación por equipos.",
     minHotels: 2,
-    sla: {
-      uptime: 99.9,
-      support: "Guardia 24/7 para incidencias críticas; resto, todos los días de 8:00 a 22:00",
-      response: { critical: "30 min", high: "2 h", normal: "8 h laborables" },
-      rpo: "5 min",
-      rto: "2 h",
-      extras: [
-        "Gestor de cuenta y revisión trimestral del servicio",
-        "Salida sin penalización si la disponibilidad baja del 99 % dos meses seguidos",
-      ],
-    },
     highlights: [
       "Todo lo de Profesional, en todos los hoteles del grupo",
       "Rol de dirección de grupo y club compartido entre hoteles",
-      "SLA del 99,9 % con guardia 24/7",
+      "Gestor de cuenta y revisión trimestral del servicio",
     ],
   },
 };
@@ -179,34 +135,104 @@ export const ADDONS: Partial<Record<PackageId, { perRoom: number; minimum: numbe
 export type AddonId = "ai" | "data" | "distribution";
 export const ADDON_IDS: AddonId[] = ["ai", "data", "distribution"];
 
-/** Annual prepayment discount. */
-export const ANNUAL_DISCOUNT = 0.15;
+/** Annual prepayment discount (the year is paid upfront and not refunded). */
+export const ANNUAL_DISCOUNT = 0.05;
 
 /** AI conversations included per hotel and month; beyond that, per conversation. */
 export const AI_CONVERSATIONS_INCLUDED = 1000;
 export const AI_EXTRA_CONVERSATION = 0.05;
 
-/** Launch programme while we have no references: first hotels, in exchange for a case study. Not combinable with the annual discount. */
-export const FOUNDERS = { discount: 0.25, months: 12, seats: 10 } as const;
-
-/** Money back if the hotel leaves in the first days. */
-export const GUARANTEE_DAYS = 60;
+/**
+ * Launch programme while we have no references: the first hotels get a bigger
+ * annual discount (instead of the standard one), in exchange for feedback and
+ * a case study.
+ */
+export const FOUNDERS = { annualDiscount: 0.1, seats: 10 } as const;
 
 /** Same promises in every plan. */
 export const ALWAYS = [
   "Sin permanencia: pago mensual y baja cuando quieras",
   "0 % de comisión sobre las reservas directas",
   "Tus datos son tuyos: exportación completa en cualquier momento",
-  `Garantía de ${GUARANTEE_DAYS} días: si no te convence, te devolvemos las cuotas mensuales`,
   "Contrato de encargado del tratamiento (RGPD) incluido",
 ];
+
+// ── Support and SLA ──────────────────────────────────────────────────────────
+// Every plan has basic support without commitments. The SLA is a separate
+// service, priced by urgency: a share of the subscription with a minimum,
+// since a bigger hotel loses more when the system is down.
+
+/** Support included in every plan (no availability commitment, no credits). */
+export const BASE_SUPPORT = {
+  channels: "Chat y email, lunes a viernes de 9:00 a 18:00",
+  response: "Respuesta en 2 días laborables",
+};
+
+export const SLA_IDS = ["priority", "urgent", "always"] as const;
+export type SlaId = (typeof SLA_IDS)[number];
+
+export interface SlaTier {
+  name: string;
+  tagline: string;
+  /** Share of the monthly subscription (plan + packages). */
+  share: number;
+  /** Minimum €/month. */
+  minimum: number;
+  /** Monthly availability commitment, percent. */
+  uptime: number;
+  support: string;
+  /** First response per priority (critical: the hotel cannot book, check in or charge). */
+  response: { critical: string; high: string; normal: string };
+  /** Recovery point / time objectives. */
+  rpo: string;
+  rto: string;
+}
+
+export const SLA_TIERS: Record<SlaId, SlaTier> = {
+  priority: {
+    name: "Prioritario",
+    tagline: "Tus incidencias van primero en horario laboral.",
+    share: 0.1,
+    minimum: 29,
+    uptime: 99.5,
+    support: "Chat, email y teléfono, lunes a viernes de 9:00 a 18:00",
+    response: { critical: "4 h laborables", high: "1 día laborable", normal: "2 días laborables" },
+    rpo: "24 h",
+    rto: "8 h",
+  },
+  urgent: {
+    name: "Urgente",
+    tagline: "Para hoteles que no paran: respuesta en una hora, todos los días.",
+    share: 0.2,
+    minimum: 89,
+    uptime: 99.7,
+    support: "Chat, email y teléfono, todos los días de 8:00 a 22:00",
+    response: { critical: "1 h", high: "4 h", normal: "1 día laborable" },
+    rpo: "24 h",
+    rto: "4 h",
+  },
+  always: {
+    name: "24/7",
+    tagline: "Guardia de noche y en festivos para lo que no puede esperar.",
+    share: 0.3,
+    minimum: 390,
+    uptime: 99.9,
+    support: "Guardia 24/7 para incidencias críticas; resto, todos los días de 8:00 a 22:00",
+    response: { critical: "30 min", high: "2 h", normal: "8 h laborables" },
+    rpo: "5 min",
+    rto: "2 h",
+  },
+};
 
 export interface QuoteInput {
   plan: PlanId;
   rooms: number;
   hotels?: number;
   addons?: AddonId[];
+  sla?: SlaId | null;
   annual?: boolean;
+  /** Founder hotel: bigger annual discount (only when paying annually). */
+  founder?: boolean;
 }
 
 export interface Quote {
@@ -215,6 +241,8 @@ export interface Quote {
   lines: { label: string; amount: number }[];
   /** €/month before the annual discount. */
   monthly: number;
+  /** Annual discount applied (0 when paying monthly). */
+  discount: number;
   /** €/month actually paid (after the annual discount, if any). */
   effectiveMonthly: number;
   /** €/year actually paid. */
@@ -225,7 +253,15 @@ export interface Quote {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Monthly price of a plan for a number of rooms. Throws on nonsense input. */
-export function quote({ plan, rooms, hotels = 1, addons = [], annual = false }: QuoteInput): Quote {
+export function quote({
+  plan,
+  rooms,
+  hotels = 1,
+  addons = [],
+  sla = null,
+  annual = false,
+  founder = false,
+}: QuoteInput): Quote {
   const p = PLANS[plan];
   if (!p) throw new Error(`Unknown plan: ${plan}`);
   if (!Number.isInteger(rooms) || rooms < 1) throw new Error("Rooms must be a positive integer");
@@ -246,13 +282,24 @@ export function quote({ plan, rooms, hotels = 1, addons = [], annual = false }: 
       amount: Math.max(a.minimum, a.perRoom * rooms),
     });
   }
+  if (sla) {
+    const t = SLA_TIERS[sla];
+    if (!t) throw new Error(`Unknown SLA: ${sla}`);
+    const subscription = lines.reduce((s, l) => s + l.amount, 0);
+    lines.push({
+      label: `SLA ${t.name}`,
+      amount: Math.max(t.minimum, round2(subscription * t.share)),
+    });
+  }
   const monthly = round2(lines.reduce((s, l) => s + l.amount, 0));
-  const effectiveMonthly = round2(annual ? monthly * (1 - ANNUAL_DISCOUNT) : monthly);
+  const discount = annual ? (founder ? FOUNDERS.annualDiscount : ANNUAL_DISCOUNT) : 0;
+  const effectiveMonthly = round2(monthly * (1 - discount));
   return {
     plan,
     packages: [...packages],
     lines,
     monthly,
+    discount,
     effectiveMonthly,
     yearly: round2(effectiveMonthly * 12),
     onboarding: annual && p.onboardingFreeAnnual ? 0 : p.onboarding,
@@ -271,11 +318,12 @@ export function suggestPlan(rooms: number, hotels: number, addons: AddonId[]): P
 }
 
 /**
- * SLA service credit for a month, as a share of that month's fee: 10 % below
- * the commitment, 25 % below 99 %, 50 % below 98 % (the cap).
+ * Service credit for a month with an SLA, as a share of that month's fee: 10 %
+ * below the commitment, 25 % below 99 %, 50 % below 98 % (the cap). Without an
+ * SLA there is no commitment and no credit.
  */
-export function slaCredit(plan: PlanId, measuredUptime: number): number {
-  if (measuredUptime >= PLANS[plan].sla.uptime) return 0;
+export function slaCredit(sla: SlaId | null, measuredUptime: number): number {
+  if (!sla || measuredUptime >= SLA_TIERS[sla].uptime) return 0;
   if (measuredUptime >= 99) return 0.1;
   if (measuredUptime >= 98) return 0.25;
   return 0.5;
@@ -307,14 +355,21 @@ export const SERVE_COST: Record<PlanId, { hours: number; variable: number }> = {
   starter: { hours: 1, variable: 3 },
   // ~1.000 AI conversations at ~0,01 € plus storage and functions.
   pro: { hours: 1.5, variable: 15 },
-  // Several hotels, 24/7 on-call and a share of PITR.
-  group: { hours: 6, variable: 80 },
+  // Several hotels and an account manager.
+  group: { hours: 4, variable: 40 },
+};
+
+/** Extra monthly cost of each SLA: support hours and, for 24/7, on-call and PITR. */
+export const SLA_SERVE_COST: Record<SlaId, { hours: number; variable: number }> = {
+  priority: { hours: 0.5, variable: 0 },
+  urgent: { hours: 1, variable: 10 },
+  always: { hours: 3, variable: 150 },
 };
 
 /** Share of the monthly revenue left after all costs that we aim for. */
 export const TARGET_MARGIN = 0.2;
 
-/** Expected customer mix: share of contracts and typical size of each plan. */
+/** Expected customer mix: share of contracts and typical size of each plan. No SLA assumed (upside). */
 export const TYPICAL_MIX: Record<PlanId, { share: number; rooms: number; hotels: number }> = {
   starter: { share: 0.4, rooms: 20, hotels: 1 },
   pro: { share: 0.5, rooms: 35, hotels: 1 },
