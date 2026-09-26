@@ -1,0 +1,120 @@
+@import "tailwindcss" source(none);
+@source "../src";
+
+/*
+ * Same palette as the product's staff panel (navy, celeste and a muted gold
+ * used sparingly), copied rather than imported: the site is its own project.
+ * The site is always light; navy bands give the contrast.
+ */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
+  --color-navy-strong: var(--navy-strong);
+  --color-navy-accent: var(--navy-accent);
+  --color-navy-border: var(--navy-border);
+  --color-navy-gold: var(--navy-gold);
+  --color-navy-gold-foreground: var(--navy-gold-foreground);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.984 0.004 250);
+  --foreground: oklch(0.24 0.05 262);
+  --card: oklch(1 0 0);
+  --primary: oklch(0.3 0.075 260);
+  --primary-foreground: oklch(0.985 0.004 250);
+  --secondary: oklch(0.955 0.022 236);
+  --secondary-foreground: oklch(0.3 0.075 260);
+  --muted: oklch(0.965 0.008 250);
+  --muted-foreground: oklch(0.52 0.03 256);
+  --accent: oklch(0.945 0.028 234);
+  --destructive: oklch(0.577 0.215 27.325);
+  --gold: oklch(0.76 0.12 82);
+  --gold-foreground: oklch(0.5 0.1 70);
+  --info: oklch(0.7 0.11 234);
+  --info-foreground: oklch(0.42 0.095 248);
+  --border: oklch(0.915 0.012 250);
+  --input: oklch(0.9 0.014 250);
+  --ring: oklch(0.68 0.11 234);
+  /* Panel sidebar tones, for the navy bands. */
+  --navy: oklch(0.225 0.058 262);
+  --navy-foreground: oklch(0.9 0.018 250);
+  --navy-strong: oklch(0.985 0.004 250);
+  --navy-accent: oklch(0.29 0.066 260);
+  --navy-border: oklch(0.31 0.05 260);
+  --navy-gold: oklch(0.78 0.12 82);
+  --navy-gold-foreground: oklch(0.225 0.058 262);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Showcase screen swap: quick fade-up, transform/opacity only. */
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.swap-in {
+  animation: swap-in 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .swap-in {
+    animation: none;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

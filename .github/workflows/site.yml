@@ -1,0 +1,31 @@
+name: Sales website
+
+# The sales website (site/) is its own project: typecheck, tests and build.
+on:
+  pull_request:
+    paths: ["site/**", ".github/workflows/site.yml"]
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/site.yml"]
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run check

@@ -1,0 +1,7 @@
+# Sales project: leads from the website. NOT the product's Supabase project.
+# Link it with its own ref:  npx supabase link --project-ref <sales-ref>
+project_id = "demo-stays-sales"
+
+[functions.leads]
+# Called by the public website with the publishable key.
+verify_jwt = false
