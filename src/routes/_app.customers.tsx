@@ -89,13 +89,19 @@ function CustomersPage() {
   const total = rows[0]?.total ?? 0;
 
   const del = useMutation({
+    // Without bookings the customer is deleted; with bookings it is anonymised
+    // (personal data removed, bookings kept) by delete_customer().
     mutationFn: async (id: string) => {
-      // reservations.customer_id is ON DELETE SET NULL: bookings are kept.
-      const { error } = await supabase.from("customers").delete().eq("id", id);
-      if (error) throw error;
+      const { data, error } = await supabase.rpc("delete_customer", { p_customer_id: id });
+      if (error) throw new Error(error.message);
+      return data as unknown as "deleted" | "anonymised";
     },
-    onSuccess: () => {
-      toast.success("Cliente eliminado");
+    onSuccess: (result) => {
+      toast.success(
+        result === "anonymised"
+          ? "Datos personales eliminados; sus reservas se conservan sin ellos"
+          : "Cliente eliminado",
+      );
       qc.invalidateQueries({ queryKey: ["customers"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -218,7 +224,9 @@ function CustomersPage() {
                             const label = c.name || c.email || "este cliente";
                             if (
                               window.confirm(
-                                `¿Eliminar a «${label}»? Esta acción no se puede deshacer.`,
+                                c.stays > 0
+                                  ? `¿Eliminar los datos de «${label}»? Tiene reservas: se conservan, pero sin su nombre, contacto ni documento. No se puede deshacer.`
+                                  : `¿Eliminar a «${label}»? No se puede deshacer.`,
                               )
                             ) {
                               del.mutate(c.id);
