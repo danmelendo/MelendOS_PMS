@@ -362,6 +362,7 @@ export type Database = {
       }
       cancellation_requests: {
         Row: {
+          category: string | null
           channel: string
           decided_at: string | null
           decided_by: string | null
@@ -374,6 +375,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          category?: string | null
           channel?: string
           decided_at?: string | null
           decided_by?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           tenant_id?: string
         }
         Update: {
+          category?: string | null
           channel?: string
           decided_at?: string | null
           decided_by?: string | null
@@ -1575,6 +1578,8 @@ export type Database = {
         Row: {
           access_token_hash: string | null
           base_price: number
+          cancellation_category: string | null
+          cancellation_note: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cleaning_minutes: number
@@ -1617,6 +1622,8 @@ export type Database = {
         Insert: {
           access_token_hash?: string | null
           base_price?: number
+          cancellation_category?: string | null
+          cancellation_note?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cleaning_minutes?: number
@@ -1659,6 +1666,8 @@ export type Database = {
         Update: {
           access_token_hash?: string | null
           base_price?: number
+          cancellation_category?: string | null
+          cancellation_note?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cleaning_minutes?: number
@@ -2321,16 +2330,17 @@ export type Database = {
       cancel_booking_as_guest: {
         Args: {
           p_actor: string
+          p_category: string
           r: Database["public"]["Tables"]["reservations"]["Row"]
         }
         Returns: undefined
       }
       cancel_guest_booking: {
-        Args: { p_id: string; p_token: string }
+        Args: { p_category?: string; p_id: string; p_token: string }
         Returns: undefined
       }
       cancel_my_reservation: {
-        Args: { p_reservation_id: string }
+        Args: { p_category?: string; p_reservation_id: string }
         Returns: undefined
       }
       cancel_stale_pending_reservations: { Args: never; Returns: number }
@@ -2355,7 +2365,12 @@ export type Database = {
       }
       current_tenant_id: { Args: never; Returns: string }
       decide_cancellation: {
-        Args: { p_approve: boolean; p_note?: string; p_request_id: string }
+        Args: {
+          p_approve: boolean
+          p_category?: string
+          p_note?: string
+          p_request_id: string
+        }
         Returns: undefined
       }
       decide_extension: {
@@ -2407,6 +2422,8 @@ export type Database = {
         Returns: {
           access_token_hash: string | null
           base_price: number
+          cancellation_category: string | null
+          cancellation_note: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cleaning_minutes: number
@@ -2458,6 +2475,8 @@ export type Database = {
         Returns: {
           access_token_hash: string | null
           base_price: number
+          cancellation_category: string | null
+          cancellation_note: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cleaning_minutes: number
@@ -2519,13 +2538,16 @@ export type Database = {
         Args: { p_tenant: string }
         Returns: number
       }
+      is_cancellation_category: { Args: { p: string }; Returns: boolean }
       is_member_user: {
         Args: { p_member: string; p_tenant: string }
         Returns: boolean
       }
       is_tenant_member: { Args: { p_tenant: string }; Returns: boolean }
+      lake_tenants: { Args: never; Returns: string[] }
       list_mcp_tokens: { Args: { p_tenant: string }; Returns: Json }
       mcp_token_auth: { Args: { p_token_hash: string }; Returns: Json }
+      module_package: { Args: { p_feature: string }; Returns: string }
       order_service: {
         Args: {
           p_note?: string
@@ -2554,7 +2576,12 @@ export type Database = {
         Returns: Json
       }
       request_guest_cancellation: {
-        Args: { p_id: string; p_reason?: string; p_token: string }
+        Args: {
+          p_category?: string
+          p_id: string
+          p_reason?: string
+          p_token: string
+        }
         Returns: string
       }
       review_author: { Args: { p_name: string }; Returns: string }
@@ -2598,6 +2625,10 @@ export type Database = {
       tenant_feature: {
         Args: { p_feature: string; p_tenant: string }
         Returns: boolean
+      }
+      tenant_packages: {
+        Args: { p_plan: string; p_settings: Json }
+        Returns: string[]
       }
       tenant_storage_usage: {
         Args: never

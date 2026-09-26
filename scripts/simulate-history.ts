@@ -129,23 +129,25 @@ try {
         updated_at: s.cancelledAt ?? s.createdAt,
         cancelled_at: s.cancelledAt,
         cancellation_reason: s.cancelledAt ? "Cancelada por el huésped" : null,
+        cancellation_category: s.cancelCategory,
       }));
       for (let i = 0; i < rows.length; i += 500) {
         await db.query(
           `insert into public.reservations
              (id, tenant_id, room_id, property_id, customer_id, start_at, end_at, people,
               base_price, total, deposit_amount, deposit_paid, payment_mode, paid_amount, status,
-              created_by_role, created_at, updated_at, cancelled_at, cancellation_reason, simulated)
+              created_by_role, created_at, updated_at, cancelled_at, cancellation_reason,
+              cancellation_category, simulated)
            select x.id, $1, x.room_id, x.property_id, x.customer_id, x.start_at, x.end_at, x.people,
                   x.base_price, x.total, x.deposit_amount, x.deposit_paid, x.payment_mode, x.paid_amount,
                   x.status::public.reservation_status, x.created_by_role, x.created_at,
-                  x.updated_at, x.cancelled_at, x.cancellation_reason, true
+                  x.updated_at, x.cancelled_at, x.cancellation_reason, x.cancellation_category, true
              from jsonb_to_recordset($2::jsonb) as x(
                id uuid, room_id uuid, property_id uuid, customer_id uuid, start_at timestamptz,
                end_at timestamptz, people int, base_price numeric, total numeric,
                deposit_amount numeric, deposit_paid boolean, payment_mode text, paid_amount numeric, status text,
                created_by_role text, created_at timestamptz, updated_at timestamptz,
-               cancelled_at timestamptz, cancellation_reason text)`,
+               cancelled_at timestamptz, cancellation_reason text, cancellation_category text)`,
           [tenant.id, JSON.stringify(rows.slice(i, i + 500))],
         );
       }

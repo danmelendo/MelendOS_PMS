@@ -100,7 +100,7 @@ export interface PmsConnector {
   // ── Prebookings (prereservas) & reservations ──
   createPrebooking(input: CreatePrebookingInput): Promise<Prebooking>;
   /** Late cancellation: a request the hotel decides on (the fee applies). */
-  requestCancellation(id: string, reason?: string): Promise<void>;
+  requestCancellation(id: string, reason?: string, category?: string): Promise<void>;
   getPrebooking(id: string): Promise<Prebooking | null>;
   /** Starts the deposit payment; the browser must follow the redirect. The
    *  booking is confirmed only by the gateway notification, never here. */
@@ -110,7 +110,7 @@ export interface PmsConnector {
     returnUrl: string,
     kind?: "deposit" | "balance",
   ): Promise<PaymentRedirect>;
-  cancelPrebooking(id: string): Promise<void>;
+  cancelPrebooking(id: string, category?: string): Promise<void>;
   listBookings(memberId: string): Promise<Prebooking[]>;
   getBooking(id: string): Promise<Prebooking | null>;
 

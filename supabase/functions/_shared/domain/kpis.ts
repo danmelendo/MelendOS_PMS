@@ -29,6 +29,8 @@ export interface StayFact {
   guests: number;
   /** Accommodation revenue of the whole stay (no extras). */
   roomRevenue: number;
+  /** Why it was cancelled or rejected (@domain/cancellations.ts), if it was. */
+  cancelCategory?: string | null;
 }
 
 export const SOLD_STATUSES = ["confirmed", "in_progress", "completed"] as const;
@@ -107,6 +109,8 @@ export interface BookingStats {
   avgLeadDays: number;
   avgLengthOfStay: number;
   channels: Record<string, number>;
+  /** Cancellations by reason group. */
+  cancelReasons: Record<string, number>;
 }
 
 /** Stays booked in [from, to] (by booking date). */
@@ -124,6 +128,12 @@ export function bookingStats(facts: StayFact[], from: Ymd, to: Ymd): BookingStat
     los += nightsBetween(f.checkIn, f.checkOut);
   }
   const cancelled = booked.filter((f) => f.status === "cancelled").length;
+  const cancelReasons: Record<string, number> = {};
+  for (const f of booked) {
+    if (f.status !== "cancelled") continue;
+    const c = f.cancelCategory ?? "no_reason";
+    cancelReasons[c] = (cancelReasons[c] ?? 0) + 1;
+  }
   return {
     bookings: booked.length,
     cancelled,
@@ -132,6 +142,7 @@ export function bookingStats(facts: StayFact[], from: Ymd, to: Ymd): BookingStat
     avgLeadDays: round2(ratio(lead, booked.length)),
     avgLengthOfStay: round2(ratio(los, booked.length)),
     channels,
+    cancelReasons,
   };
 }
 
@@ -200,6 +211,7 @@ export function parseStayFacts(raw: { rooms?: Record<string, number>; stays?: un
         channel: s[7] == null ? null : String(s[7]),
         guests: Number(s[8]),
         roomRevenue: Number(s[9]),
+        cancelCategory: s[10] == null ? null : String(s[10]),
       }),
     ),
   };

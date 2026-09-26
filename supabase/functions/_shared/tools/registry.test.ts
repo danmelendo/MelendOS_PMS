@@ -298,6 +298,16 @@ describe("get_booking and request_cancellation", () => {
     expect(again).toMatchObject({ already_requested: true, request_id: first.request_id });
   });
 
+  it("records why the guest cancels, from a fixed list", async () => {
+    const { store, requests } = fakeStore();
+    const input = { reference: "B2000000", email: "laura@example.com" };
+    ok(await runTool("request_cancellation", { ...input, reason_category: "work" }, store, ctx));
+    expect(requests[0]).toMatchObject({ category: "work" });
+    expect(
+      await runTool("request_cancellation", { ...input, reason_category: "bored" }, store, ctx),
+    ).toMatchObject({ ok: false, error: { code: "invalid" } });
+  });
+
   it("refuses bookings that are already closed", async () => {
     const { store, requests } = fakeStore();
     const res = await runTool(

@@ -23,6 +23,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { eur, STATUS_LABELS, STATUS_COLORS, HOTELS, buildingKey } from "@/lib/data";
+import {
+  CANCELLATION_CATEGORIES,
+  isCancellationCategory,
+  type CancellationCategory,
+} from "@domain/cancellations.ts";
+
+// Reasons reception can pick (the payment one is set by the system).
+const STAFF_CATEGORIES = (Object.keys(CANCELLATION_CATEGORIES) as CancellationCategory[]).filter(
+  (c) => c !== "payment_not_completed",
+);
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import {
   ReservationExtrasInfo,
@@ -42,9 +52,16 @@ function ReservationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [buildingFilter, setBuildingFilter] = useState<string>("all");
-  // Cancelación con motivo obligatorio: id de la reserva a cancelar + texto.
+  // Cancellation: a reason group (required, for reports and the ML models)
+  // and an optional internal note.
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
+  const [cancelCategory, setCancelCategory] = useState<CancellationCategory | "">("");
+  const [cancelNote, setCancelNote] = useState("");
+  const closeCancel = () => {
+    setCancelTarget(null);
+    setCancelCategory("");
+    setCancelNote("");
+  };
 
   const { data: reservations } = useQuery({
     queryKey: ["reservations", "list"],
@@ -62,30 +79,33 @@ function ReservationsPage() {
   });
 
   const cancel = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+    mutationFn: async (v: { id: string; category: CancellationCategory; note: string }) => {
       const { error } = await supabase
         .from("reservations")
-        .update({ status: "cancelled", cancellation_reason: reason } as never)
-        .eq("id", id);
+        .update({
+          status: "cancelled",
+          cancellation_reason: CANCELLATION_CATEGORIES[v.category],
+          cancellation_category: v.category,
+          cancellation_note: v.note || null,
+        })
+        .eq("id", v.id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Reserva cancelada");
       qc.invalidateQueries({ queryKey: ["reservations"] });
-      setCancelTarget(null);
-      setCancelReason("");
+      closeCancel();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const confirmCancel = () => {
-    const reason = cancelReason.trim();
     if (!cancelTarget) return;
-    if (!reason) {
-      toast.error("Indica el motivo de la cancelación");
+    if (!cancelCategory) {
+      toast.error("Elige el motivo de la cancelación");
       return;
     }
-    cancel.mutate({ id: cancelTarget, reason });
+    cancel.mutate({ id: cancelTarget, category: cancelCategory, note: cancelNote.trim() });
   };
 
   const filtered = reservations?.filter((r) => {
@@ -229,16 +249,21 @@ function ReservationsPage() {
                           <Badge variant="outline" className={STATUS_COLORS[r.status]}>
                             {STATUS_LABELS[r.status]}
                           </Badge>
-                          {(() => {
-                            const reason = (r as { cancellation_reason?: string | null })
-                              .cancellation_reason;
-                            return (r.status === "cancelled" || r.status === "rejected") &&
-                              reason ? (
-                              <div className="text-xs text-muted-foreground mt-1 max-w-[200px]">
-                                {reason}
+                          {(r.status === "cancelled" || r.status === "rejected") &&
+                            (r.cancellation_category || r.cancellation_reason) && (
+                              <div className="mt-1 max-w-[220px] space-y-0.5 text-xs text-muted-foreground">
+                                <div className="font-medium">
+                                  {isCancellationCategory(r.cancellation_category)
+                                    ? CANCELLATION_CATEGORIES[r.cancellation_category]
+                                    : r.cancellation_reason}
+                                </div>
+                                {r.cancellation_note && (
+                                  <div className="italic" title="Nota interna">
+                                    {r.cancellation_note}
+                                  </div>
+                                )}
                               </div>
-                            ) : null;
-                          })()}
+                            )}
                         </td>
                         <td className="p-2 text-right font-medium tabular-nums">
                           {eur(Number(r.total))}
@@ -260,7 +285,8 @@ function ReservationsPage() {
                                 className="h-8 w-8"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setCancelReason("");
+                                  setCancelCategory("");
+                                  setCancelNote("");
                                   setCancelTarget(r.id);
                                 }}
                                 title="Cancelar"
@@ -305,46 +331,57 @@ function ReservationsPage() {
       <Dialog
         open={!!cancelTarget}
         onOpenChange={(o) => {
-          if (!o) {
-            setCancelTarget(null);
-            setCancelReason("");
-          }
+          if (!o) closeCancel();
         }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Cancelar reserva</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="cancel-reason">
-              Motivo de la cancelación <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="cancel-reason"
-              rows={3}
-              autoFocus
-              placeholder="Ej. El cliente llamó para anular, habitación con avería, no se presentó…"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Obligatorio. Quedará registrado junto a la reserva.
-            </p>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="cancel-category">
+                Motivo <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={cancelCategory}
+                onValueChange={(v) => setCancelCategory(v as CancellationCategory)}
+              >
+                <SelectTrigger id="cancel-category">
+                  <SelectValue placeholder="Elige un motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STAFF_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {CANCELLATION_CATEGORIES[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cancel-note">Nota interna</Label>
+              <Textarea
+                id="cancel-note"
+                rows={3}
+                maxLength={2000}
+                placeholder="Detalles para el equipo (no la ve el huésped)"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                El motivo alimenta los informes y los modelos de predicción.
+              </p>
+            </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCancelTarget(null);
-                setCancelReason("");
-              }}
-            >
+            <Button variant="outline" onClick={closeCancel}>
               Volver
             </Button>
             <Button
               variant="destructive"
               onClick={confirmCancel}
-              disabled={!cancelReason.trim() || cancel.isPending}
+              disabled={!cancelCategory || cancel.isPending}
             >
               {cancel.isPending ? "Cancelando…" : "Confirmar cancelación"}
             </Button>

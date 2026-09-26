@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import pg from "pg";
 import { FEATURES, tenantFeatures } from "../functions/_shared/domain/features.ts";
+import { CANCELLATION_CATEGORY_IDS } from "../functions/_shared/domain/cancellations.ts";
 
 const DB_URL = process.env.SUPABASE_DB_URL;
 const sid = (k: string) => {
@@ -783,6 +784,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
           "public",
           2,
           200,
+          null, // cancellation_category
         ]);
       }
       expect(other.ok && other.value.stays.some((s: unknown[]) => s[0] === ids.lumen)).toBe(false);
@@ -1527,6 +1529,81 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(report.stays).toEqual([]);
       expect(lake).not.toContain(ids.lumen);
       expect(lake).toContain(ids.albora);
+    });
+  });
+
+  describe("cancellation reasons", () => {
+    const booking = async (days: number) =>
+      (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, deposit_amount, created_by_role)
+           values ($1, $2, now() + make_interval(days => $3), now() + make_interval(days => $3 + 2),
+                   'confirmed', 200, 0, 'admin') returning id`,
+          [ids.lumen, ids["lumen-room-101"], days],
+        )
+      ).rows[0].id;
+    const category = async (id: string) =>
+      (
+        await client.query(
+          "select cancellation_category as c from public.reservations where id = $1",
+          [id],
+        )
+      ).rows[0].c;
+
+    it("the SQL list matches the TypeScript one", async () => {
+      const rows = await client.query(
+        "select c, public.is_cancellation_category(c) as ok from unnest($1::text[]) c",
+        [[...CANCELLATION_CATEGORY_IDS, "bored"]],
+      );
+      expect(rows.rows.filter((r) => !r.ok).map((r) => r.c)).toEqual(["bored"]);
+    });
+
+    it("every cancelled or rejected booking gets a group; a reinstated one loses it", async () => {
+      await client.query("savepoint setup");
+      const a = await booking(230);
+      const b = await booking(240);
+      await client.query("update public.reservations set status = 'cancelled' where id = $1", [a]);
+      await client.query("update public.reservations set status = 'rejected' where id = $1", [b]);
+      const afterCancel = [await category(a), await category(b)];
+      await client.query("update public.reservations set status = 'confirmed' where id = $1", [a]);
+      const reinstated = await category(a);
+      const bad = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query(
+          "update public.reservations set status = 'cancelled', cancellation_category = 'bored' where id = $1",
+          [a],
+        ),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(afterCancel).toEqual(["no_reason", "payment_not_completed"]);
+      expect(reinstated).toBeNull();
+      expect(bad.ok).toBe(false);
+    });
+
+    it("reception classifies the reason when approving a request", async () => {
+      await client.query("savepoint setup");
+      const id = await booking(250);
+      const request = (
+        await client.query<{ id: string }>(
+          `insert into public.cancellation_requests (tenant_id, reservation_id, reason, category, channel)
+           values ($1, $2, 'Me han cambiado el viaje de trabajo', 'change_of_plans', 'web') returning id`,
+          [ids.lumen, id],
+        )
+      ).rows[0].id;
+      await asIdentity("authenticated", users.lumenReception, () =>
+        client.query("select public.decide_cancellation($1, true, 'Llamó el cliente', 'work')", [
+          request,
+        ]),
+      );
+      const row = (
+        await client.query(
+          "select cancellation_category, cancellation_note from public.reservations where id = $1",
+          [id],
+        )
+      ).rows[0];
+      await client.query("rollback to savepoint setup");
+
+      expect(row).toEqual({ cancellation_category: "work", cancellation_note: "Llamó el cliente" });
     });
   });
 });

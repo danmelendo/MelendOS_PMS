@@ -467,21 +467,22 @@ export class DemoStaysConnector implements PmsConnector {
     return (data as { redirect: PaymentRedirect }).redirect;
   }
 
-  async requestCancellation(id: string, reason?: string): Promise<void> {
+  async requestCancellation(id: string, reason?: string, category?: string): Promise<void> {
     const { error } = await sb.rpc("request_guest_cancellation", {
       p_id: id,
       // null = the signed-in member (the generated type marks it required).
       p_token: guestToken(id) as string,
       p_reason: reason,
+      p_category: category,
     });
     if (error) throw new Error(error.message ?? "No se pudo solicitar la cancelación");
   }
 
-  async cancelPrebooking(id: string): Promise<void> {
+  async cancelPrebooking(id: string, category?: string): Promise<void> {
     const token = guestToken(id);
     const { error } = token
-      ? await sb.rpc("cancel_guest_booking", { p_id: id, p_token: token })
-      : await sb.rpc("cancel_my_reservation", { p_reservation_id: id });
+      ? await sb.rpc("cancel_guest_booking", { p_id: id, p_token: token, p_category: category })
+      : await sb.rpc("cancel_my_reservation", { p_reservation_id: id, p_category: category });
     if (error) throw new Error(error.message ?? "No se pudo cancelar");
   }
 

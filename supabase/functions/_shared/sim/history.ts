@@ -7,6 +7,7 @@
 // Used by scripts/simulate-history.ts (demo / pre-production database).
 import { addDays, dayOfWeek, eachNight, nightsBetween, type Ymd } from "../domain/dates.ts";
 import { round2 } from "../domain/pricing.ts";
+import type { CancellationCategory } from "../domain/cancellations.ts";
 
 export type HotelProfile = "urban" | "coastal";
 
@@ -44,6 +45,8 @@ export interface SimStay {
   createdAt: string;
   cancelledAt: string | null;
   status: "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
+  /** Why it was cancelled (cancelled stays only). */
+  cancelCategory: CancellationCategory | null;
   channel: "public" | "admin";
   guests: number;
   roomRevenue: number;
@@ -151,6 +154,41 @@ function eventFactor(profile: HotelProfile, day: Ymd): number {
 }
 
 /** Target share of rooms sold on a night. */
+/** A number in [0, 1) from a string, without touching the random sequence. */
+function hashUnit(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296;
+}
+
+/**
+ * Plausible reason for a cancellation: bookings made far ahead are dropped for
+ * a better offer or a change of plans; last-minute ones for illness, travel
+ * problems or a booking mistake; the coast loses more to the weather.
+ */
+export function cancellationCategory(
+  profile: HotelProfile,
+  lead: number,
+  key: string,
+): CancellationCategory {
+  const w: [CancellationCategory, number][] = [
+    ["change_of_plans", 30],
+    ["personal", lead <= 14 ? 20 : 12],
+    ["work", profile === "urban" ? 14 : 6],
+    ["travel_disruption", lead <= 7 ? 12 : 5],
+    ["found_alternative", lead > 60 ? 24 : 12],
+    ["booking_error", lead <= 3 ? 14 : 4],
+    ["force_majeure", profile === "urban" ? 2 : 6],
+    ["hotel_initiated", 2],
+    ["no_reason", 10],
+  ];
+  let x = hashUnit(key) * w.reduce((t, [, n]) => t + n, 0);
+  for (const [c, n] of w) {
+    if ((x -= n) < 0) return c;
+  }
+  return "other";
+}
+
 export function demand(profile: HotelProfile, night: Ymd, yearsFromStart: number): number {
   const month = Number(night.slice(5, 7)) - 1;
   const dow = dayOfWeek(night);
@@ -379,6 +417,10 @@ export function simulateHistory(input: SimInput): { stays: SimStay[]; customers:
           : paymentMode === "prepay" || status === "completed" || status === "in_progress"
             ? revenue
             : 0;
+      const cancelCategory =
+        status === "cancelled"
+          ? cancellationCategory(input.profile, lead, `${room.id}${createdAt}${arrival}`)
+          : null;
       stays.push({
         id: r.uuid(),
         tenantId: room.tenantId,
@@ -390,6 +432,7 @@ export function simulateHistory(input: SimInput): { stays: SimStay[]; customers:
         createdAt,
         cancelledAt,
         status,
+        cancelCategory,
         channel,
         guests,
         roomRevenue: revenue,

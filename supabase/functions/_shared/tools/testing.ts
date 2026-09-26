@@ -94,6 +94,7 @@ export function fakeStore(
     reservationId: string;
     reason: string | null;
     channel: string;
+    category?: string | null;
   }[] = [];
   const tokenHashes: Record<string, string> = {};
   const store: ToolStore = {
@@ -158,10 +159,16 @@ export function fakeStore(
     async getBookingById(tenantId, id) {
       return bookings.find((b) => b.tenant_id === tenantId && b.id === id) ?? null;
     },
-    async createCancellationRequest(tenantId, reservationId, reason, channel) {
+    async createCancellationRequest(tenantId, reservationId, reason, channel, category) {
       const existing = requests.findIndex((r) => r.reservationId === reservationId);
       if (existing >= 0) return { id: `req-${existing}`, created: false };
-      requests.push({ tenantId, reservationId, reason, channel });
+      requests.push({
+        tenantId,
+        reservationId,
+        reason,
+        channel,
+        ...(category ? { category } : {}),
+      });
       return { id: `req-${requests.length - 1}`, created: true };
     },
     async setAccessTokenHash(_t, id, hash) {

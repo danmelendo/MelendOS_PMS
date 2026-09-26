@@ -4,6 +4,38 @@ import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { pms, type Prebooking } from "@/integrations/pms";
 import { eur } from "@/lib/stays";
+import {
+  CANCELLATION_CATEGORIES,
+  GUEST_CANCELLATION_CATEGORIES,
+  type CancellationCategory,
+} from "@domain/cancellations.ts";
+
+/** Optional reason, so the hotel learns why guests cancel. */
+function ReasonSelect({
+  value,
+  onChange,
+}: {
+  value: CancellationCategory | "";
+  onChange: (v: CancellationCategory | "") => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs text-neutral-500">¿Por qué cancelas? (opcional)</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as CancellationCategory | "")}
+        className="w-full border border-neutral-200 bg-white px-3 py-2 text-sm"
+      >
+        <option value="">Prefiero no decirlo</option>
+        {GUEST_CANCELLATION_CATEGORIES.map((c) => (
+          <option key={c} value={c}>
+            {CANCELLATION_CATEGORIES[c]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("es-ES", {
@@ -22,8 +54,9 @@ const when = (iso: string) =>
 export function BookingCancellation({ booking }: { booking: Prebooking }) {
   const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const [reason, setReason] = useState<CancellationCategory | "">("");
   const cancel = useMutation({
-    mutationFn: () => pms.cancelPrebooking(booking.id),
+    mutationFn: () => pms.cancelPrebooking(booking.id, reason || undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pms"] });
       toast.success("Reserva cancelada", {
@@ -35,7 +68,7 @@ export function BookingCancellation({ booking }: { booking: Prebooking }) {
     onError: (e: Error) => toast.error(e.message || "No se pudo cancelar"),
   });
   const request = useMutation({
-    mutationFn: () => pms.requestCancellation(booking.id),
+    mutationFn: () => pms.requestCancellation(booking.id, undefined, reason || undefined),
     onSuccess: () =>
       toast.success("Solicitud enviada", { description: "El hotel te responderá en breve." }),
     onError: (e: Error) => toast.error(e.message || "No se pudo enviar la solicitud"),
@@ -64,6 +97,7 @@ export function BookingCancellation({ booking }: { booking: Prebooking }) {
       {freeNow ? (
         confirming ? (
           <div className="mt-3 space-y-2">
+            <ReasonSelect value={reason} onChange={setReason} />
             <p className="font-medium">
               ¿Cancelar la reserva? No se puede deshacer.
               {booking.paidOnline ? ` Te devolvemos ${eur(booking.paidAmount)}.` : ""}
@@ -95,14 +129,38 @@ export function BookingCancellation({ booking }: { booking: Prebooking }) {
             Cancelar gratis
           </button>
         )
+      ) : request.isSuccess ? (
+        <p className="mt-3 font-medium text-neutral-700">
+          Solicitud enviada: el hotel te responderá en breve.
+        </p>
+      ) : confirming ? (
+        <div className="mt-3 space-y-2">
+          <ReasonSelect value={reason} onChange={setReason} />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={request.isPending}
+              onClick={() => request.mutate()}
+              className="bg-neutral-900 px-4 py-2 font-semibold text-white disabled:opacity-50"
+            >
+              Enviar la solicitud
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="px-4 py-2 text-neutral-600"
+            >
+              Volver
+            </button>
+          </div>
+        </div>
       ) : (
         <button
           type="button"
-          disabled={request.isPending || request.isSuccess}
-          onClick={() => request.mutate()}
-          className="mt-3 w-full border border-neutral-300 py-2.5 font-medium text-neutral-700 disabled:opacity-50"
+          onClick={() => setConfirming(true)}
+          className="mt-3 w-full border border-neutral-300 py-2.5 font-medium text-neutral-700"
         >
-          {request.isSuccess ? "Solicitud enviada" : "Solicitar la cancelación al hotel"}
+          Solicitar la cancelación al hotel
         </button>
       )}
     </section>
