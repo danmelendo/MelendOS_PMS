@@ -3,6 +3,7 @@ import { Smartphone, Globe } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { CopilotWidget } from "@/components/CopilotWidget";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app")({
@@ -49,6 +50,7 @@ function AppLayout() {
           </main>
         </div>
       </div>
+      <CopilotWidget />
     </SidebarProvider>
   );
 }
