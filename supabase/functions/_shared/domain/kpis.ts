@@ -303,6 +303,8 @@ export const CHANNEL_LABELS: Record<string, string> = {
   reception: "Recepción / teléfono",
   agent: "Asistente IA",
   mcp: "Integración IA (MCP)",
+  ota: "OTAs",
+  tour_operator: "Touroperadores",
   member: "Club (app)",
   other: "Otros",
 };

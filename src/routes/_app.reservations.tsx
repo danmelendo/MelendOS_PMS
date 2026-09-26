@@ -71,7 +71,7 @@ function ReservationsPage() {
       const { data, error } = await supabase
         .from("reservations")
         .select(
-          "*, rooms(id,name,building), customers(id,name,phone), reservation_extras(qty,is_gift,extras(name,category))",
+          "*, rooms(id,name,building), customers(id,name,phone), channels(name), reservation_extras(qty,is_gift,extras(name,category))",
         )
         .order("start_at", { ascending: false })
         .limit(200);
@@ -238,8 +238,24 @@ function ReservationsPage() {
                                 label: "Web pública",
                                 cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
                               },
+                              member: { label: "App", cls: "bg-info/10 text-info border-info/30" },
+                              agent: {
+                                label: "Asistente IA",
+                                cls: "bg-info/10 text-info border-info/30",
+                              },
+                              mcp: { label: "MCP", cls: "bg-info/10 text-info border-info/30" },
                             };
-                            const info = role ? map[role] : null;
+                            // Channel bookings show the channel (Booking.com, a tour operator…).
+                            const channel = (r as { channels?: { name: string } | null }).channels;
+                            const info =
+                              (role === "ota" || role === "tour_operator") && channel
+                                ? {
+                                    label: channel.name,
+                                    cls: "bg-gold/15 text-gold border-gold/40",
+                                  }
+                                : role
+                                  ? map[role]
+                                  : null;
                             return info ? (
                               <Badge variant="outline" className={info.cls}>
                                 {info.label}

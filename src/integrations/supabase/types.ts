@@ -417,6 +417,150 @@ export type Database = {
           },
         ]
       }
+      channel_messages: {
+        Row: {
+          channel_id: string
+          created_at: string
+          detail: string | null
+          direction: string
+          event: string
+          external_ref: string | null
+          id: number
+          payload: Json | null
+          reservation_id: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          detail?: string | null
+          direction: string
+          event: string
+          external_ref?: string | null
+          id?: never
+          payload?: Json | null
+          reservation_id?: string | null
+          status: string
+          tenant_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          detail?: string | null
+          direction?: string
+          event?: string
+          external_ref?: string | null
+          id?: never
+          payload?: Json | null
+          reservation_id?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_messages_tenant_id_channel_id_fkey"
+            columns: ["tenant_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      channel_outbox: {
+        Row: {
+          attempts: number
+          channel_id: string
+          created_at: string
+          error: string | null
+          event: string
+          id: number
+          payload: Json
+          sent_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel_id: string
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: never
+          payload: Json
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          attempts?: number
+          channel_id?: string
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: never
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_outbox_tenant_id_channel_id_fkey"
+            columns: ["tenant_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      channels: {
+        Row: {
+          commission_pct: number
+          created_at: string
+          id: string
+          kind: string
+          last_message_at: string | null
+          name: string
+          provider: string
+          room_map: Json
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          commission_pct?: number
+          created_at?: string
+          id?: string
+          kind: string
+          last_message_at?: string | null
+          name: string
+          provider: string
+          room_map?: Json
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          commission_pct?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          name?: string
+          provider?: string
+          room_map?: Json
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       common_spaces: {
         Row: {
           active: boolean
@@ -1645,6 +1789,8 @@ export type Database = {
           cancellation_note: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          channel_commission: number | null
+          channel_id: string | null
           cleaning_minutes: number
           confirmation_email_error: string | null
           confirmation_email_sent_at: string | null
@@ -1658,6 +1804,7 @@ export type Database = {
           dynamic_reason: string | null
           dynamic_surcharge: number
           end_at: string
+          external_ref: string | null
           extras_total: number
           free_cancellation_until: string | null
           hold_expires_at: string | null
@@ -1689,6 +1836,8 @@ export type Database = {
           cancellation_note?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          channel_commission?: number | null
+          channel_id?: string | null
           cleaning_minutes?: number
           confirmation_email_error?: string | null
           confirmation_email_sent_at?: string | null
@@ -1702,6 +1851,7 @@ export type Database = {
           dynamic_reason?: string | null
           dynamic_surcharge?: number
           end_at: string
+          external_ref?: string | null
           extras_total?: number
           free_cancellation_until?: string | null
           hold_expires_at?: string | null
@@ -1733,6 +1883,8 @@ export type Database = {
           cancellation_note?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          channel_commission?: number | null
+          channel_id?: string | null
           cleaning_minutes?: number
           confirmation_email_error?: string | null
           confirmation_email_sent_at?: string | null
@@ -1746,6 +1898,7 @@ export type Database = {
           dynamic_reason?: string | null
           dynamic_surcharge?: number
           end_at?: string
+          external_ref?: string | null
           extras_total?: number
           free_cancellation_until?: string | null
           hold_expires_at?: string | null
@@ -1771,6 +1924,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reservations_channel_fk"
+            columns: ["tenant_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["tenant_id", "id"]
+          },
           {
             foreignKeyName: "reservations_tenant_id_customer_id_fkey"
             columns: ["tenant_id", "customer_id"]
@@ -2398,6 +2558,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      cancel_booking_for_channel: {
+        Args: {
+          p_category?: string
+          p_channel: string
+          p_reservation: string
+          p_tenant: string
+        }
+        Returns: Json
+      }
       cancel_guest_booking: {
         Args: { p_category?: string; p_id: string; p_token: string }
         Returns: undefined
@@ -2407,6 +2576,7 @@ export type Database = {
         Returns: undefined
       }
       cancel_stale_pending_reservations: { Args: never; Returns: number }
+      channel_secret: { Args: { p_channel: string }; Returns: string }
       confirm_payment: {
         Args: {
           p_amount: number
@@ -2416,6 +2586,17 @@ export type Database = {
           p_succeeded: boolean
         }
         Returns: string
+      }
+      create_channel: {
+        Args: {
+          p_commission?: number
+          p_kind: string
+          p_name: string
+          p_provider: string
+          p_room_map?: Json
+          p_tenant: string
+        }
+        Returns: Json
       }
       create_mcp_token: {
         Args: {
@@ -2469,6 +2650,7 @@ export type Database = {
         Args: { p_approve: boolean; p_id: string; p_note?: string }
         Returns: undefined
       }
+      delete_channel: { Args: { p_channel: string }; Returns: undefined }
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number
@@ -2519,6 +2701,8 @@ export type Database = {
           cancellation_note: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          channel_commission: number | null
+          channel_id: string | null
           cleaning_minutes: number
           confirmation_email_error: string | null
           confirmation_email_sent_at: string | null
@@ -2532,6 +2716,7 @@ export type Database = {
           dynamic_reason: string | null
           dynamic_surcharge: number
           end_at: string
+          external_ref: string | null
           extras_total: number
           free_cancellation_until: string | null
           hold_expires_at: string | null
@@ -2572,6 +2757,8 @@ export type Database = {
           cancellation_note: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          channel_commission: number | null
+          channel_id: string | null
           cleaning_minutes: number
           confirmation_email_error: string | null
           confirmation_email_sent_at: string | null
@@ -2585,6 +2772,7 @@ export type Database = {
           dynamic_reason: string | null
           dynamic_surcharge: number
           end_at: string
+          external_ref: string | null
           extras_total: number
           free_cancellation_until: string | null
           hold_expires_at: string | null
