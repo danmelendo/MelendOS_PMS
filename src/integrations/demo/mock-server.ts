@@ -570,6 +570,48 @@ function recordDeskPayment(args: Record<string, unknown>) {
   return ok(null);
 }
 
+// MCP access tokens: same rules as create_mcp_token (the mock has no MCP server).
+async function createMcpToken(args: Record<string, unknown>) {
+  const name = String(args.p_name ?? "").trim();
+  const days = Number(args.p_days ?? 90);
+  if (!name || name.length > 80) return fail("Pon un nombre de hasta 80 caracteres");
+  if (!(days >= 1 && days <= 365)) return fail("La caducidad debe estar entre 1 y 365 días");
+  const tokens = (db().mcp_tokens ??= []);
+  const now = new Date();
+  const active = tokens.filter(
+    (t) => t.tenant_id === args.p_tenant && !t.revoked_at && new Date(t.expires_at) > now,
+  );
+  if (active.length >= 20) return fail("Máximo 20 accesos activos por hotel: revoca alguno");
+  const hex = [...crypto.getRandomValues(new Uint8Array(24))]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const token = `dsm_${hex}`;
+  const scopes = (args.p_scopes as string[] | null)?.includes("write")
+    ? ["read", "write"]
+    : ["read"];
+  const row: Row = {
+    id: uid("mcp"),
+    tenant_id: args.p_tenant,
+    name,
+    token_prefix: token.slice(0, 12),
+    token_hash: await sha256Hex(token),
+    scopes,
+    created_at: now.toISOString(),
+    expires_at: new Date(now.getTime() + days * 86_400_000).toISOString(),
+    last_used_at: null,
+    revoked_at: null,
+  };
+  tokens.push(row);
+  persist();
+  return ok({
+    id: row.id,
+    token,
+    token_prefix: row.token_prefix,
+    scopes,
+    expires_at: row.expires_at,
+  });
+}
+
 // ── RPC ──────────────────────────────────────────────────────────────────────
 export async function mockServerRpc(
   fn: string,
@@ -709,6 +751,26 @@ export async function mockServerRpc(
         r.cancellation_reason =
           String(req.reason ?? "").trim() || "Cancelada a petición del huésped";
       }
+      persist();
+      return ok(null);
+    }
+    case "create_mcp_token":
+      return createMcpToken(args);
+    case "list_mcp_tokens":
+      return ok(
+        (db().mcp_tokens ?? [])
+          .filter((t) => t.tenant_id === args.p_tenant)
+          .sort(
+            (a, b) =>
+              Number(!!a.revoked_at) - Number(!!b.revoked_at) ||
+              String(b.created_at).localeCompare(String(a.created_at)),
+          )
+          .map(({ tenant_id: _t, token_hash: _h, ...t }) => ({ ...t, calls_30d: 0 })),
+      );
+    case "revoke_mcp_token": {
+      const t = (db().mcp_tokens ?? []).find((x) => x.id === args.p_id);
+      if (!t) return fail("Acceso no encontrado");
+      t.revoked_at ??= new Date().toISOString();
       persist();
       return ok(null);
     }

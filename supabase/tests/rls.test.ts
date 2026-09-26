@@ -324,10 +324,16 @@ describe.skipIf(!DB_URL)("RLS", () => {
 
   describe("guests (guest app)", () => {
     it("see their own stays in each hotel and nobody else's", async () => {
+      // The demo database is live: count Alex's stays instead of assuming the seed's 2.
+      const own = await count(
+        "select count(*) as n from public.reservations where member_id in ($1, $2)",
+        [ids["lumen-member-alex"], ids["albora-member-alex"]],
+      );
       const r = await attempt("authenticated", users.guestAlex, () =>
         count("select count(*) as n from public.reservations"),
       );
-      expect(r).toEqual({ ok: true, value: 2 });
+      expect(own).toBeGreaterThanOrEqual(2);
+      expect(r).toEqual({ ok: true, value: own });
       const other = await attempt("authenticated", users.otherGuest, () =>
         count("select count(*) as n from public.reservations"),
       );
@@ -1321,6 +1327,117 @@ describe.skipIf(!DB_URL)("RLS", () => {
       );
       expect(anon.ok).toBe(true);
       if (anon.ok) expect(anon.value).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe("MCP access tokens", () => {
+    const create = (userId: string, tenant: string, scopes: string[]) =>
+      attempt("authenticated", userId, async () => {
+        const r = await client.query("select public.create_mcp_token($1, 'Test', $2, 30) as t", [
+          tenant,
+          scopes,
+        ]);
+        return r.rows[0].t;
+      });
+
+    it("only an admin of the hotel creates, lists or revokes them", async () => {
+      const reception = await create(users.lumenReception, ids.lumen, ["read"]);
+      const otherHotel = await create(users.alboraAdmin, ids.lumen, ["read"]);
+      expect(reception.ok).toBe(false);
+      expect(otherHotel.ok).toBe(false);
+
+      await client.query("savepoint setup");
+      const t = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "select public.create_mcp_token($1, 'Claude', array['write'], 30) as t",
+              [ids.lumen],
+            )
+          ).rows[0].t,
+      );
+      const listOther = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.list_mcp_tokens($1)", [ids.lumen]),
+      );
+      const revokeOther = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.revoke_mcp_token($1)", [t.id]),
+      );
+      const listed = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (await client.query("select public.list_mcp_tokens($1) as l", [ids.lumen])).rows[0].l,
+      );
+      const stored = (
+        await client.query("select token_hash from public.mcp_tokens where id = $1", [t.id])
+      ).rows[0];
+      await client.query("rollback to savepoint setup");
+
+      expect(t.token).toMatch(/^dsm_[0-9a-f]{48}$/);
+      expect(t.scopes).toEqual(["read", "write"]);
+      expect(listOther.ok).toBe(false);
+      expect(revokeOther.ok).toBe(false);
+      expect(listed).toHaveLength(1);
+      expect(JSON.stringify(listed)).not.toContain(stored.token_hash);
+      expect(JSON.stringify(listed)).not.toContain(t.token);
+    });
+
+    it("the table and the token check are closed to users", async () => {
+      const read = await attempt("authenticated", users.lumenAdmin, () =>
+        count("select count(*) as n from public.mcp_tokens"),
+      );
+      const check = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.mcp_token_auth('x')"),
+      );
+      const anonCreate = await attempt("anon", undefined, () =>
+        client.query("select public.create_mcp_token($1, 'x', array['read'], 30)", [ids.lumen]),
+      );
+      expect(read.ok).toBe(false);
+      expect(check.ok).toBe(false);
+      expect(anonCreate.ok).toBe(false);
+    });
+
+    it("a revoked or expired token no longer authenticates", async () => {
+      await client.query("savepoint setup");
+      const t = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "select public.create_mcp_token($1, 'Claude', array['read'], 30) as t",
+              [ids.lumen],
+            )
+          ).rows[0].t,
+      );
+      const auth = async () =>
+        (
+          await client.query(
+            "select public.mcp_token_auth(encode(extensions.digest($1, 'sha256'), 'hex')) as a",
+            [t.token],
+          )
+        ).rows[0].a;
+      const valid = await auth();
+      await client.query(
+        "update public.mcp_tokens set expires_at = now() - interval '1 second' where id = $1",
+        [t.id],
+      );
+      const expired = await auth();
+      await client.query(
+        "update public.mcp_tokens set expires_at = now() + interval '1 day' where id = $1",
+        [t.id],
+      );
+      await asIdentity("authenticated", users.lumenAdmin, () =>
+        client.query("select public.revoke_mcp_token($1)", [t.id]),
+      );
+      const revoked = await auth();
+      await client.query("rollback to savepoint setup");
+
+      expect(valid).toMatchObject({ tenant_id: ids.lumen, scopes: ["read"], calls_last_minute: 0 });
+      expect(expired).toBeNull();
+      expect(revoked).toBeNull();
     });
   });
 });

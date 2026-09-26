@@ -56,7 +56,8 @@ happened. Columns: `id`, `tenant_id`, `event_type`, `entity`, `entity_id`,
 - `free_cancellation_until` / `late_cancellation_fee`: the cancellation terms
   fixed when the booking was made (free until that instant, then that fee).
 - `created_by_role` is the channel: `public` (website), `admin` (reception or
-  phone), `agent` (AI assistant), `member` (guest app).
+  phone), `agent` (AI assistant on the website), `mcp` (an external AI tool
+  connected to the hotel's MCP server, since 26/09/2026), `member` (guest app).
 - `simulated = true`: fictitious history generated for the demo
   (`scripts/simulate-history.ts`). Real bookings are always `false`.
 

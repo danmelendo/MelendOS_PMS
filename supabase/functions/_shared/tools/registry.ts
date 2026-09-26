@@ -109,6 +109,9 @@ export { referenceOf };
 
 const paymentOptions = (p: HotelPolicies) => p.paymentModes.map((m) => PAYMENT_MODE_LABELS[m]);
 
+/** Who the booking is recorded as made by (reports count bookings per channel). */
+const bookingChannel = (ctx: ToolContext) => (ctx.channel === "mcp" ? "mcp" : "agent");
+
 const ymd = z.string().refine(isYmd, "Date must be yyyy-MM-dd");
 const stayDates = {
   check_in: ymd.describe("Arrival date (yyyy-MM-dd)"),
@@ -291,7 +294,7 @@ const quotePrice = defineTool({
   async run(store, input, ctx) {
     const q = await quoteStay(store, input, {
       userId: ctx.userId,
-      channel: "agent",
+      channel: bookingChannel(ctx),
       tenantId: ctx.tenantId,
       now: ctx.now,
     });
@@ -325,7 +328,7 @@ const createDraft = defineTool({
   async run(store, input, ctx) {
     const d = await createBookingDraft(store, input, {
       userId: ctx.userId,
-      channel: "agent",
+      channel: bookingChannel(ctx),
       tenantId: ctx.tenantId,
       now: ctx.now,
     });

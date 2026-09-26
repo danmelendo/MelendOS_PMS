@@ -1096,6 +1096,56 @@ export type Database = {
           },
         ]
       }
+      mcp_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          tenant_id: string
+          token_hash: string
+          token_prefix: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes: string[]
+          tenant_id: string
+          token_hash: string
+          token_prefix: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          tenant_id?: string
+          token_hash?: string
+          token_prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           created_at: string
@@ -2294,6 +2344,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_mcp_token: {
+        Args: {
+          p_days?: number
+          p_name: string
+          p_scopes: string[]
+          p_tenant: string
+        }
+        Returns: Json
+      }
       current_tenant_id: { Args: never; Returns: string }
       decide_cancellation: {
         Args: { p_approve: boolean; p_note?: string; p_request_id: string }
@@ -2465,6 +2524,8 @@ export type Database = {
         Returns: boolean
       }
       is_tenant_member: { Args: { p_tenant: string }; Returns: boolean }
+      list_mcp_tokens: { Args: { p_tenant: string }; Returns: Json }
+      mcp_token_auth: { Args: { p_token_hash: string }; Returns: Json }
       order_service: {
         Args: {
           p_note?: string
@@ -2497,6 +2558,7 @@ export type Database = {
         Returns: string
       }
       review_author: { Args: { p_name: string }; Returns: string }
+      revoke_mcp_token: { Args: { p_id: string }; Returns: undefined }
       room_busy_windows: {
         Args: { p_from: string; p_tenant: string; p_to: string }
         Returns: {
