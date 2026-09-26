@@ -21,6 +21,10 @@ import {
   type PaymentMode,
 } from "../domain/policies.ts";
 import {
+  GUEST_CANCELLATION_CATEGORIES,
+  type CancellationCategory,
+} from "../domain/cancellations.ts";
+import {
   BookingError,
   bookingDraftInput,
   createBookingDraft,
@@ -77,6 +81,7 @@ export interface ToolStore extends BookingStore {
     reservationId: string,
     reason: string | null,
     channel: string,
+    category?: CancellationCategory | null,
   ): Promise<{ id: string; created: boolean }>;
   setAccessTokenHash(tenantId: string, reservationId: string, hash: string): Promise<void>;
 }
@@ -426,6 +431,12 @@ const requestCancellation = defineTool({
     reference,
     email,
     reason: z.string().trim().max(500).optional(),
+    reason_category: z
+      .enum(GUEST_CANCELLATION_CATEGORIES as [CancellationCategory, ...CancellationCategory[]])
+      .optional()
+      .describe(
+        "Why the guest cancels, if they said: change_of_plans, personal (illness…), work, travel_disruption, found_alternative, booking_error, force_majeure (weather…), other",
+      ),
   }),
   async run(store, input, ctx) {
     const b = await verifiedBooking(store, ctx, input.reference, input.email);
@@ -437,6 +448,7 @@ const requestCancellation = defineTool({
       b.id,
       input.reason ?? null,
       ctx.channel,
+      input.reason_category ?? null,
     );
     return {
       reference: b.reference,

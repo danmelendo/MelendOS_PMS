@@ -44,7 +44,7 @@ SNAPSHOTS: dict[str, list[str]] = {
         "promo_code_id", "total", "deposit_amount", "deposit_paid", "paid_amount",
         "status", "is_prebooking", "created_by_role", "created_at", "updated_at",
         "cancelled_at", "simulated", "payment_mode", "free_cancellation_until",
-        "late_cancellation_fee",
+        "late_cancellation_fee", "cancellation_category",
     ],
     "reservation_extras": [
         "id", "tenant_id", "reservation_id", "extra_id", "qty", "unit_price", "is_gift",
@@ -61,7 +61,7 @@ SNAPSHOTS: dict[str, list[str]] = {
     "customers": ["id", "tenant_id", "created_at", "simulated"],
     "cancellation_requests": [
         "id", "tenant_id", "reservation_id", "channel", "status", "requested_at",
-        "decided_at",
+        "decided_at", "category",
     ],
 }
 EVENTS = "domain_events"

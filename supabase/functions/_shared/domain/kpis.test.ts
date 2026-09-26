@@ -23,6 +23,7 @@ const fact = (over: Partial<StayFact>): StayFact => ({
   channel: "public",
   guests: 2,
   roomRevenue: 200,
+  cancelCategory: null,
   ...over,
 });
 
@@ -188,5 +189,21 @@ describe("weekdayKpis and parseStayFacts", () => {
     });
     expect(parsed.rooms).toEqual({ t1: 4 });
     expect(parsed.stays[0]).toEqual(fact({ channel: null }));
+  });
+});
+
+describe("cancellation reasons", () => {
+  it("counts cancellations by reason group, unknown ones as no_reason", () => {
+    const s = bookingStats(
+      [
+        fact({ status: "cancelled", cancelCategory: "work" }),
+        fact({ status: "cancelled", cancelCategory: "work" }),
+        fact({ status: "cancelled" }),
+        fact({}),
+      ],
+      "2026-02-01",
+      "2026-02-28",
+    );
+    expect(s.cancelReasons).toEqual({ work: 2, no_reason: 1 });
   });
 });

@@ -8,6 +8,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { eur } from "@/lib/data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  CANCELLATION_CATEGORIES,
+  isCancellationCategory,
+  type CancellationCategory,
+} from "@domain/cancellations.ts";
+
+const CATEGORY_OPTIONS = (Object.keys(CANCELLATION_CATEGORIES) as CancellationCategory[]).filter(
+  (c) => c !== "payment_not_completed",
+);
 
 const CHANNELS: Record<string, string> = {
   web: "web",
@@ -26,6 +42,7 @@ export function CancellationRequests() {
   const qc = useQueryClient();
   const [pending, setPending] = useState<Decision | null>(null);
   const [note, setNote] = useState("");
+  const [category, setCategory] = useState<CancellationCategory | "">("");
 
   const { data: requests } = useQuery({
     queryKey: ["cancellation_requests", "pending"],
@@ -33,7 +50,7 @@ export function CancellationRequests() {
       const { data, error } = await supabase
         .from("cancellation_requests")
         .select(
-          "id, reason, channel, requested_at, reservation_id, reservations(id, start_at, end_at, status, total, paid_amount, deposit_paid, payment_mode, free_cancellation_until, late_cancellation_fee, rooms(name, building), customers(name, email), members(name))",
+          "id, reason, category, channel, requested_at, reservation_id, reservations(id, start_at, end_at, status, total, paid_amount, deposit_paid, payment_mode, free_cancellation_until, late_cancellation_fee, rooms(name, building), customers(name, email), members(name))",
         )
         .eq("status", "pending")
         .order("requested_at");
@@ -49,6 +66,7 @@ export function CancellationRequests() {
         p_request_id: id,
         p_approve: approve,
         p_note: note.trim() || undefined,
+        p_category: approve && category ? category : undefined,
       });
       if (error) throw error;
       return approve;
@@ -56,6 +74,7 @@ export function CancellationRequests() {
     onSuccess: (approve) => {
       setPending(null);
       setNote("");
+      setCategory("");
       qc.invalidateQueries({ queryKey: ["cancellation_requests"] });
       qc.invalidateQueries({ queryKey: ["reservations"] });
       toast.success(approve ? "Reserva cancelada" : "Solicitud rechazada");
@@ -105,6 +124,9 @@ export function CancellationRequests() {
                 <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
                   Vía {CHANNELS[q.channel] ?? q.channel}
+                  {isCancellationCategory(q.category) && (
+                    <> · {CANCELLATION_CATEGORIES[q.category]}</>
+                  )}
                   {q.reason ? <> · «{q.reason}»</> : null}
                 </span>
               </p>
@@ -125,6 +147,23 @@ export function CancellationRequests() {
                         ` Pagado online: ${eur(paid)}; el reembolso se hace desde la pasarela de pago.`}
                     </p>
                   )}
+                  {confirming.approve && (
+                    <Select
+                      value={category}
+                      onValueChange={(v) => setCategory(v as CancellationCategory)}
+                    >
+                      <SelectTrigger className="h-9" aria-label="Motivo de la cancelación">
+                        <SelectValue placeholder="Motivo de la cancelación" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {CANCELLATION_CATEGORIES[c]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <Textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -136,7 +175,7 @@ export function CancellationRequests() {
                     <Button
                       size="sm"
                       variant={confirming.approve ? "destructive" : "default"}
-                      disabled={decide.isPending}
+                      disabled={decide.isPending || (confirming.approve && !category)}
                       onClick={() => decide.mutate(confirming)}
                     >
                       {confirming.approve ? "Sí, cancelar reserva" : "Sí, rechazar"}
@@ -148,6 +187,7 @@ export function CancellationRequests() {
                       onClick={() => {
                         setPending(null);
                         setNote("");
+                        setCategory("");
                       }}
                     >
                       Volver
@@ -159,7 +199,10 @@ export function CancellationRequests() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setPending({ id: q.id, approve: true })}
+                    onClick={() => {
+                      setPending({ id: q.id, approve: true });
+                      setCategory(isCancellationCategory(q.category) ? q.category : "");
+                    }}
                   >
                     <Check className="mr-1 h-3.5 w-3.5" /> Aprobar
                   </Button>

@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { eur, useRooms } from "@/lib/data";
 import { CHANNELS, PERIODS, periodRange, useStayFacts, type Period } from "@/lib/reports";
+import { CANCELLATION_CATEGORIES, isCancellationCategory } from "@domain/cancellations.ts";
 
 export const Route = createFileRoute("/_app/reports")({
   component: ReportsPage,
@@ -149,6 +150,16 @@ function ReportsPage() {
       ]
         .map(([name, bookings]) => ({ name, bookings }))
         .sort((a, b) => b.bookings - a.bookings)
+    : [];
+
+  // Why bookings made in the period were cancelled.
+  const cancelReasons = view
+    ? Object.entries(view.now.cancelReasons)
+        .map(([k, n]) => ({
+          name: isCancellationCategory(k) ? CANCELLATION_CATEGORIES[k] : k,
+          count: n,
+        }))
+        .sort((a, b) => b.count - a.count)
     : [];
 
   // Straight to the URL without the module in any of the staff's hotels.
@@ -445,6 +456,32 @@ function ReportsPage() {
               </div>
             </ChartCard>
           </div>
+
+          <ChartCard title="Motivos de cancelación">
+            <div className="grid gap-x-8 gap-y-3 py-2 md:grid-cols-2">
+              {cancelReasons.map((c) => (
+                <div key={c.name}>
+                  <div className="flex justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate">{c.name}</span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      {c.count} · {pct(c.count / Math.max(1, view.now.cancelled))}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 rounded-full bg-muted">
+                    <div
+                      className="h-2 rounded-full bg-gold"
+                      style={{ width: `${(c.count / Math.max(1, view.now.cancelled)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!cancelReasons.length && (
+                <p className="py-6 text-center text-sm text-muted-foreground md:col-span-2">
+                  Sin cancelaciones en el periodo.
+                </p>
+              )}
+            </div>
+          </ChartCard>
 
           <Card>
             <CardHeader>

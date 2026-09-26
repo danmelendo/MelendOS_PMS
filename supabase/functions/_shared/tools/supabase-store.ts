@@ -188,10 +188,16 @@ export function supabaseToolStore(db: SupabaseClient): ToolStore {
       ) as unknown as BookingRow | null;
       return row ? toLookup(row) : null;
     },
-    async createCancellationRequest(tenantId, reservationId, reason, channel) {
+    async createCancellationRequest(tenantId, reservationId, reason, channel, category) {
       const res = await db
         .from("cancellation_requests")
-        .insert({ tenant_id: tenantId, reservation_id: reservationId, reason, channel })
+        .insert({
+          tenant_id: tenantId,
+          reservation_id: reservationId,
+          reason,
+          channel,
+          category: category ?? null,
+        })
         .select("id")
         .single();
       if (!res.error) return { id: res.data.id, created: true };

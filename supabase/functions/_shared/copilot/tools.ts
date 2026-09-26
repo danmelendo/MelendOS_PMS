@@ -18,6 +18,7 @@ import {
   type StayFact,
 } from "../domain/kpis.ts";
 import { REVIEW_SCORES } from "../domain/reviews.ts";
+import { CANCELLATION_CATEGORIES, isCancellationCategory } from "../domain/cancellations.ts";
 import type { ToolResult } from "../tools/registry.ts";
 
 export interface CopilotStore {
@@ -145,13 +146,19 @@ function summaryOf(facts: StayFact[], rooms: number, from: Ymd, to: Ymd) {
     avg_lead_days: s.avgLeadDays,
     avg_length_of_stay_nights: s.avgLengthOfStay,
     bookings_by_channel: channels,
+    cancellations_by_reason: Object.fromEntries(
+      Object.entries(s.cancelReasons).map(([k, n]) => [
+        isCancellationCategory(k) ? CANCELLATION_CATEGORIES[k] : k,
+        n,
+      ]),
+    ),
   };
 }
 
 const businessSummary = defineTool({
   name: "business_summary",
   description:
-    "Headline numbers of the hotel for a period: occupancy, ADR, RevPAR, room revenue, sold nights, bookings made, cancellations, lead time, length of stay and bookings by channel. Future periods show what is already on the books. Optionally compares with the same period one year earlier.",
+    "Headline numbers of the hotel for a period: occupancy, ADR, RevPAR, room revenue, sold nights, bookings made, cancellations and their reasons, lead time, length of stay and bookings by channel. Future periods show what is already on the books. Optionally compares with the same period one year earlier.",
   input: z.object({
     ...period,
     compare_previous_year: z.boolean().default(false),
