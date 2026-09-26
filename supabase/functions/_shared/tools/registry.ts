@@ -11,7 +11,7 @@
 //   decides on.
 // ─────────────────────────────────────────────────────────────────────────────
 import { z } from "zod";
-import { isYmd, nightsBetween, zonedHourToUtc } from "../domain/dates.ts";
+import { isYmd, nightsBetween, ymdInZone, zonedHourToUtc } from "../domain/dates.ts";
 import { priceStay, round2 } from "../domain/pricing.ts";
 import { bookingReference as referenceOf } from "../domain/reference.ts";
 import {
@@ -84,6 +84,13 @@ export interface ToolStore extends BookingStore {
     category?: CancellationCategory | null,
   ): Promise<{ id: string; created: boolean }>;
   setAccessTokenHash(tenantId: string, reservationId: string, hash: string): Promise<void>;
+  /** Cancels inside the free window (same rules as the guest on the web). */
+  cancelBooking(
+    tenantId: string,
+    reservationId: string,
+    channel: string,
+    category: CancellationCategory | null,
+  ): Promise<{ refund: number }>;
 }
 
 export interface ToolContext {
@@ -422,27 +429,71 @@ const getBooking = defineTool({
   },
 });
 
-const requestCancellation = defineTool({
-  name: "request_cancellation",
+const cancelBooking = defineTool({
+  name: "cancel_booking",
   description:
-    "Ask the hotel to cancel a booking (reference + guest email). This only files a request: hotel staff approve or reject it and handle any refund. Use only after the guest explicitly asks to cancel.",
+    "Cancel a booking for the guest. Verify it is them: booking reference, the email of the booking and the arrival date. Two steps: first call it with confirm false to get the terms (free, or the fee if it is late) and tell them to the guest; call it again with confirm true only after the guest explicitly confirms in a new message. Inside the free window the booking is cancelled (refunded if paid online); later, it becomes a request that the hotel decides on.",
   readOnly: false,
   input: z.object({
     reference,
     email,
-    reason: z.string().trim().max(500).optional(),
+    check_in: ymd.describe("Arrival date of the booking as the guest states it (yyyy-MM-dd)"),
+    confirm: z
+      .boolean()
+      .default(false)
+      .describe("false: only return the terms. true: cancel, after the guest confirmed them"),
     reason_category: z
       .enum(GUEST_CANCELLATION_CATEGORIES as [CancellationCategory, ...CancellationCategory[]])
       .optional()
       .describe(
         "Why the guest cancels, if they said: change_of_plans, personal (illness…), work, travel_disruption, found_alternative, booking_error, force_majeure (weather…), other",
       ),
+    reason: z.string().trim().max(500).optional(),
   }),
   async run(store, input, ctx) {
     const b = await verifiedBooking(store, ctx, input.reference, input.email);
+    const { timezone } = await store.getTenantSettings(ctx.tenantId);
+    // A wrong arrival date answers like a wrong reference: nothing to probe.
+    if (ymdInZone(b.start_at, timezone) !== input.check_in) {
+      throw new ToolError("not_found", "No booking matches that reference and email");
+    }
     if (!["pending", "confirmed"].includes(b.status)) {
       throw new ToolError("conflict", `A booking in status ${b.status} cannot be cancelled`);
     }
+    const now = ctx.now ?? new Date();
+    const free =
+      (b.status === "pending" && !b.deposit_paid) ||
+      (!!b.free_cancellation_until && now.getTime() <= Date.parse(b.free_cancellation_until));
+    const refund = b.deposit_paid ? Number(b.deposit_amount) : 0;
+    const terms = {
+      reference: b.reference,
+      hotel: b.property_name,
+      room: b.room_name,
+      check_in: b.start_at,
+      check_out: b.end_at,
+      free_cancellation: free,
+      free_cancellation_until: b.free_cancellation_until,
+      fee_if_cancelled: free ? 0 : Number(b.late_cancellation_fee ?? 0),
+      refund_online: free ? refund : null,
+    };
+    if (!input.confirm) {
+      return {
+        ...terms,
+        status: "needs_confirmation",
+        next_step:
+          "Tell the guest these terms and ask them to confirm. Call cancel_booking again with confirm true only after they say yes.",
+      };
+    }
+    if (free) {
+      const done = await store.cancelBooking(
+        ctx.tenantId,
+        b.id,
+        ctx.channel,
+        input.reason_category ?? null,
+      );
+      return { ...terms, status: "cancelled", refund_online: done.refund };
+    }
+    // Late: the fee applies and the hotel decides (human in the loop).
     const req = await store.createCancellationRequest(
       ctx.tenantId,
       b.id,
@@ -451,9 +502,9 @@ const requestCancellation = defineTool({
       input.reason_category ?? null,
     );
     return {
-      reference: b.reference,
-      request_id: req.id,
+      ...terms,
       status: "pending_hotel_review",
+      request_id: req.id,
       already_requested: !req.created,
     };
   },
@@ -467,7 +518,7 @@ export const TOOLS = [
   createDraft,
   createPaymentLink,
   getBooking,
-  requestCancellation,
+  cancelBooking,
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number]["name"];

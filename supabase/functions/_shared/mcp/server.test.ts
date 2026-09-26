@@ -65,7 +65,7 @@ describe("MCP server", () => {
     const { tools } = await client.listTools();
     expect(tools).toHaveLength(7);
     const write = tools.filter((t) => !t.annotations?.readOnlyHint).map((t) => t.name);
-    expect(write).toEqual(["create_booking_draft", "create_payment_link", "request_cancellation"]);
+    expect(write).toEqual(["create_booking_draft", "create_payment_link", "cancel_booking"]);
   });
 
   it("runs a tool on the token's hotel and meters the call", async () => {

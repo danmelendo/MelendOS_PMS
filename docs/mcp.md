@@ -13,13 +13,16 @@ the website uses (`supabase/functions/_shared/tools/registry.ts`).
   (30 days to 1 year) and can be revoked at once. Only its SHA-256 is stored.
 - **Scopes:**
 
-  | Scope   | Tools                                                                                |
-  | ------- | ------------------------------------------------------------------------------------ |
-  | `read`  | `search_availability`, `get_unit_details`, `quote_price`, `get_booking`              |
-  | `write` | the above plus `create_booking_draft`, `create_payment_link`, `request_cancellation` |
+  | Scope   | Tools                                                                          |
+  | ------- | ------------------------------------------------------------------------------ |
+  | `read`  | `search_availability`, `get_unit_details`, `quote_price`, `get_booking`        |
+  | `write` | the above plus `create_booking_draft`, `create_payment_link`, `cancel_booking` |
 
-  None of them is irreversible: online bookings stay pending until the guest
-  pays, cancellations are requests the hotel decides on. Tools carry MCP
+  Online bookings stay pending until the guest pays. `cancel_booking` verifies
+  the guest (reference, email, arrival date), returns the terms with
+  `confirm: false` and cancels with `confirm: true` inside the free window
+  (refund flagged if paid online); after it, it files a request the hotel
+  decides on. It is the only tool marked `destructiveHint: true`. Tools carry MCP
   annotations (`readOnlyHint`, `destructiveHint: false`).
 
 - **Limits and metering:** 60 tool calls per token and minute. Each call is

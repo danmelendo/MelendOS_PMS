@@ -29,7 +29,7 @@ describe("tool registry", () => {
       "create_booking_draft",
       "create_payment_link",
       "get_booking",
-      "request_cancellation",
+      "cancel_booking",
     ]);
     for (const s of schemas) expect(s.input_schema.type).toBe("object");
     const search = schemas[0].input_schema as { required: string[] };
@@ -244,7 +244,7 @@ describe("create_payment_link", () => {
   });
 });
 
-describe("get_booking and request_cancellation", () => {
+describe("get_booking and cancel_booking", () => {
   it("needs the reference and the matching email", async () => {
     const { store } = fakeStore();
     expect(
@@ -283,10 +283,62 @@ describe("get_booking and request_cancellation", () => {
     expect(otherTenant).toMatchObject({ ok: false, error: { code: "not_found" } });
   });
 
-  it("files one cancellation request for the hotel to decide", async () => {
-    const { store, requests } = fakeStore();
-    const input = { reference: "B2000000", email: "laura@example.com", reason: "Cambio de planes" };
-    const first = ok(await runTool("request_cancellation", input, store, ctx));
+  it("cancels after checking the arrival date and showing the terms first", async () => {
+    const { store, cancelled } = fakeStore();
+    const who = { reference: "B2000000", email: "laura@example.com" };
+    const wrongDate = await runTool(
+      "cancel_booking",
+      { ...who, check_in: "2026-10-02" },
+      store,
+      ctx,
+    );
+    const wrongMail = await runTool(
+      "cancel_booking",
+      { ...who, email: "x@example.com", check_in: "2026-10-01" },
+      store,
+      ctx,
+    );
+    // A wrong date answers exactly like a wrong email.
+    expect(wrongDate).toEqual(wrongMail);
+    expect(wrongDate).toMatchObject({ ok: false, error: { code: "not_found" } });
+
+    const terms = ok(
+      await runTool("cancel_booking", { ...who, check_in: "2026-10-01" }, store, ctx),
+    );
+    expect(terms).toMatchObject({
+      status: "needs_confirmation",
+      free_cancellation: true,
+      fee_if_cancelled: 0,
+      refund_online: 200,
+    });
+    expect(cancelled).toHaveLength(0);
+
+    const done = ok(
+      await runTool(
+        "cancel_booking",
+        { ...who, check_in: "2026-10-01", confirm: true, reason_category: "work" },
+        store,
+        ctx,
+      ),
+    );
+    expect(done).toMatchObject({ status: "cancelled", refund_online: 200 });
+    expect(cancelled).toEqual([
+      { id: "b2000000-0000-0000-0000-000000000000", channel: "web_chat", category: "work" },
+    ]);
+  });
+
+  it("after the free window, files one request for the hotel to decide", async () => {
+    const { store, requests, cancelled } = fakeStore();
+    const late = { ...ctx, now: new Date("2026-09-30T10:00:00Z") };
+    const input = {
+      reference: "B2000000",
+      email: "laura@example.com",
+      check_in: "2026-10-01",
+      reason: "Cambio de planes",
+    };
+    const terms = ok(await runTool("cancel_booking", input, store, late));
+    expect(terms).toMatchObject({ free_cancellation: false, fee_if_cancelled: 100 });
+    const first = ok(await runTool("cancel_booking", { ...input, confirm: true }, store, late));
     expect(first).toMatchObject({ status: "pending_hotel_review", already_requested: false });
     expect(requests[0]).toEqual({
       tenantId: "t1",
@@ -294,30 +346,26 @@ describe("get_booking and request_cancellation", () => {
       reason: "Cambio de planes",
       channel: "web_chat",
     });
-    const again = ok(await runTool("request_cancellation", input, store, ctx));
+    const again = ok(await runTool("cancel_booking", { ...input, confirm: true }, store, late));
     expect(again).toMatchObject({ already_requested: true, request_id: first.request_id });
+    expect(cancelled).toHaveLength(0);
   });
 
-  it("records why the guest cancels, from a fixed list", async () => {
-    const { store, requests } = fakeStore();
-    const input = { reference: "B2000000", email: "laura@example.com" };
-    ok(await runTool("request_cancellation", { ...input, reason_category: "work" }, store, ctx));
-    expect(requests[0]).toMatchObject({ category: "work" });
+  it("takes the reason from a fixed list and refuses closed bookings", async () => {
+    const { store, requests, cancelled } = fakeStore();
+    const who = { reference: "B2000000", email: "laura@example.com", check_in: "2026-10-01" };
     expect(
-      await runTool("request_cancellation", { ...input, reason_category: "bored" }, store, ctx),
+      await runTool("cancel_booking", { ...who, reason_category: "bored" }, store, ctx),
     ).toMatchObject({ ok: false, error: { code: "invalid" } });
-  });
-
-  it("refuses bookings that are already closed", async () => {
-    const { store, requests } = fakeStore();
-    const res = await runTool(
-      "request_cancellation",
-      { reference: "B3000000", email: "laura@example.com" },
+    const closed = await runTool(
+      "cancel_booking",
+      { ...who, reference: "B3000000", confirm: true },
       store,
       ctx,
     );
-    expect(res).toMatchObject({ ok: false, error: { code: "conflict" } });
+    expect(closed).toMatchObject({ ok: false, error: { code: "conflict" } });
     expect(requests).toHaveLength(0);
+    expect(cancelled).toHaveLength(0);
   });
 });
 

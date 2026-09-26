@@ -26,7 +26,7 @@ const TITLES: Record<string, string> = {
   create_booking_draft: "Create a booking",
   create_payment_link: "Payment link",
   get_booking: "Look up a booking",
-  request_cancellation: "Request a cancellation",
+  cancel_booking: "Cancel a booking",
 };
 
 export function toolAllowed(readOnly: boolean, scopes: readonly string[]): boolean {
@@ -47,8 +47,9 @@ export function mcpTools(scopes: readonly string[]): Tool[] {
         annotations: {
           title: TITLES[t.name],
           readOnlyHint: t.read_only,
-          // Drafts, links and requests: nothing is deleted or charged.
-          destructiveHint: false,
+          // Drafts and links change nothing for good; cancel_booking can
+          // cancel a booking (inside the free window, after confirm: true).
+          destructiveHint: t.name === "cancel_booking",
           idempotentHint: t.read_only,
           openWorldHint: false,
         },
@@ -86,7 +87,7 @@ export function createMcpServer(opts: McpServerOptions): Server {
     instructions:
       `Booking tools of ${opts.hotelName}. Dates are yyyy-MM-dd; prices are in EUR and come ` +
       `only from the tools. Bookings are created pending (paid online) or confirmed (paid at ` +
-      `the hotel); cancellations are requests the hotel decides on. ` +
+      `the hotel). cancel_booking shows the terms first (confirm false) and cancels with confirm true inside the free window; later it files a request the hotel decides on. ` +
       (scopes.includes("write")
         ? "This token can read and create bookings."
         : "This token is read-only."),
