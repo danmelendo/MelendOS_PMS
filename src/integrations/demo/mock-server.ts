@@ -14,6 +14,7 @@ import {
   type BookingStore,
 } from "../../../supabase/functions/_shared/tools/bookings.ts";
 import { requestExtension } from "../../../supabase/functions/_shared/tools/extensions.ts";
+import { priceCalendar } from "../../../supabase/functions/_shared/tools/calendar.ts";
 import { DEMO_MEMBER_ID, type Row } from "./seed";
 import { db, persist, uid } from "./mock-db";
 
@@ -816,6 +817,47 @@ export async function mockServerFunction(
       if (e instanceof BookingError) return fail(e.message, e.code);
       throw e;
     }
+  }
+  if (name === "price-calendar") {
+    const tenantOf = (table: string, id: unknown) =>
+      id ? db()[table]?.find((x) => x.id === id)?.tenant_id : undefined;
+    const tenantId =
+      tenantOf("rooms", body.room_id) ??
+      tenantOf("properties", body.property_id) ??
+      (body.tenant_id as string | undefined);
+    if (!tenantId) return fail("Hotel no encontrado", "not_found");
+    const calendar = await priceCalendar(
+      {
+        ...mockBookingStore,
+        async listRooms(t) {
+          return db()
+            .rooms.filter((r) => sameTenant(r, t))
+            .map((r) => ({
+              id: r.id,
+              tenant_id: r.tenant_id,
+              property_id: r.property_id,
+              property_name: "",
+              name: r.name,
+              category: r.asset_type ?? "room",
+              capacity: Number(r.capacity ?? 2),
+              features: r.features ?? [],
+              rate_group_id: r.rate_group_id ?? null,
+              rate_group_name: null,
+              status: r.status,
+              active: !!r.active,
+            }));
+        },
+      },
+      {
+        tenantId,
+        propertyId: (body.property_id as string) ?? null,
+        roomId: (body.room_id as string) ?? null,
+        from: String(body.from ?? ""),
+        days: Number(body.days ?? 42),
+        guests: Number(body.guests ?? 1),
+      },
+    );
+    return ok(calendar);
   }
   if (name === "stays-extend") {
     const r = await guestStay({ p_reservation_id: body.reservation_id, p_token: body.token });

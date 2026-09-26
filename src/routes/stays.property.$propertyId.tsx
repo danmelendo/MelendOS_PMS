@@ -138,6 +138,7 @@ function PropertyScreen() {
           <DateRangePicker
             checkIn={checkIn}
             checkOut={checkOut}
+            pricing={{ propertyId, guests }}
             onChange={({ checkIn: ci, checkOut: co }) => {
               setCheckIn(ci);
               setCheckOut(co);

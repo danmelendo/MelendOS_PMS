@@ -10,7 +10,7 @@ import { NightlyPrice } from "@/components/NightlyPrice";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { HotelCoverArt } from "@/components/cover-art";
 import type { AssetType } from "@/integrations/pms";
-import { useFeatures } from "@/lib/features";
+import { useBrandTenant, useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/stays/")({
   component: DiscoverScreen,
@@ -27,6 +27,7 @@ function DiscoverScreen() {
   const features = useFeatures();
   const { member } = useMember();
   const { brand, brandId } = useBrand();
+  const { data: tenant } = useBrandTenant();
   const [province, setProvince] = useState<string | null>(null);
   const [checkIn, setCheckIn] = useState(dateOffset(7));
   const [checkOut, setCheckOut] = useState(dateOffset(10));
@@ -89,6 +90,7 @@ function DiscoverScreen() {
         <DateRangePicker
           checkIn={checkIn}
           checkOut={checkOut}
+          pricing={tenant ? { tenantId: tenant.id } : undefined}
           onChange={({ checkIn: ci, checkOut: co }) => {
             setCheckIn(ci);
             setCheckOut(co);
