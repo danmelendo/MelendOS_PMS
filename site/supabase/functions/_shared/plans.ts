@@ -306,6 +306,33 @@ export function quote({
   };
 }
 
+export interface PriceOptions {
+  sla?: SlaId | null;
+  annual?: boolean;
+  founder?: boolean;
+}
+
+/**
+ * The prices a plan card shows, with the chosen SLA and discount already in:
+ * what the hotel reads is what it pays, with no extra line appearing later.
+ */
+export function listPrice(
+  plan: PlanId,
+  { sla = null, annual = false, founder = false }: PriceOptions = {},
+) {
+  const factor =
+    (1 + (sla ? SLA_TIERS[sla].share : 0)) *
+    (1 - (annual ? (founder ? FOUNDERS.annualDiscount : ANNUAL_DISCOUNT) : 0));
+  const p = PLANS[plan];
+  // The minimum of a one-room contract is the plan minimum plus the SLA minimum.
+  const minimum = quote({ plan, rooms: 1, hotels: p.minHotels, sla, annual, founder });
+  return {
+    perRoom: round2(p.perRoom * factor),
+    minimum: minimum.effectiveMonthly,
+    addonPerRoom: (id: AddonId) => round2((ADDONS[id]?.perRoom ?? 0) * factor),
+  };
+}
+
 /**
  * The cheapest plan that covers what the hotel asked for (a Starter with every
  * add-on can cost more than Pro). Group only when there are several hotels.

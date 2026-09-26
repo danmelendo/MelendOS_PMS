@@ -19,6 +19,7 @@ import {
   SLA_IDS,
   SLA_TIERS,
   downtimeMinutes,
+  listPrice,
   quote,
   suggestPlan,
   type AddonId,
@@ -195,6 +196,7 @@ export function PricingPage() {
           {PLAN_IDS.map((id) => {
             const plan = PLANS[id];
             const q = priceOf(id);
+            const list = listPrice(id, { sla: sla || null, annual });
             const best = id === suggested;
             const needsHotels = hotels < plan.minHotels;
             return (
@@ -213,14 +215,21 @@ export function PricingPage() {
                 <p className="mt-1 min-h-10 text-sm text-muted-foreground">{plan.tagline}</p>
                 <p className="mt-5 flex items-baseline gap-1">
                   <span className="text-4xl font-semibold tracking-tight tabular-nums">
-                    {eur(plan.perRoom * (annual ? 1 - ANNUAL_DISCOUNT : 1), annual ? 2 : 0)}
+                    {eur(list.perRoom, list.perRoom % 1 ? 2 : 0)}
                   </span>
                   <span className="text-sm text-muted-foreground">/ habitación y mes</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Mínimo {eur(plan.minimum)}/mes
+                  Mínimo {eur(list.minimum, list.minimum % 1 ? 2 : 0)}/mes
                   {plan.minHotels > 1 ? ` · desde ${plan.minHotels} hoteles` : ""}
                 </p>
+                {(sla || annual) && (
+                  <p className="mt-1 text-xs font-medium text-info-foreground">
+                    {[sla && `SLA ${SLA_TIERS[sla].name} incluido`, annual && "pago anual"]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
                 <div className="mt-4 rounded-md bg-muted px-3 py-2 text-sm">
                   {needsHotels ? (
                     <span className="text-muted-foreground">Para grupos de 2 hoteles o más.</span>
@@ -232,7 +241,8 @@ export function PricingPage() {
                       </span>
                       {sla && (
                         <span className="block text-xs text-muted-foreground">
-                          Incluye SLA {SLA_TIERS[sla].name}
+                          De ellos, SLA {SLA_TIERS[sla].name}:{" "}
+                          {eur(q.lines[q.lines.length - 1].amount * (1 - q.discount), 2)}
                         </span>
                       )}
                       {annual && (
@@ -251,7 +261,9 @@ export function PricingPage() {
                   ))}
                   <li className="flex gap-2">
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" />
-                    Soporte incluido: {BASE_SUPPORT.channels.toLowerCase()}. SLA aparte
+                    {sla
+                      ? `SLA ${SLA_TIERS[sla].name}: respuesta crítica en ${SLA_TIERS[sla].response.critical}, disponibilidad ${pct(SLA_TIERS[sla].uptime)}`
+                      : `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. SLA opcional`}
                   </li>
                 </ul>
                 {id === "starter" && (
@@ -268,7 +280,7 @@ export function PricingPage() {
                         />
                         <span className="flex-1">{PACKAGES[a].name}</span>
                         <span className="text-xs text-muted-foreground tabular-nums">
-                          +{eur(ADDONS[a]!.perRoom, ADDONS[a]!.perRoom % 1 ? 2 : 0)}/hab.
+                          +{eur(list.addonPerRoom(a), list.addonPerRoom(a) % 1 ? 2 : 0)}/hab.
                         </span>
                       </label>
                     ))}

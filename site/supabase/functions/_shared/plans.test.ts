@@ -11,6 +11,7 @@ import {
   PLAN_PACKAGES,
   PLANS,
   downtimeMinutes,
+  listPrice,
   quote,
   slaCredit,
   suggestPlan,
@@ -82,6 +83,21 @@ describe("SLA (separate service, priced by urgency)", () => {
     // The share is taken over the plan plus its packages.
     expect(quote({ plan: "starter", rooms: 100, addons: ["ai"], sla: "priority" }).monthly).toBe(
       400 + 300 + 70,
+    );
+  });
+
+  it("shows plan prices with the SLA and discount already included", () => {
+    expect(listPrice("starter")).toMatchObject({ perRoom: 4, minimum: 69 });
+    const urgent = listPrice("pro", { sla: "urgent" });
+    expect(urgent.perRoom).toBe(10.8);
+    expect(urgent.minimum).toBe(149 + 89);
+    expect(urgent.addonPerRoom("ai")).toBe(3.6);
+    const always = listPrice("group", { sla: "always", annual: true });
+    expect(always.perRoom).toBe(9.88);
+    expect(always.minimum).toBe(836);
+    // Above the minimums, the card price times the rooms is what the quote charges.
+    expect(listPrice("pro", { sla: "urgent" }).perRoom * 100).toBe(
+      quote({ plan: "pro", rooms: 100, sla: "urgent" }).monthly,
     );
   });
 
