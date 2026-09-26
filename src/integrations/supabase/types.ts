@@ -2651,6 +2651,7 @@ export type Database = {
         Returns: undefined
       }
       delete_channel: { Args: { p_channel: string }; Returns: undefined }
+      delete_customer: { Args: { p_customer_id: string }; Returns: string }
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number

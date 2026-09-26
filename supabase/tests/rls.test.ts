@@ -1887,4 +1887,71 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(duplicate.ok).toBe(false);
     });
   });
+
+  describe("deleting customers", () => {
+    it("deletes customers without bookings and anonymises those with bookings", async () => {
+      await client.query("savepoint setup");
+      const add = async (name: string) =>
+        (
+          await client.query<{ id: string }>(
+            "insert into public.customers (tenant_id, name, email, phone) values ($1, $2, $3, '+34 600 000 000') returning id",
+            [ids.lumen, name, `${name.toLowerCase().replace(/ /g, ".")}@example.com`],
+          )
+        ).rows[0].id;
+      const lone = await add("Sin Reservas");
+      const guest = await add("Con Reservas");
+      const booking = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, customer_id, start_at, end_at, status, total, created_by_role)
+           values ($1, $2, $3, now() + interval '500 days', now() + interval '502 days', 'confirmed', 200, 'admin')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"], guest],
+        )
+      ).rows[0].id;
+      await client.query(
+        "insert into public.guest_identities (tenant_id, customer_id, document_type, document_number) values ($1, $2, 'dni', '12345678Z')",
+        [ids.lumen, guest],
+      );
+      const byReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.delete_customer($1)", [lone]),
+      );
+      const directByReception = await attempt(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (await client.query("delete from public.customers where id = $1", [lone])).rowCount,
+      );
+      const results = await asIdentity("authenticated", users.lumenAdmin, async () => [
+        (await client.query("select public.delete_customer($1) as r", [lone])).rows[0].r,
+        (await client.query("select public.delete_customer($1) as r", [guest])).rows[0].r,
+      ]);
+      const loneLeft = Number(
+        (await client.query("select count(*) as n from public.customers where id = $1", [lone]))
+          .rows[0].n,
+      );
+      const anon = (
+        await client.query("select name, email, phone from public.customers where id = $1", [guest])
+      ).rows[0];
+      const kept = (
+        await client.query("select customer_id from public.reservations where id = $1", [booking])
+      ).rows[0];
+      const identity = Number(
+        (
+          await client.query(
+            "select count(*) as n from public.guest_identities where customer_id = $1",
+            [guest],
+          )
+        ).rows[0].n,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(byReception.ok).toBe(false);
+      expect(directByReception).toEqual({ ok: true, value: 0 });
+      expect(results).toEqual(["deleted", "anonymised"]);
+      expect(loneLeft).toBe(0);
+      expect(anon).toEqual({ name: "Cliente eliminado", email: null, phone: null });
+      expect(kept).toEqual({ customer_id: guest });
+      expect(identity).toBe(0);
+    });
+  });
 });
