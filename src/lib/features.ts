@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { tenantFeatures, type Features } from "@domain/features.ts";
+import { hotelPolicies, type HotelPolicies } from "@domain/policies.ts";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/lib/brand";
 
@@ -45,5 +46,14 @@ export function useFeatures(): Features & { ready: boolean } {
   return {
     ...tenantFeatures(tenant.plan, tenant.settings as { features?: Record<string, unknown> }),
     ready: true,
+  };
+}
+
+/** Payment and cancellation policies of the current hotel. */
+export function usePolicies(): HotelPolicies & { ready: boolean } {
+  const { data: tenant, isPending } = useBrandTenant();
+  return {
+    ...hotelPolicies((tenant?.settings ?? {}) as Record<string, unknown>),
+    ready: !isPending && !!tenant,
   };
 }

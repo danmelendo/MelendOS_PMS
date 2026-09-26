@@ -246,7 +246,15 @@ export class DemoStaysConnector implements PmsConnector {
       nights: nightsBetween(checkIn, checkOut),
       guests: Number(r.people ?? 2),
       total: Number(r.total ?? 0),
-      deposit: Number(r.deposit_amount ?? 0),
+      paymentMode: r.payment_mode === "at_hotel" ? "at_hotel" : "prepay",
+      payNow:
+        r.payment_mode !== "at_hotel" && !r.deposit_paid && r.status === "pending"
+          ? Number(r.deposit_amount ?? r.total ?? 0)
+          : 0,
+      paidAmount: Number(r.paid_amount ?? 0),
+      paidOnline: !!r.deposit_paid,
+      freeCancellationUntil: r.free_cancellation_until ?? null,
+      lateCancellationFee: Number(r.late_cancellation_fee ?? 0),
       status: this.bookingStatus(r),
       holdExpiresAt: r.hold_expires_at ?? null,
       isPrebooking: !!r.is_prebooking,
@@ -440,6 +448,7 @@ export class DemoStaysConnector implements PmsConnector {
         check_out: input.checkOut,
         guests: input.guests,
         hold: input.hold,
+        ...(input.paymentMode ? { payment_mode: input.paymentMode } : {}),
         ...(input.guest ? { customer: input.guest } : {}),
         ...(input.extras?.length ? { extras: input.extras } : {}),
       },
@@ -497,7 +506,7 @@ export class DemoStaysConnector implements PmsConnector {
         await this.appendJournal(id, "confirmed", {
           memberId: r.member_id,
           propertyId: r.property_id,
-          payload: { deposit: Number(r.deposit_amount ?? 0) },
+          payload: { paid: Number(r.deposit_amount ?? 0) },
         });
         if (r.member_id) {
           await this.earnPoints(r.member_id, Number(r.total ?? 0), id, r.property_id);
@@ -505,6 +514,16 @@ export class DemoStaysConnector implements PmsConnector {
       }
     }
     return (data as { redirect: PaymentRedirect }).redirect;
+  }
+
+  async requestCancellation(id: string, reason?: string): Promise<void> {
+    const { error } = await sb.rpc("request_guest_cancellation", {
+      p_id: id,
+      // null = the signed-in member (the generated type marks it required).
+      p_token: guestToken(id) as string,
+      p_reason: reason,
+    });
+    if (error) throw new Error(error.message ?? "No se pudo solicitar la cancelación");
   }
 
   async cancelPrebooking(id: string): Promise<void> {

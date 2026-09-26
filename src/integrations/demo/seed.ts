@@ -15,10 +15,11 @@ export type Row = Record<string, any>;
 import { addDays, ymdInZone, zonedHourToUtc } from "@domain/dates.ts";
 import { simCustomers, simReviews, simulateHistory, type SimRoom } from "@shared/sim/history.ts";
 import { reviewAuthor } from "@domain/reviews.ts";
+import { cancellationTerms, hotelPolicies } from "@domain/policies.ts";
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 24; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 25; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -305,9 +306,10 @@ const TENANTS = [
     settings: {
       checkin_hour: 15,
       checkout_hour: 12,
-      deposit_pct: 30,
       currency: "EUR",
       timezone: "Europe/Madrid",
+      payment: { modes: ["prepay", "at_hotel"], default: "prepay" },
+      cancellation: { free_hours: 48, penalty: "first_night" },
     },
   },
   {
@@ -319,9 +321,10 @@ const TENANTS = [
     settings: {
       checkin_hour: 15,
       checkout_hour: 12,
-      deposit_pct: 30,
       currency: "EUR",
       timezone: "Europe/Madrid",
+      payment: { modes: ["prepay", "at_hotel"], default: "prepay" },
+      cancellation: { free_hours: 168, penalty: "first_night" },
     },
   },
 ];
@@ -503,7 +506,7 @@ function buildTenantData(now: Date) {
     invoice(
       "inv-deposit-next",
       "FAC-2026-0457",
-      "Señal reserva · hab. 201",
+      "Reserva · hab. 201",
       "Albora Hotel & Spa",
       0,
       0,
@@ -1394,6 +1397,7 @@ export function buildSeedDb(): DemoDb {
   };
   assignTenants(out);
   addSimulatedHistory(out, now);
+  for (const r of out.reservations) stampBookingTerms(out, r);
   return out;
 }
 
@@ -1444,6 +1448,31 @@ function folioCharge(
     posted_at: status === "posted" ? at : null,
     void_reason: null,
   };
+}
+
+/**
+ * Payment mode and cancellation terms of a booking, as the database does
+ * (column defaults + the stamp_cancellation_terms trigger).
+ */
+export function stampBookingTerms(d: DemoDb, r: Row) {
+  const tenant = d.tenants.find((t) => t.id === r.tenant_id);
+  const p = hotelPolicies(tenant?.settings ?? {});
+  r.payment_mode ??= ["admin", "reception", "staff"].includes(r.created_by_role)
+    ? "at_hotel"
+    : "prepay";
+  if (r.payment_mode === "at_hotel" && !r.deposit_paid) r.deposit_amount = 0;
+  const nights = Math.max(
+    1,
+    Math.round((Date.parse(r.end_at) - Date.parse(r.start_at)) / 86_400_000),
+  );
+  const terms = cancellationTerms(p, r.start_at, Number(r.total ?? 0), nights);
+  r.free_cancellation_until ??= terms.freeUntil;
+  r.late_cancellation_fee ??=
+    p.penalty === "none"
+      ? 0
+      : p.penalty === "full"
+        ? Number(r.total)
+        : Math.round((Number(r.total) / nights) * 100) / 100;
 }
 
 function chat(
@@ -1514,7 +1543,6 @@ function addSimulatedHistory(d: DemoDb, now: Date) {
       busy,
       from: addDays(today, -365),
       to: addDays(today, 180),
-      depositPct: Number(t.settings?.deposit_pct ?? 30),
     });
     const pool = simCustomers(seed, customers);
     const firstSeen = new Map<number, string>();
@@ -1560,8 +1588,9 @@ function addSimulatedHistory(d: DemoDb, now: Date) {
         dynamic_surcharge: 0,
         extras_total: 0,
         total: s.roomRevenue,
-        deposit_amount: s.deposit,
-        deposit_paid: s.depositPaid,
+        deposit_amount: s.paymentMode === "prepay" ? s.roomRevenue : 0,
+        payment_mode: s.paymentMode,
+        deposit_paid: s.paidOnline,
         paid_amount: s.paidAmount,
         status: s.status,
         created_by_role: s.channel,

@@ -5,6 +5,7 @@ import type { ChatMessage, LlmClient, LlmResponse, ToolSpec } from "./llm.ts";
 import { stripThinking, toolCallsInText } from "./llm.ts";
 import {
   cleanReply,
+  falseClaim,
   guestDataGuard,
   looksOffTopic,
   MAX_STEPS,
@@ -139,7 +140,7 @@ describe("runAgentTurn", () => {
     expect(r.reservationId).toBe("c0ffee00-1111-2222-3333-444455556666");
     expect(r.attachments.map((a) => a.kind)).toEqual(["manage", "payment"]);
     expect(r.attachments[1].url).toMatch(/^https:\/\/hotel\.example\/web\/checkout\//);
-    expect(r.attachments[1].label).toBe("Pagar la señal (60,00 €)");
+    expect(r.attachments[1].label).toBe("Pagar la reserva (200,00 €)");
   });
 
   it("returns tool errors to the model instead of failing", async () => {
@@ -334,5 +335,73 @@ describe("staying on topic and hiding the plumbing", () => {
       userMessage: "Hazme un script de Python",
     });
     expect(r).toMatchObject({ reply: OFF_TOPIC_REPLY, outcome: "refused" });
+  });
+});
+
+describe("claims without actions", () => {
+  it("spots a booking or cancellation that was only said, not done", () => {
+    const none = () => false;
+    expect(falseClaim("Perfecto, he reservado la habitación 104.", none)).toMatch(/NO existe/);
+    expect(falseClaim("¡Reserva creada! Te espero.", none)).toMatch(/create_booking_draft/);
+    expect(falseClaim("He solicitado la cancelación al hotel.", none)).toMatch(
+      /request_cancellation/,
+    );
+    expect(
+      falseClaim("He reservado la habitación.", (t) => t === "create_booking_draft"),
+    ).toBeNull();
+    expect(falseClaim("La 104 está libre por 255,00 €.", none)).toBeNull();
+  });
+
+  it("makes the model act instead of pretending, without showing the note", async () => {
+    const { store, inserted } = fakeStore();
+    const { llm, calls } = scripted([
+      { content: "Perfecto, he reservado la habitación 101 para ti." },
+      {
+        toolCalls: [
+          call("create_booking_draft", {
+            room_id: "r-101",
+            check_in: "2026-10-01",
+            check_out: "2026-10-03",
+            guests: 2,
+            customer: { name: "Laura Gómez", email: "laura@example.com" },
+          }),
+        ],
+      },
+      { content: "Listo, reserva pendiente de pago." },
+    ]);
+    const r = await runAgentTurn({
+      llm,
+      store,
+      ctx,
+      system: "sys",
+      history: [],
+      userMessage: "La 101, pago online. Laura Gómez, laura@example.com",
+    });
+    expect(inserted).toHaveLength(1);
+    expect(r.outcome).toBe("booking_draft");
+    expect(r.reply).toBe("Listo, reserva pendiente de pago.");
+    // The note reached the model once and is not stored.
+    expect(
+      calls[1].some((m) => m.role === "user" && String(m.content).includes("Nota del sistema")),
+    ).toBe(true);
+    expect(
+      r.messages.some((m) =>
+        String((m as { content?: unknown }).content).includes("Nota del sistema"),
+      ),
+    ).toBe(false);
+  });
+
+  it("never shows a false claim twice", async () => {
+    const { llm } = scripted([{ content: "He reservado la 101." }]);
+    const r = await runAgentTurn({
+      llm,
+      store: fakeStore().store,
+      ctx,
+      system: "sys",
+      history: [],
+      userMessage: "Resérvala",
+    });
+    expect(r.reply).not.toMatch(/He reservado/);
+    expect(r.reservationId).toBeNull();
   });
 });

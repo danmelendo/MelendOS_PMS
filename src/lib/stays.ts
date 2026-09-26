@@ -200,3 +200,9 @@ export function dateOffset(days: number): string {
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
+/** "pagado online" / "se paga en el hotel" for a booking summary. */
+export function paymentLabel(b: { paymentMode: "prepay" | "at_hotel"; paidOnline: boolean }) {
+  if (b.paymentMode === "at_hotel") return "se paga en el hotel";
+  return b.paidOnline ? "pagado online" : "pago online pendiente";
+}

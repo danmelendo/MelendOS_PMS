@@ -46,6 +46,8 @@ export interface CreatePrebookingInput {
   hold: boolean;
   /** Guest details, required when booking without an account. */
   guest?: { name: string; email: string; phone?: string };
+  /** Pay the whole stay online now, or at the hotel (default: the hotel's). */
+  paymentMode?: "prepay" | "at_hotel";
   extras?: { extra_id: string; qty: number }[];
 }
 
@@ -93,6 +95,8 @@ export interface PmsConnector {
 
   // ── Prebookings (prereservas) & reservations ──
   createPrebooking(input: CreatePrebookingInput): Promise<Prebooking>;
+  /** Late cancellation: a request the hotel decides on (the fee applies). */
+  requestCancellation(id: string, reason?: string): Promise<void>;
   getPrebooking(id: string): Promise<Prebooking | null>;
   /** Starts the deposit payment; the browser must follow the redirect. The
    *  booking is confirmed only by the gateway notification, never here. */

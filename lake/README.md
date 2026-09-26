@@ -25,7 +25,7 @@ are kept for 35 days; the snapshot of the 1st of each month is kept for good.
 
 | Table                   | Columns                                                                                                                                                                                                                                                                                                                                                                                               |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reservations`          | `id`, `tenant_id`, `room_id`, `property_id`, `customer_id`, `member_id`, `start_at`, `end_at`, `people`, `cleaning_minutes`, `base_price`, `dynamic_surcharge`, `dynamic_reason`, `extras_total`, `discount_amount`, `promo_code_id`, `total`, `deposit_amount`, `deposit_paid`, `paid_amount`, `status`, `is_prebooking`, `created_by_role`, `created_at`, `updated_at`, `cancelled_at`, `simulated` |
+| `reservations`          | `id`, `tenant_id`, `room_id`, `property_id`, `customer_id`, `member_id`, `start_at`, `end_at`, `people`, `cleaning_minutes`, `base_price`, `dynamic_surcharge`, `dynamic_reason`, `extras_total`, `discount_amount`, `promo_code_id`, `total`, `deposit_amount`, `deposit_paid`, `paid_amount`, `status`, `is_prebooking`, `created_by_role`, `created_at`, `updated_at`, `cancelled_at`, `simulated`, `payment_mode`, `free_cancellation_until`, `late_cancellation_fee` |
 | `reservation_extras`    | `id`, `tenant_id`, `reservation_id`, `extra_id`, `qty`, `unit_price`, `is_gift`, `created_at`                                                                                                                                                                                                                                                                                                         |
 | `rooms`                 | `id`, `tenant_id`, `property_id`, `name`, `capacity`, `asset_type`, `features`, `rate_group_id`, `status`, `active`                                                                                                                                                                                                                                                                                   |
 | `rate_nightly`          | `tenant_id`, `rate_group_id`, `price`, `weekend_price`                                                                                                                                                                                                                                                                                                                                                |
@@ -49,6 +49,12 @@ happened. Columns: `id`, `tenant_id`, `event_type`, `entity`, `entity_id`,
   apart, in `extras_total`).
 - `created_at` is the booking date: lead time = `start_at - created_at`.
 - `cancelled_at` is set when a booking is cancelled.
+- `payment_mode` (from 26/09/2026): `prepay` (whole stay paid online when booking)
+  or `at_hotel` (paid at the hotel). There are no partial deposits any more:
+  `deposit_amount` (legacy name) is the amount to pay online when booking (the
+  total with `prepay`, 0 at the hotel) and `deposit_paid` means "paid online".
+- `free_cancellation_until` / `late_cancellation_fee`: the cancellation terms
+  fixed when the booking was made (free until that instant, then that fee).
 - `created_by_role` is the channel: `public` (website), `admin` (reception or
   phone), `agent` (AI assistant), `member` (guest app).
 - `simulated = true`: fictitious history generated for the demo

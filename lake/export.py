@@ -43,7 +43,8 @@ SNAPSHOTS: dict[str, list[str]] = {
         "dynamic_surcharge", "dynamic_reason", "extras_total", "discount_amount",
         "promo_code_id", "total", "deposit_amount", "deposit_paid", "paid_amount",
         "status", "is_prebooking", "created_by_role", "created_at", "updated_at",
-        "cancelled_at", "simulated",
+        "cancelled_at", "simulated", "payment_mode", "free_cancellation_until",
+        "late_cancellation_fee",
     ],
     "reservation_extras": [
         "id", "tenant_id", "reservation_id", "extra_id", "qty", "unit_price", "is_gift",

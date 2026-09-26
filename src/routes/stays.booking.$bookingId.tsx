@@ -1,3 +1,5 @@
+import { BookingCancellation } from "@/components/BookingCancellation";
+import { paymentLabel } from "@/lib/stays";
 import { StayFolio } from "@/components/StayFolio";
 import { MessagesSquare } from "lucide-react";
 import { chatOpen } from "@/lib/chat";
@@ -43,7 +45,7 @@ const EVENT_META: Record<
   checked_out: { label: "Check-out realizado", icon: LogIn },
   rejected: { label: "Pago no completado", icon: Ban },
   no_show: { label: "No presentado", icon: Ban },
-  confirmed: { label: "Reserva confirmada · señal pagada", icon: CheckCircle2 },
+  confirmed: { label: "Reserva confirmada", icon: CheckCircle2 },
   signed: { label: "Registro de viajeros firmado", icon: PenLine },
   checked_in: { label: "Check-in realizado", icon: LogIn },
   cancelled: { label: "Reserva cancelada", icon: Ban },
@@ -70,21 +72,10 @@ function BookingDetailScreen() {
     queryFn: () => pms.listJournal({ bookingRef: bookingId }),
   });
 
-  const cancel = useMutation({
-    mutationFn: () => pms.cancelPrebooking(bookingId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pms"] });
-      toast.success("Reserva cancelada");
-    },
-    onError: () => toast.error("No se pudo cancelar"),
-  });
-
   if (!booking) return <p className="px-5 py-16 text-center text-sm text-neutral-400">Cargando…</p>;
 
   const canSign =
     ["confirmed", "in_progress"].includes(booking.status) && signature?.status !== "signed";
-  // Guests cancel only unpaid bookings; paid ones are cancelled by the hotel.
-  const canCancel = booking.status === "held";
   const timeline = [...(journal ?? [])].reverse(); // oldest → newest
 
   return (
@@ -120,7 +111,7 @@ function BookingDetailScreen() {
             {booking.guests}
           </DRow>
           <DRow icon={ClipboardList} label="Total">
-            {eur(booking.total)} · señal {eur(booking.deposit)}
+            {eur(booking.total)} · {paymentLabel(booking)}
           </DRow>
         </div>
       </div>
@@ -207,15 +198,7 @@ function BookingDetailScreen() {
         </ol>
       </div>
 
-      {canCancel && (
-        <button
-          disabled={cancel.isPending}
-          onClick={() => cancel.mutate()}
-          className="mt-4 w-full  border border-rose-200 py-3 text-sm font-medium text-rose-600 disabled:opacity-50"
-        >
-          Cancelar reserva
-        </button>
-      )}
+      <BookingCancellation booking={booking} />
     </div>
   );
 }

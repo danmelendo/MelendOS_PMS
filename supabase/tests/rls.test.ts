@@ -364,41 +364,108 @@ describe.skipIf(!DB_URL)("RLS", () => {
 
   describe("guest and staff actions", () => {
     // Pending stay of Alex at Lumen, created as the table owner for the tests.
-    async function pendingGuestStay(dayOffset: number, paid = false) {
+    async function pendingGuestStay(dayOffset: number, paid = false, freeWindowOver = false) {
+      // A Lumen room free on those nights (the demo has real stays around today).
+      const room = (
+        await client.query<{ id: string }>(
+          `select r.id from public.rooms r
+            where r.tenant_id = $1 and r.active
+              and not exists (select 1 from public.reservations x
+                               where x.room_id = r.id and x.status not in ('cancelled', 'no_show', 'rejected')
+                                 and x.start_at < now() + make_interval(days => $2 + 2)
+                                 and x.end_at > now() + make_interval(days => $2 - 1))
+            order by r.name limit 1`,
+          [ids.lumen, dayOffset],
+        )
+      ).rows[0].id;
       const res = await client.query<{ id: string }>(
-        `insert into public.reservations (tenant_id, room_id, member_id, start_at, end_at, status, deposit_paid, total, created_by_role)
-         values ($1, $2, $3, now() + make_interval(days => $4), now() + make_interval(days => $4 + 1), $5, $6, 100, 'member')
+        `insert into public.reservations (tenant_id, room_id, member_id, start_at, end_at, status, deposit_paid, paid_amount, total, created_by_role, free_cancellation_until)
+         values ($1, $2, $3, now() + make_interval(days => $4), now() + make_interval(days => $4 + 1), $5, $6,
+                 case when $6 then 100 else 0 end, 100, 'member',
+                 case when $7 then now() - interval '1 hour' end)
          returning id`,
         [
           ids.lumen,
-          ids["lumen-room-101"],
+          room,
           ids["lumen-member-alex"],
           dayOffset,
           paid ? "confirmed" : "pending",
           paid,
+          freeWindowOver,
         ],
       );
       return res.rows[0].id;
     }
 
-    it("a guest cancels their own unpaid stay, not someone else's or a paid one", async () => {
+    it("a guest cancels for free inside the window; later it is a request", async () => {
       await client.query("savepoint setup");
       const pending = await pendingGuestStay(90);
-      const paid = await pendingGuestStay(95, true);
-      const own = await attempt("authenticated", users.guestAlex, () =>
-        client.query("select public.cancel_my_reservation($1)", [pending]),
+      const paidEarly = await pendingGuestStay(95, true);
+      const paidLate = await pendingGuestStay(100, true, true); // free window already over
+      const cancel = (user: string, id: string) =>
+        attempt("authenticated", user, () =>
+          client.query("select public.cancel_my_reservation($1)", [id]),
+        );
+      expect((await cancel(users.guestAlex, pending)).ok).toBe(true);
+      expect((await cancel(users.otherGuest, pending)).ok).toBe(false);
+
+      await asIdentity("authenticated", users.guestAlex, () =>
+        client.query("select public.cancel_my_reservation($1)", [paidEarly]),
       );
-      expect(own.ok).toBe(true);
-      const other = await attempt("authenticated", users.otherGuest, () =>
-        client.query("select public.cancel_my_reservation($1)", [pending]),
+      const refund = await count(
+        "select count(*) as n from public.domain_events where entity_id = $1 and event_type = 'payment.refund_required'",
+        [paidEarly],
       );
-      expect(other.ok).toBe(false);
-      const paidAttempt = await attempt("authenticated", users.guestAlex, () =>
-        client.query("select public.cancel_my_reservation($1)", [paid]),
+      const late = await cancel(users.guestAlex, paidLate);
+      const request = await asIdentity(
+        "authenticated",
+        users.guestAlex,
+        async () =>
+          (
+            await client.query(
+              "select public.request_guest_cancellation($1, null, 'Vuelo cancelado') as id",
+              [paidLate],
+            )
+          ).rows[0].id,
       );
-      expect(paidAttempt.ok).toBe(false);
-      if (!paidAttempt.ok) expect(paidAttempt.error).toMatch(/hotel/);
+      const statuses = (
+        await client.query("select id, status from public.reservations where id = any($1)", [
+          [paidEarly, paidLate],
+        ])
+      ).rows;
       await client.query("rollback to savepoint setup");
+
+      expect(refund).toBe(1);
+      expect(late.ok).toBe(false);
+      if (!late.ok) expect(late.error).toMatch(/plazo/);
+      expect(request).toMatch(/^[0-9a-f-]{36}$/);
+      expect(statuses.find((r) => r.id === paidEarly)?.status).toBe("cancelled");
+      expect(statuses.find((r) => r.id === paidLate)?.status).toBe("confirmed");
+    });
+
+    it("every booking keeps the cancellation terms it was made with", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        `update public.tenants set settings = settings || '{"cancellation": {"free_hours": 48, "penalty": "first_night"}}'::jsonb where id = $1`,
+        [ids.lumen],
+      );
+      const r = (
+        await client.query(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, payment_mode)
+           values ($1, $2, '2031-05-10T13:00:00Z', '2031-05-13T10:00:00Z', 'confirmed', 300, 'reception', 'at_hotel')
+           returning free_cancellation_until, late_cancellation_fee, payment_mode, deposit_amount`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0];
+      // Changing the policy afterwards does not change the booking.
+      await client.query(
+        `update public.tenants set settings = settings || '{"cancellation": {"free_hours": 0, "penalty": "full"}}'::jsonb where id = $1`,
+        [ids.lumen],
+      );
+      await client.query("rollback to savepoint setup");
+      expect(new Date(r.free_cancellation_until).toISOString()).toBe("2031-05-08T13:00:00.000Z");
+      expect(Number(r.late_cancellation_fee)).toBe(100);
+      expect(r.payment_mode).toBe("at_hotel");
     });
 
     it("a guest redeems rewards with enough points only, where there is a club", async () => {

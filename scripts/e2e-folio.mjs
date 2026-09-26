@@ -42,10 +42,10 @@ try {
   check("booking created", booked.status === 201, `HTTP ${booked.status}`);
   reservationId = booked.body.reservation_id;
   const token = booked.body.access_token;
-  // As if the deposit had been paid through the gateway.
+  // As if the stay had been paid online through the gateway.
   await admin
     .from("reservations")
-    .update({ status: "confirmed", deposit_paid: true, paid_amount: booked.body.deposit })
+    .update({ status: "confirmed", deposit_paid: true, paid_amount: booked.body.amount_due_now })
     .eq("id", reservationId);
 
   const { data: svc } = await admin
@@ -92,7 +92,7 @@ try {
     .update({ status: "posted" })
     .eq("reservation_id", reservationId);
   const folio = await anon.rpc("get_folio", { p_reservation_id: reservationId, p_token: token });
-  const expected = booked.body.breakdown.total + Number(svc.price) - booked.body.deposit;
+  const expected = booked.body.breakdown.total + Number(svc.price) - booked.body.amount_due_now;
   check(
     "balance = booking + posted charges - paid",
     Math.abs(folio.data.balance - expected) < 0.01,
@@ -116,11 +116,15 @@ try {
       Number(payment.amount) === folio.data.balance,
     JSON.stringify(payment),
   );
-  const deposit = await call("payments-create", {
+  const secondPayment = await call("payments-create", {
     reservation_id: reservationId,
     return_url: "https://example.com/back",
   });
-  check("no second deposit on a confirmed stay", deposit.status === 409, `HTTP ${deposit.status}`);
+  check(
+    "no second booking payment on a confirmed stay",
+    secondPayment.status === 409,
+    `HTTP ${secondPayment.status}`,
+  );
 } finally {
   if (reservationId) {
     await admin.from("booking_journal").delete().eq("booking_ref", reservationId);

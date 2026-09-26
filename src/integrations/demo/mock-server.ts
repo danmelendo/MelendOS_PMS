@@ -6,6 +6,7 @@ import { isBlocking, type RoomReservation } from "@domain/availability.ts";
 import { ymdInZone } from "@domain/dates.ts";
 import { bookingReference } from "@domain/reference.ts";
 import { tenantFeatures } from "@domain/features.ts";
+import { hotelPolicies } from "@domain/policies.ts";
 import { reviewAuthor } from "@domain/reviews.ts";
 import {
   BookingError,
@@ -83,13 +84,12 @@ const mockBookingStore: BookingStore = {
       : null;
   },
   async getTenantSettings(tenantId) {
-    const t = db().tenants.find((x) => x.id === tenantId);
+    const s = db().tenants.find((x) => x.id === tenantId)?.settings ?? {};
     return {
-      checkin_hour: 15,
-      checkout_hour: 12,
-      deposit_pct: 30,
-      timezone: "Europe/Madrid",
-      ...(t?.settings ?? {}),
+      checkin_hour: Number(s.checkin_hour ?? 15),
+      checkout_hour: Number(s.checkout_hour ?? 12),
+      timezone: String(s.timezone ?? "Europe/Madrid"),
+      policies: hotelPolicies(s),
     };
   },
   async getBusyWindows(tenantId, from, to) {
@@ -653,13 +653,44 @@ export async function mockServerRpc(
           ? await guestRow(args.p_id, args.p_token)
           : db().reservations.find((x) => x.id === args.p_reservation_id && x.member_id);
       if (!r) return fail("Reserva no encontrada");
-      if (r.status !== "pending" || r.deposit_paid) {
-        return fail("Esta reserva solo la puede cancelar el hotel");
+      const free =
+        (r.status === "pending" && !r.deposit_paid) ||
+        (["pending", "confirmed"].includes(r.status) &&
+          (!r.free_cancellation_until || Date.now() <= Date.parse(r.free_cancellation_until)));
+      if (!free) {
+        return fail("Fuera del plazo de cancelación gratuita: solicita la cancelación al hotel");
       }
       r.status = "cancelled";
       r.cancellation_reason = "Cancelada por el huésped";
       persist();
       return ok(null);
+    }
+    case "request_guest_cancellation": {
+      const r = await guestStay({ p_reservation_id: args.p_id, p_token: args.p_token });
+      if (!r) return fail("Reserva no encontrada");
+      if (!["pending", "confirmed"].includes(r.status)) {
+        return fail("Esta reserva ya no se puede cancelar");
+      }
+      db().cancellation_requests ??= [];
+      const open = db().cancellation_requests.find(
+        (q) => q.reservation_id === r.id && q.status === "pending",
+      );
+      if (open) return ok(open.id);
+      const id = uid("creq");
+      db().cancellation_requests.push({
+        id,
+        tenant_id: r.tenant_id,
+        reservation_id: r.id,
+        reason: String(args.p_reason ?? "").trim() || null,
+        channel: args.p_token ? "web" : "guest_app",
+        status: "pending",
+        requested_at: new Date().toISOString(),
+        decided_at: null,
+        decided_by: null,
+        decision_note: null,
+      });
+      persist();
+      return ok(id);
     }
     case "decide_cancellation": {
       const req = db().cancellation_requests?.find((x) => x.id === args.p_request_id);

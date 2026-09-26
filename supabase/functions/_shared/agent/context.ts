@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ymdInZone } from "../domain/dates.ts";
 import { systemPrompt } from "./prompt.ts";
+import { cancellationSummary, hotelPolicies, PAYMENT_MODE_LABELS } from "../domain/policies.ts";
 
 export async function agentSystemPrompt(
   db: SupabaseClient,
@@ -27,7 +28,8 @@ export async function agentSystemPrompt(
     weekday: new Intl.DateTimeFormat("es-ES", { weekday: "long", timeZone: tz }).format(now),
     checkinHour: Number(settings.checkin_hour ?? 15),
     checkoutHour: Number(settings.checkout_hour ?? 12),
-    depositPct: Number(settings.deposit_pct ?? 30),
+    paymentOptions: hotelPolicies(settings).paymentModes.map((m) => PAYMENT_MODE_LABELS[m]),
+    cancellationPolicy: cancellationSummary(hotelPolicies(settings)),
     about: [
       props.length ? `Hoteles: ${props.map((p) => `${p.name} (${p.city})`).join(", ")}.` : "",
       types.length ? `Tipos de habitación: ${types.map((g) => g.name).join(", ")}.` : "",
