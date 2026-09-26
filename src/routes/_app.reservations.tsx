@@ -40,6 +40,7 @@ import {
 } from "@/components/ReservationExtrasInfo";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app/reservations")({
   component: ReservationsPage,
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/_app/reservations")({
 
 function ReservationsPage() {
   const qc = useQueryClient();
+  const { canOperate } = useRoles();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -126,14 +128,16 @@ function ReservationsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Reservas</h1>
-        <Button
-          onClick={() => {
-            setEditId(undefined);
-            setOpen(true);
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Nueva
-        </Button>
+        {canOperate && (
+          <Button
+            onClick={() => {
+              setEditId(undefined);
+              setOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Nueva
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -276,7 +280,8 @@ function ReservationsPage() {
                           )}
                         </td>
                         <td className="p-2 text-right">
-                          {r.status !== "cancelled" &&
+                          {canOperate &&
+                            r.status !== "cancelled" &&
                             r.status !== "rejected" &&
                             r.status !== "completed" && (
                               <Button

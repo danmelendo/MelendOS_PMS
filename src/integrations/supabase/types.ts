@@ -2428,7 +2428,15 @@ export type Database = {
       }
       current_tenant_id: { Args: never; Returns: string }
       customer_directory: {
-        Args: { p_tenant?: string }
+        Args: {
+          p_identity?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_sort?: string
+          p_stay?: string
+          p_tenant?: string
+        }
         Returns: {
           created_at: string
           email: string
@@ -2445,6 +2453,7 @@ export type Database = {
           spent: number
           stays: number
           tenant_id: string
+          total: number
         }[]
       }
       decide_cancellation: {
@@ -2623,6 +2632,7 @@ export type Database = {
         Returns: number
       }
       is_cancellation_category: { Args: { p: string }; Returns: boolean }
+      is_group_only: { Args: { p_tenant: string }; Returns: boolean }
       is_member_user: {
         Args: { p_member: string; p_tenant: string }
         Returns: boolean
@@ -2764,7 +2774,7 @@ export type Database = {
         | "rejected"
       room_category: "room" | "suite" | "family"
       room_status: "available" | "occupied" | "cleaning" | "out_of_service"
-      staff_role: "admin" | "reception"
+      staff_role: "admin" | "reception" | "group"
       tenant_status: "trial" | "active" | "suspended"
     }
     CompositeTypes: {
@@ -2916,7 +2926,7 @@ export const Constants = {
       ],
       room_category: ["room", "suite", "family"],
       room_status: ["available", "occupied", "cleaning", "out_of_service"],
-      staff_role: ["admin", "reception"],
+      staff_role: ["admin", "reception", "group"],
       tenant_status: ["trial", "active", "suspended"],
     },
   },

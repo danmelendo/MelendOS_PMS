@@ -18,6 +18,7 @@ import {
   useStaffReply,
   type InboxMessage,
 } from "@/lib/chat";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app/messages")({
   component: MessagesPage,
@@ -170,6 +171,7 @@ function Thread({
   guestName: string;
   onBack: () => void;
 }) {
+  const { canOperate } = useRoles();
   const [text, setText] = useState("");
   const [folio, setFolio] = useState(false);
   const reply = useStaffReply();
@@ -268,32 +270,38 @@ function Thread({
         <div ref={end} />
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
-        }}
-        className="flex items-end gap-2 border-t p-3"
-      >
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send();
-            }
+      {!canOperate ? (
+        <p className="border-t p-3 text-center text-xs text-muted-foreground">
+          La dirección de grupo consulta las conversaciones; responde la recepción del hotel.
+        </p>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
           }}
-          rows={2}
-          maxLength={2000}
-          placeholder={`Responder a ${guestName}…`}
-          aria-label="Respuesta"
-          className="min-h-[44px] flex-1 resize-none"
-        />
-        <Button type="submit" disabled={reply.isPending || !text.trim()} aria-label="Enviar">
-          <SendHorizonal className="h-4 w-4" />
-        </Button>
-      </form>
+          className="flex items-end gap-2 border-t p-3"
+        >
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            rows={2}
+            maxLength={2000}
+            placeholder={`Responder a ${guestName}…`}
+            aria-label="Respuesta"
+            className="min-h-[44px] flex-1 resize-none"
+          />
+          <Button type="submit" disabled={reply.isPending || !text.trim()} aria-label="Enviar">
+            <SendHorizonal className="h-4 w-4" />
+          </Button>
+        </form>
+      )}
     </>
   );
 }

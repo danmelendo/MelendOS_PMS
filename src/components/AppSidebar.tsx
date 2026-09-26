@@ -76,9 +76,10 @@ export function AppSidebar() {
   useInboxLive();
   const unread = useUnreadCount();
   const { signOut, user } = useAuth();
-  const { isAdmin } = useRoles();
+  const { isAdmin, isGroup, canOperate } = useRoles();
   const has = useAnyHotelHas();
-  const visible = (i: NavItem) => !i.feature || has(i.feature);
+  const visible = (i: NavItem) =>
+    (!i.feature || has(i.feature)) && (canOperate || i.to !== "/admin/manual");
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -92,7 +93,11 @@ export function AppSidebar() {
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold tracking-tight">Demo Stays</span>
             <span className="text-xs text-sidebar-foreground/60">
-              {isAdmin ? "Administrador" : "Recepción"}
+              {isGroup && !canOperate
+                ? "Dirección de grupo"
+                : isAdmin
+                  ? "Administrador"
+                  : "Recepción"}
             </span>
           </div>
         </div>

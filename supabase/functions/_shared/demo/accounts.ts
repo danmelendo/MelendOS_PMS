@@ -6,39 +6,46 @@ export interface DemoAccount {
   email: string;
   label: string;
   kind: "staff" | "guest";
-  /** Staff role and hotel (seed key), for tenant_members. */
-  role?: "admin" | "reception";
-  tenant?: "lumen" | "albora";
+  /** Staff role and hotels (seed keys), for tenant_members. */
+  role?: "admin" | "reception" | "group";
+  tenants?: ("lumen" | "albora")[];
 }
 
 export const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    email: "grupo@demostays.example",
+    label: "Dirección de grupo · los dos hoteles",
+    kind: "staff",
+    role: "group",
+    tenants: ["lumen", "albora"],
+  },
   {
     email: "admin@lumen.demostays.example",
     label: "Dirección · Hotel Lumen",
     kind: "staff",
     role: "admin",
-    tenant: "lumen",
+    tenants: ["lumen"],
   },
   {
     email: "recepcion@lumen.demostays.example",
     label: "Recepción · Hotel Lumen",
     kind: "staff",
     role: "reception",
-    tenant: "lumen",
+    tenants: ["lumen"],
   },
   {
     email: "admin@albora.demostays.example",
     label: "Dirección · Albora Hotel & Spa",
     kind: "staff",
     role: "admin",
-    tenant: "albora",
+    tenants: ["albora"],
   },
   {
     email: "recepcion@albora.demostays.example",
     label: "Recepción · Albora Hotel & Spa",
     kind: "staff",
     role: "reception",
-    tenant: "albora",
+    tenants: ["albora"],
   },
   {
     email: "alex@guest.demostays.example",

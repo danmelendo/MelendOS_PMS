@@ -15,6 +15,7 @@ import { useRooms, STATUS_COLORS, STATUS_LABELS, HOTELS, buildingKey } from "@/l
 import { cn } from "@/lib/utils";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app/calendar")({
   component: CalendarPage,
@@ -40,6 +41,7 @@ function startOfDay(d: Date) {
 
 function CalendarPage() {
   const { data: rooms } = useRooms();
+  const { canOperate } = useRoles();
   const [from, setFrom] = useState(() => {
     // Open with yesterday visible so in-house stays show where they started.
     const d = startOfDay(new Date());
@@ -157,15 +159,17 @@ function CalendarPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button
-            onClick={() => {
-              setEditId(undefined);
-              setDefaults({ start: startOfDay(new Date()) });
-              setOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Nueva reserva
-          </Button>
+          {canOperate && (
+            <Button
+              onClick={() => {
+                setEditId(undefined);
+                setDefaults({ start: startOfDay(new Date()) });
+                setOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Nueva reserva
+            </Button>
+          )}
         </div>
       </div>
 
@@ -237,6 +241,7 @@ function CalendarPage() {
                           type="button"
                           key={d.getTime()}
                           aria-label={`Nueva reserva en ${room.name} el ${d.toLocaleDateString("es-ES")}`}
+                          disabled={!canOperate}
                           className={cn(
                             "absolute top-0 h-full border-r border-border/60 transition-colors hover:bg-primary/5",
                             weekend && "bg-info/5",
