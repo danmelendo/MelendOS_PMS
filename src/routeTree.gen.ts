@@ -37,6 +37,7 @@ import { Route as AppRatesRouteImport } from './routes/_app.rates'
 import { Route as AppPromosRouteImport } from './routes/_app.promos'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppJournalRouteImport } from './routes/_app.journal'
+import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppExtrasRouteImport } from './routes/_app.extras'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
@@ -197,6 +198,11 @@ const AppJournalRoute = AppJournalRouteImport.update({
   path: '/journal',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExtrasRoute = AppExtrasRouteImport.update({
   id: '/extras',
   path: '/extras',
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AppCalendarRoute
   '/customers': typeof AppCustomersRoute
   '/extras': typeof AppExtrasRoute
+  '/integrations': typeof AppIntegrationsRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
   '/promos': typeof AppPromosRoute
@@ -355,6 +362,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof AppCalendarRoute
   '/customers': typeof AppCustomersRoute
   '/extras': typeof AppExtrasRoute
+  '/integrations': typeof AppIntegrationsRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
   '/promos': typeof AppPromosRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/extras': typeof AppExtrasRoute
+  '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/journal': typeof AppJournalRoute
   '/_app/messages': typeof AppMessagesRoute
   '/_app/promos': typeof AppPromosRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/customers'
     | '/extras'
+    | '/integrations'
     | '/journal'
     | '/messages'
     | '/promos'
@@ -504,6 +514,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/customers'
     | '/extras'
+    | '/integrations'
     | '/journal'
     | '/messages'
     | '/promos'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/_app/calendar'
     | '/_app/customers'
     | '/_app/extras'
+    | '/_app/integrations'
     | '/_app/journal'
     | '/_app/messages'
     | '/_app/promos'
@@ -802,6 +814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppJournalRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/integrations': {
+      id: '/_app/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AppIntegrationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/extras': {
       id: '/_app/extras'
       path: '/extras'
@@ -949,6 +968,7 @@ interface AppRouteChildren {
   AppCalendarRoute: typeof AppCalendarRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppExtrasRoute: typeof AppExtrasRoute
+  AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppJournalRoute: typeof AppJournalRoute
   AppMessagesRoute: typeof AppMessagesRoute
   AppPromosRoute: typeof AppPromosRoute
@@ -965,6 +985,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCalendarRoute: AppCalendarRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppExtrasRoute: AppExtrasRoute,
+  AppIntegrationsRoute: AppIntegrationsRoute,
   AppJournalRoute: AppJournalRoute,
   AppMessagesRoute: AppMessagesRoute,
   AppPromosRoute: AppPromosRoute,

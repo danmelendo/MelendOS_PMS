@@ -94,6 +94,7 @@ export const CHANNELS: Record<string, string> = {
   staff: "Recepción / teléfono",
   reception: "Recepción / teléfono",
   agent: "Asistente IA",
+  mcp: "Integración IA (MCP)",
   member: "Club (app)",
   other: "Otros",
 };

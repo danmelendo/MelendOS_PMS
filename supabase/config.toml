@@ -437,3 +437,6 @@ verify_jwt = false
 
 [functions.agent-chat]
 verify_jwt = false
+
+[functions.mcp]
+verify_jwt = false

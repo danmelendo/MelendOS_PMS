@@ -31,6 +31,7 @@ import {
   Globe,
   BookOpenCheck,
   Smartphone,
+  PlugZap,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -61,6 +62,7 @@ const adminItems = [
   { to: "/rates", label: "Tarifas", icon: Tag },
   { to: "/extras", label: "Extras", icon: PackagePlus },
   { to: "/promos", label: "Códigos promo", icon: Ticket },
+  { to: "/integrations", label: "Integraciones IA", icon: PlugZap },
 ] as const;
 
 export function AppSidebar() {

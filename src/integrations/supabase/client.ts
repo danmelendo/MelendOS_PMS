@@ -23,6 +23,8 @@ function getEnv() {
 // connect a genuine Supabase project instead.
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = getEnv();
 export const IS_DEMO = !SUPABASE_URL || !SUPABASE_ANON_KEY;
+/** Base URL of the Edge Functions (null in the backend-free demo). */
+export const FUNCTIONS_URL = IS_DEMO ? null : `${SUPABASE_URL}/functions/v1`;
 
 function createRealClient() {
   return createClient<Database>(SUPABASE_URL!, SUPABASE_ANON_KEY!, {

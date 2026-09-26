@@ -96,7 +96,7 @@ export interface NewReservation {
   status: "pending" | "confirmed";
   is_prebooking: boolean;
   hold_expires_at: string | null;
-  created_by_role: "public" | "member" | "agent";
+  created_by_role: "public" | "member" | "agent" | "mcp";
   /** SHA-256 (hex) of the guest access token; the token itself is never stored. */
   access_token_hash: string;
 }
@@ -138,7 +138,7 @@ export interface BookingStore {
 export interface BookingContext {
   /** Signed-in user (guest app); null for the anonymous public web. */
   userId: string | null;
-  channel: "public" | "member" | "agent";
+  channel: "public" | "member" | "agent" | "mcp";
   /** Set by the server for agent/MCP calls: only this tenant's rooms exist. */
   tenantId?: string;
   now?: Date;
@@ -405,7 +405,8 @@ export async function createBookingDraft(
     status,
     is_prebooking: !!holdExpiresAt,
     hold_expires_at: holdExpiresAt,
-    created_by_role: ctx.channel === "agent" ? "agent" : member ? "member" : "public",
+    created_by_role:
+      ctx.channel === "agent" || ctx.channel === "mcp" ? ctx.channel : member ? "member" : "public",
     access_token_hash: access.hash,
   });
 
