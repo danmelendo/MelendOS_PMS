@@ -834,6 +834,69 @@ export type Database = {
           },
         ]
       }
+      guest_identities: {
+        Row: {
+          address_line: string | null
+          birth_date: string | null
+          city: string | null
+          country: string | null
+          customer_id: string
+          document_country: string | null
+          document_number: string
+          document_type: string
+          nationality: string | null
+          postal_code: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address_line?: string | null
+          birth_date?: string | null
+          city?: string | null
+          country?: string | null
+          customer_id: string
+          document_country?: string | null
+          document_number: string
+          document_type: string
+          nationality?: string | null
+          postal_code?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address_line?: string | null
+          birth_date?: string | null
+          city?: string | null
+          country?: string | null
+          customer_id?: string
+          document_country?: string | null
+          document_number?: string
+          document_type?: string
+          nationality?: string | null
+          postal_code?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_identities_tenant_id_customer_id_fkey"
+            columns: ["tenant_id", "customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "guest_identities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidents: {
         Row: {
           category: string
@@ -2364,6 +2427,26 @@ export type Database = {
         Returns: Json
       }
       current_tenant_id: { Args: never; Returns: string }
+      customer_directory: {
+        Args: { p_tenant?: string }
+        Returns: {
+          created_at: string
+          email: string
+          has_identity: boolean
+          id: string
+          in_house: boolean
+          last_check_out: string
+          name: string
+          next_check_in: string
+          nights: number
+          no_contact: boolean
+          notes: string
+          phone: string
+          spent: number
+          stays: number
+          tenant_id: string
+        }[]
+      }
       decide_cancellation: {
         Args: {
           p_approve: boolean
@@ -2404,6 +2487,7 @@ export type Database = {
         Args: { p_id: string; p_token: string }
         Returns: Json
       }
+      get_guest_identity: { Args: { p_customer_id: string }; Returns: Json }
       get_my_review: {
         Args: { p_reservation_id: string; p_token?: string }
         Returns: Json
@@ -2544,6 +2628,7 @@ export type Database = {
         Returns: boolean
       }
       is_tenant_member: { Args: { p_tenant: string }; Returns: boolean }
+      is_tenant_staff: { Args: { p_tenant: string }; Returns: boolean }
       lake_tenants: { Args: never; Returns: string[] }
       list_mcp_tokens: { Args: { p_tenant: string }; Returns: Json }
       mcp_token_auth: { Args: { p_token_hash: string }; Returns: Json }
@@ -2594,6 +2679,11 @@ export type Database = {
           start_at: string
         }[]
       }
+      save_guest_identity: {
+        Args: { p_customer_id: string; p_data: Json }
+        Returns: undefined
+      }
+      seconds_since_sign_in: { Args: never; Returns: number }
       send_stay_message: {
         Args: {
           p_body: string
