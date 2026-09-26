@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bot, CreditCard, ExternalLink, MessageCircle, SendHorizonal, X } from "lucide-react";
 import { IS_DEMO, supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/lib/brand";
-import { useBrandTenant } from "@/lib/features";
+import { useBrandTenant, useFeatures } from "@/lib/features";
 
 // The booking agent on the public website. The server keeps the conversation
 // (agent-chat function); the browser only remembers its id for the session.
@@ -64,6 +64,7 @@ function Formatted({ text }: { text: string }) {
 export function AgentChat() {
   const { brandId } = useBrand();
   const { data: tenant } = useBrandTenant();
+  const features = useFeatures();
   const storageKey = `agent-chat-${brandId}`;
   const [open, setOpen] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
@@ -95,7 +96,8 @@ export function AgentChat() {
   }, [lines.length, busy, open]);
 
   // The agent needs the real backend (and a model); the mock has neither.
-  if (IS_DEMO) return null;
+  // It is part of the AI package: hotels without it do not show it.
+  if (IS_DEMO || !features.ai_agent) return null;
 
   const send = async () => {
     const message = text.trim();

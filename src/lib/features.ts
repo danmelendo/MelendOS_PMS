@@ -1,7 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { tenantFeatures, type Features } from "@domain/features.ts";
+import {
+  tenantFeatures,
+  tenantPackages,
+  type Feature,
+  type Features,
+  type PackageId,
+} from "@domain/features.ts";
 import { hotelPolicies, type HotelPolicies } from "@domain/policies.ts";
-import { supabase } from "@/integrations/supabase/client";
+import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { useRoles } from "@/lib/roles";
 import { useBrand } from "@/lib/brand";
 
 /** The hotel (tenant) behind the brand shown on the web and the guest app. */
@@ -56,4 +63,58 @@ export function usePolicies(): HotelPolicies & { ready: boolean } {
     ...hotelPolicies((tenant?.settings ?? {}) as Record<string, unknown>),
     ready: !isPending && !!tenant,
   };
+}
+
+export interface StaffHotel {
+  id: string;
+  name: string;
+  plan: string;
+  packages: PackageId[];
+  features: Features;
+  /** Modules switched on or off one by one (settings.features). */
+  overrides: Partial<Record<Feature, boolean>>;
+}
+
+/** The hotels of the signed-in staff member, with their packages and modules. */
+export function useStaffHotelModules() {
+  const { tenantIds, loading } = useRoles();
+  return useQuery({
+    queryKey: ["staff-hotel-modules", tenantIds],
+    enabled: IS_DEMO || !loading,
+    queryFn: async (): Promise<StaffHotel[]> => {
+      let q = supabase.from("tenants").select("id, name, plan, settings").order("name");
+      if (!IS_DEMO) q = q.in("id", tenantIds);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []).map((t) => {
+        const settings = (t.settings ?? {}) as {
+          packages?: unknown;
+          features?: Record<string, unknown>;
+        };
+        const overrides = Object.fromEntries(
+          Object.entries(settings.features ?? {}).filter(([, v]) => typeof v === "boolean"),
+        ) as Partial<Record<Feature, boolean>>;
+        return {
+          id: t.id,
+          name: t.name,
+          plan: t.plan,
+          packages: tenantPackages(t.plan, settings),
+          features: tenantFeatures(t.plan, settings),
+          overrides,
+        };
+      });
+    },
+  });
+}
+
+/** Whether any of the staff member's hotels has the module (for the menu). */
+export function useAnyHotelHas() {
+  const { data } = useStaffHotelModules();
+  return (feature: Feature) => !!data?.some((h) => h.features[feature]);
+}
+
+/** The staff member's hotels that have the module (for per-hotel pages). */
+export function useHotelsWith(feature: Feature) {
+  const q = useStaffHotelModules();
+  return { ...q, data: q.data?.filter((h) => h.features[feature]) };
 }

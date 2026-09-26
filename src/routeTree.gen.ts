@@ -35,6 +35,7 @@ import { Route as AppReservationsRouteImport } from './routes/_app.reservations'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppRatesRouteImport } from './routes/_app.rates'
 import { Route as AppPromosRouteImport } from './routes/_app.promos'
+import { Route as AppPlanRouteImport } from './routes/_app.plan'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppJournalRouteImport } from './routes/_app.journal'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
@@ -188,6 +189,11 @@ const AppPromosRoute = AppPromosRouteImport.update({
   path: '/promos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPlanRoute = AppPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMessagesRoute = AppMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/integrations': typeof AppIntegrationsRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
+  '/plan': typeof AppPlanRoute
   '/promos': typeof AppPromosRoute
   '/rates': typeof AppRatesRoute
   '/reports': typeof AppReportsRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/integrations': typeof AppIntegrationsRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
+  '/plan': typeof AppPlanRoute
   '/promos': typeof AppPromosRoute
   '/rates': typeof AppRatesRoute
   '/reports': typeof AppReportsRoute
@@ -417,6 +425,7 @@ export interface FileRoutesById {
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/journal': typeof AppJournalRoute
   '/_app/messages': typeof AppMessagesRoute
+  '/_app/plan': typeof AppPlanRoute
   '/_app/promos': typeof AppPromosRoute
   '/_app/rates': typeof AppRatesRoute
   '/_app/reports': typeof AppReportsRoute
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/journal'
     | '/messages'
+    | '/plan'
     | '/promos'
     | '/rates'
     | '/reports'
@@ -517,6 +527,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/journal'
     | '/messages'
+    | '/plan'
     | '/promos'
     | '/rates'
     | '/reports'
@@ -568,6 +579,7 @@ export interface FileRouteTypes {
     | '/_app/integrations'
     | '/_app/journal'
     | '/_app/messages'
+    | '/_app/plan'
     | '/_app/promos'
     | '/_app/rates'
     | '/_app/reports'
@@ -800,6 +812,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPromosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/plan': {
+      id: '/_app/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AppPlanRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/messages': {
       id: '/_app/messages'
       path: '/messages'
@@ -971,6 +990,7 @@ interface AppRouteChildren {
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppJournalRoute: typeof AppJournalRoute
   AppMessagesRoute: typeof AppMessagesRoute
+  AppPlanRoute: typeof AppPlanRoute
   AppPromosRoute: typeof AppPromosRoute
   AppRatesRoute: typeof AppRatesRoute
   AppReportsRoute: typeof AppReportsRoute
@@ -988,6 +1008,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppJournalRoute: AppJournalRoute,
   AppMessagesRoute: AppMessagesRoute,
+  AppPlanRoute: AppPlanRoute,
   AppPromosRoute: AppPromosRoute,
   AppRatesRoute: AppRatesRoute,
   AppReportsRoute: AppReportsRoute,

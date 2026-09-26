@@ -8,6 +8,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import pg from "pg";
+import { FEATURES, tenantFeatures } from "../functions/_shared/domain/features.ts";
 
 const DB_URL = process.env.SUPABASE_DB_URL;
 const sid = (k: string) => {
@@ -1438,6 +1439,94 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(valid).toMatchObject({ tenant_id: ids.lumen, scopes: ["read"], calls_last_minute: 0 });
       expect(expired).toBeNull();
       expect(revoked).toBeNull();
+    });
+  });
+
+  describe("packages and modules", () => {
+    const setTenant = (plan: string, settings: object) =>
+      client.query(
+        "update public.tenants set plan = $2, settings = (settings - 'packages' - 'features') || $3::jsonb where id = $1",
+        [ids.lumen, plan, JSON.stringify(settings)],
+      );
+
+    it("the SQL rule matches the TypeScript one", async () => {
+      const cases: [string, object][] = [
+        ["starter", {}],
+        ["pro", {}],
+        ["group", {}],
+        ["unknown", {}],
+        ["starter", { packages: ["ai", "data", "nonsense"] }],
+        ["pro", { packages: [] }],
+        ["starter", { features: { loyalty: true, chat: false } }],
+        ["pro", { features: { loyalty: "no" } }],
+      ];
+      await client.query("savepoint setup");
+      const mismatches: string[] = [];
+      for (const [plan, settings] of cases) {
+        await setTenant(plan, settings);
+        const expected = tenantFeatures(plan, settings);
+        for (const f of FEATURES) {
+          const got = (
+            await client.query("select public.tenant_feature($1, $2) as on", [ids.lumen, f])
+          ).rows[0].on;
+          if (got !== expected[f]) mismatches.push(`${plan} ${JSON.stringify(settings)} ${f}`);
+        }
+      }
+      await client.query("rollback to savepoint setup");
+      expect(mismatches).toEqual([]);
+    });
+
+    it("without the AI package: no MCP tokens, and existing ones stop working", async () => {
+      await client.query("savepoint setup");
+      await setTenant("starter", { packages: ["stay", "ai"] });
+      const t = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "select public.create_mcp_token($1, 'Claude', array['read'], 30) as t",
+              [ids.lumen],
+            )
+          ).rows[0].t,
+      );
+      await setTenant("starter", { packages: ["stay"] });
+      const refused = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.create_mcp_token($1, 'x', array['read'], 30)", [ids.lumen]),
+      );
+      const auth = (
+        await client.query(
+          "select public.mcp_token_auth(encode(extensions.digest($1, 'sha256'), 'hex')) as a",
+          [t.token],
+        )
+      ).rows[0].a;
+      await client.query("rollback to savepoint setup");
+
+      expect(refused.ok).toBe(false);
+      expect(auth).toBeNull();
+    });
+
+    it("reports and the data lake only cover hotels with the data package", async () => {
+      await client.query("savepoint setup");
+      await setTenant("starter", { packages: ["stay"] });
+      const report = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "select public.report_stays(current_date - 30, current_date, $1) as r",
+              [ids.lumen],
+            )
+          ).rows[0].r,
+      );
+      const lake = (await client.query("select array_agg(t) as ids from public.lake_tenants() t"))
+        .rows[0].ids as string[];
+      await client.query("rollback to savepoint setup");
+
+      expect(report.stays).toEqual([]);
+      expect(lake).not.toContain(ids.lumen);
+      expect(lake).toContain(ids.albora);
     });
   });
 });

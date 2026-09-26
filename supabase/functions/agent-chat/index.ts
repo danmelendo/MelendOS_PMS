@@ -36,6 +36,14 @@ function toChat(m: Row): ChatMessage {
   return { role: "user", content: String(m.content ?? "") };
 }
 
+const NOT_CONTRACTED = "El asistente no está disponible en este hotel.";
+
+/** The AI package includes the booking agent (see @domain/features.ts). */
+async function agentEnabled(db: ReturnType<typeof adminClient>, tenantId: string) {
+  const { data } = await db.rpc("tenant_feature", { p_tenant: tenantId, p_feature: "ai_agent" });
+  return data === true;
+}
+
 function webUrl(req: Request) {
   const origin = req.headers.get("Origin");
   if (origin && /^https?:\/\/[^/]+$/.test(origin)) return origin;
@@ -86,6 +94,7 @@ Deno.serve(async (req) => {
       .in("status", ["trial", "active"])
       .maybeSingle();
     if (!t) return json({ error: "Hotel no encontrado" }, 404);
+    if (!(await agentEnabled(db, t.id))) return json({ error: NOT_CONTRACTED }, 403);
     const { data, error } = await db
       .from("agent_conversations")
       .insert({ tenant_id: t.id, channel: "web_chat" })
@@ -98,6 +107,8 @@ Deno.serve(async (req) => {
     return json({ error: "Esta conversación es muy larga; empieza una nueva." }, 429);
   }
   const tenantId = String(conversation.tenant_id);
+  // The hotel may have dropped the module since the conversation started.
+  if (!(await agentEnabled(db, tenantId))) return json({ error: NOT_CONTRACTED }, 403);
   const conversationId = String(conversation.id);
 
   const now = new Date();

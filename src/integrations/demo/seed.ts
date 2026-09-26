@@ -19,7 +19,7 @@ import { cancellationTerms, hotelPolicies } from "@domain/policies.ts";
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 25; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 26; // bump to force a reseed when the shape changes
 
 // Room category, derived from the rate group so the seed stays compact.
 function deriveAssetType(groupId: string): "room" | "suite" | "family" {
@@ -308,6 +308,7 @@ const TENANTS = [
       checkout_hour: 12,
       currency: "EUR",
       timezone: "Europe/Madrid",
+      packages: ["stay", "ai", "data"],
       payment: { modes: ["prepay", "at_hotel"], default: "prepay" },
       cancellation: { free_hours: 48, penalty: "first_night" },
     },
@@ -323,6 +324,7 @@ const TENANTS = [
       checkout_hour: 12,
       currency: "EUR",
       timezone: "Europe/Madrid",
+      packages: ["stay", "ai", "chain", "data"],
       payment: { modes: ["prepay", "at_hotel"], default: "prepay" },
       cancellation: { free_hours: 168, penalty: "first_night" },
     },

@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useHotelsWith } from "@/lib/features";
+import { ModuleOff } from "@/components/ModuleOff";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   Area,
@@ -32,14 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { eur, useRooms } from "@/lib/data";
-import {
-  CHANNELS,
-  PERIODS,
-  periodRange,
-  useStaffHotels,
-  useStayFacts,
-  type Period,
-} from "@/lib/reports";
+import { CHANNELS, PERIODS, periodRange, useStayFacts, type Period } from "@/lib/reports";
 
 export const Route = createFileRoute("/_app/reports")({
   component: ReportsPage,
@@ -73,7 +68,7 @@ function ReportsPage() {
   const [period, setPeriod] = useState<Period>("12m");
   const [hotel, setHotel] = useState<string>("all");
   const range = periodRange(period);
-  const { data: hotels } = useStaffHotels();
+  const { data: hotels } = useHotelsWith("reports");
   const { data: rooms } = useRooms();
   // One request covers the period and the same period last year.
   const { data, isPending, error } = useStayFacts(range.lyFrom, range.to);
@@ -155,6 +150,9 @@ function ReportsPage() {
         .map(([name, bookings]) => ({ name, bookings }))
         .sort((a, b) => b.bookings - a.bookings)
     : [];
+
+  // Straight to the URL without the module in any of the staff's hotels.
+  if (hotels && hotels.length === 0) return <ModuleOff feature="reports" hotel="tus hoteles" />;
 
   return (
     <div className="space-y-6">

@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useHotelsWith } from "@/lib/features";
+import { ModuleOff } from "@/components/ModuleOff";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { MessageSquareReply, Star } from "lucide-react";
@@ -17,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useReviews } from "@/lib/reviews";
-import { useStaffHotels } from "@/lib/reports";
 
 export const Route = createFileRoute("/_app/reviews")({
   component: ReviewsPage,
@@ -42,7 +43,7 @@ function StarsRow({ value }: { value: number }) {
 // not be hidden); the hotel answers them here.
 function ReviewsPage() {
   const qc = useQueryClient();
-  const { data: hotels } = useStaffHotels();
+  const { data: hotels } = useHotelsWith("reviews");
   const [hotel, setHotel] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [replying, setReplying] = useState<string | null>(null);
@@ -86,6 +87,9 @@ function ReviewsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Straight to the URL without the module in any of the staff's hotels.
+  if (hotels && hotels.length === 0) return <ModuleOff feature="reviews" hotel="tus hoteles" />;
 
   return (
     <div className="space-y-6">

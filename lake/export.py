@@ -139,11 +139,20 @@ def connect(db_url: str) -> duckdb.DuckDBPyConnection:
     return con
 
 
-def export_day(con: duckdb.DuckDBPyConnection, day: dt.date, out: Path) -> list[tuple[str, Path]]:
-    """Writes the Parquet files of every hotel for a day. Returns (lake path, file)."""
+def lake_tenants(con: duckdb.DuckDBPyConnection) -> list[str]:
+    """Hotels with the data_lake module (the data package), from public.lake_tenants()."""
+    rows = con.execute(
+        "SELECT id FROM postgres_query('pg', 'select id::text as id from public.lake_tenants() id')"
+    ).fetchall()
+    return [r[0] for r in rows]
+
+
+def export_day(
+    con: duckdb.DuckDBPyConnection, day: dt.date, out: Path, tenants: list[str]
+) -> list[tuple[str, Path]]:
+    """Writes the Parquet files of the given hotels for a day. Returns (lake path, file)."""
     check_whitelist()
     written: list[tuple[str, Path]] = []
-    tenants = [r[0] for r in con.execute("SELECT id::varchar FROM pg.public.tenants ORDER BY 1").fetchall()]
     start = dt.datetime.combine(day, dt.time(), tzinfo=dt.timezone.utc)
     for tenant in tenants:
         jobs = [
@@ -198,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     con = connect(db_url)
     out = args.out or Path(tempfile.mkdtemp(prefix="lake-"))
-    files = export_day(con, args.date, out)
+    files = export_day(con, args.date, out, lake_tenants(con))
     total = sum(f.stat().st_size for _, f in files)
     print(f"{len(files)} files, {total / 1024:.0f} KiB for {args.date}")
     if args.out:
