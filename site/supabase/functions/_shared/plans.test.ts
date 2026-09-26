@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ADDON_IDS,
   ADDONS,
+  COSTS,
+  SERVE_COST,
   PLAN_IDS,
   PLAN_PACKAGES,
   PLANS,
@@ -9,27 +11,34 @@ import {
   quote,
   slaCredit,
   suggestPlan,
+  unitEconomics,
 } from "./plans.ts";
 
 describe("quote", () => {
   it("charges per room with a monthly minimum", () => {
     expect(quote({ plan: "starter", rooms: 20 }).monthly).toBe(80);
     expect(quote({ plan: "starter", rooms: 5 }).monthly).toBe(PLANS.starter.minimum);
-    expect(quote({ plan: "pro", rooms: 40 }).monthly).toBe(280);
-    expect(quote({ plan: "group", rooms: 120, hotels: 2 }).monthly).toBe(720);
+    expect(quote({ plan: "pro", rooms: 40 }).monthly).toBe(360);
+    expect(quote({ plan: "group", rooms: 120, hotels: 2 }).monthly).toBe(960);
   });
 
   it("adds packages to Esencial and ignores the ones a plan already has", () => {
     const q = quote({ plan: "starter", rooms: 30, addons: ["ai", "data", "ai"] });
-    expect(q.monthly).toBe(120 + 60 + 30);
+    expect(q.monthly).toBe(120 + 90 + 30);
     expect(q.packages).toEqual(["stay", "ai", "data"]);
-    expect(quote({ plan: "pro", rooms: 30, addons: ["ai"] }).monthly).toBe(210);
+    expect(quote({ plan: "pro", rooms: 30, addons: ["ai"] }).monthly).toBe(270);
   });
 
   it("applies the annual discount", () => {
     const q = quote({ plan: "pro", rooms: 40, annual: true });
-    expect(q.effectiveMonthly).toBe(238);
-    expect(q.yearly).toBe(2856);
+    expect(q.effectiveMonthly).toBe(306);
+    expect(q.yearly).toBe(3672);
+  });
+
+  it("waives Esencial onboarding only when paying a year upfront", () => {
+    expect(quote({ plan: "starter", rooms: 10 }).onboarding).toBe(149);
+    expect(quote({ plan: "starter", rooms: 10, annual: true }).onboarding).toBe(0);
+    expect(quote({ plan: "pro", rooms: 10, annual: true }).onboarding).toBe(490);
   });
 
   it("rejects nonsense and a group plan for a single hotel", () => {
@@ -69,5 +78,21 @@ describe("SLA", () => {
     expect(PLANS.pro.sla.uptime).toBeLessThan(PLANS.group.sla.uptime);
     expect(downtimeMinutes(99.9)).toBe(43);
     expect(downtimeMinutes(99.5)).toBe(216);
+  });
+});
+
+describe("unit economics (two people full time)", () => {
+  it("every plan's minimum pays for serving it with room to spare", () => {
+    for (const id of PLAN_IDS) {
+      const cost = SERVE_COST[id].hours * COSTS.hourly + SERVE_COST[id].variable;
+      expect(PLANS[id].minimum, id).toBeGreaterThanOrEqual(cost * 1.5);
+    }
+  });
+
+  it("breaks even and reaches the target margin with a reachable number of hotels", () => {
+    const e = unitEconomics();
+    expect(e.breakEven).toBe(38);
+    expect(e.target).toBe(48);
+    expect(e.supportHours).toBeLessThanOrEqual(COSTS.supportCapacity);
   });
 });

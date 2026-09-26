@@ -244,11 +244,12 @@ export function PricingPage() {
                 <p className="mt-5 text-xs text-muted-foreground">
                   Implantación:{" "}
                   <span className="font-medium text-foreground">
-                    {plan.onboarding
-                      ? `${id === "group" ? "desde " : ""}${eur(plan.onboarding)}`
-                      : "gratis"}
+                    {q.onboarding
+                      ? `${id === "group" ? "desde " : ""}${eur(q.onboarding)}`
+                      : "gratis con el pago anual"}
                   </span>
-                  . {plan.onboardingNote}
+                  {q.onboarding > 0 && plan.onboardingFreeAnnual && " (gratis con el pago anual)"}.{" "}
+                  {plan.onboardingNote}
                 </p>
                 <a
                   href={`${PAGES.demo}?${new URLSearchParams({ plan: id, rooms: String(rooms), hotels: String(Math.max(hotels, plan.minHotels)) })}`}
@@ -276,8 +277,8 @@ export function PricingPage() {
           <p className="text-sm">
             <span className="font-semibold">Hoteles fundadores:</span> los {FOUNDERS.seats} primeros
             hoteles tienen un {FOUNDERS.discount * 100} % de descuento durante {FOUNDERS.months}{" "}
-            meses a cambio de sus comentarios y, si el resultado es bueno, un caso de éxito.
-            Pregúntalo en la demo.
+            meses a cambio de sus comentarios y, si el resultado es bueno, un caso de éxito. No
+            acumulable con el descuento del pago anual. Pregúntalo en la demo.
           </p>
         </div>
       </section>

@@ -68,6 +68,8 @@ export interface Plan {
   minimum: number;
   /** One-off onboarding fee (setup, data import, training). */
   onboarding: number;
+  /** Onboarding is free when paying a year upfront. */
+  onboardingFreeAnnual: boolean;
   onboardingNote: string;
   /** Hotels the plan is meant for; group needs at least two. */
   minHotels: number;
@@ -92,8 +94,9 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Esencial",
     tagline: "Para hostales y hoteles pequeños que quieren dejar el Excel y vender directo.",
     perRoom: 4,
-    minimum: 49,
-    onboarding: 0,
+    minimum: 69,
+    onboarding: 149,
+    onboardingFreeAnnual: true,
     onboardingNote: "Alta guiada e importación de habitaciones y reservas desde Excel o CSV.",
     minHotels: 1,
     sla: {
@@ -117,9 +120,10 @@ export const PLANS: Record<PlanId, Plan> = {
   pro: {
     name: "Profesional",
     tagline: "Todos los módulos para el hotel independiente que quiere crecer.",
-    perRoom: 7,
-    minimum: 119,
-    onboarding: 290,
+    perRoom: 9,
+    minimum: 149,
+    onboarding: 490,
+    onboardingFreeAnnual: false,
     onboardingNote:
       "Migración de datos desde tu sistema actual, configuración de tarifas y canales y 2 h de formación.",
     minHotels: 1,
@@ -140,9 +144,10 @@ export const PLANS: Record<PlanId, Plan> = {
   group: {
     name: "Grupo",
     tagline: "Para cadenas y grupos: varios hoteles, un solo panel y compromisos de empresa.",
-    perRoom: 6,
-    minimum: 390,
-    onboarding: 990,
+    perRoom: 8,
+    minimum: 490,
+    onboarding: 1490,
+    onboardingFreeAnnual: false,
     onboardingNote:
       "Desde 990 €: proyecto de implantación por hotel, integraciones a medida y formación por equipos.",
     minHotels: 2,
@@ -167,9 +172,9 @@ export const PLANS: Record<PlanId, Plan> = {
 
 /** Packages that can be added one by one to Esencial (Profesional has them all). */
 export const ADDONS: Partial<Record<PackageId, { perRoom: number; minimum: number }>> = {
-  ai: { perRoom: 2, minimum: 29 },
-  data: { perRoom: 1, minimum: 15 },
-  distribution: { perRoom: 1.5, minimum: 19 },
+  ai: { perRoom: 3, minimum: 59 },
+  data: { perRoom: 1, minimum: 19 },
+  distribution: { perRoom: 2, minimum: 29 },
 };
 export type AddonId = "ai" | "data" | "distribution";
 export const ADDON_IDS: AddonId[] = ["ai", "data", "distribution"];
@@ -181,8 +186,8 @@ export const ANNUAL_DISCOUNT = 0.15;
 export const AI_CONVERSATIONS_INCLUDED = 1000;
 export const AI_EXTRA_CONVERSATION = 0.05;
 
-/** Launch programme while we have no references: first hotels, in exchange for a case study. */
-export const FOUNDERS = { discount: 0.3, months: 24, seats: 10 } as const;
+/** Launch programme while we have no references: first hotels, in exchange for a case study. Not combinable with the annual discount. */
+export const FOUNDERS = { discount: 0.25, months: 12, seats: 10 } as const;
 
 /** Money back if the hotel leaves in the first days. */
 export const GUARANTEE_DAYS = 60;
@@ -192,7 +197,7 @@ export const ALWAYS = [
   "Sin permanencia: pago mensual y baja cuando quieras",
   "0 % de comisión sobre las reservas directas",
   "Tus datos son tuyos: exportación completa en cualquier momento",
-  `Garantía de ${GUARANTEE_DAYS} días: si no te convence, te devolvemos las cuotas`,
+  `Garantía de ${GUARANTEE_DAYS} días: si no te convence, te devolvemos las cuotas mensuales`,
   "Contrato de encargado del tratamiento (RGPD) incluido",
 ];
 
@@ -250,7 +255,7 @@ export function quote({ plan, rooms, hotels = 1, addons = [], annual = false }: 
     monthly,
     effectiveMonthly,
     yearly: round2(effectiveMonthly * 12),
-    onboarding: p.onboarding,
+    onboarding: annual && p.onboardingFreeAnnual ? 0 : p.onboarding,
   };
 }
 
@@ -279,4 +284,63 @@ export function slaCredit(plan: PlanId, measuredUptime: number): number {
 /** Allowed downtime per 30-day month for an uptime percentage, in minutes. */
 export function downtimeMinutes(uptime: number): number {
   return Math.round((30 * 24 * 60 * (100 - uptime)) / 100);
+}
+
+// ── Unit economics (internal: not shown on the site) ─────────────────────────
+// Prices must pay for two people working on this full time, with a margin.
+// Assumptions explained in site/PRICING.md; change them here and the tests
+// say whether the prices still hold.
+
+export const COSTS = {
+  /** Two people, 42.000 € gross a year each plus employer social security. */
+  team: 9200,
+  /** Production infrastructure with PITR, base AI, monitoring, accounting, insurance, tools, marketing. */
+  fixed: 900,
+  /** Internal cost of one hour: team cost / ~260 productive hours a month. */
+  hourly: 35,
+  /** Support hours the two of us can give a month (half the time; the rest is product and sales). */
+  supportCapacity: 150,
+} as const;
+
+/** Monthly cost of serving one contract: support hours and variable infrastructure/AI. */
+export const SERVE_COST: Record<PlanId, { hours: number; variable: number }> = {
+  starter: { hours: 1, variable: 3 },
+  // ~1.000 AI conversations at ~0,01 € plus storage and functions.
+  pro: { hours: 1.5, variable: 15 },
+  // Several hotels, 24/7 on-call and a share of PITR.
+  group: { hours: 6, variable: 80 },
+};
+
+/** Share of the monthly revenue left after all costs that we aim for. */
+export const TARGET_MARGIN = 0.2;
+
+/** Expected customer mix: share of contracts and typical size of each plan. */
+export const TYPICAL_MIX: Record<PlanId, { share: number; rooms: number; hotels: number }> = {
+  starter: { share: 0.4, rooms: 20, hotels: 1 },
+  pro: { share: 0.5, rooms: 35, hotels: 1 },
+  group: { share: 0.1, rooms: 120, hotels: 2 },
+};
+
+/** How many contracts the business needs to break even and to reach the target margin. */
+export function unitEconomics(mix = TYPICAL_MIX) {
+  let revenue = 0;
+  let variable = 0;
+  let hours = 0;
+  for (const id of PLAN_IDS) {
+    const m = mix[id];
+    revenue += m.share * quote({ plan: id, rooms: m.rooms, hotels: m.hotels }).monthly;
+    variable += m.share * SERVE_COST[id].variable;
+    hours += m.share * SERVE_COST[id].hours;
+  }
+  const fixed = COSTS.team + COSTS.fixed;
+  const breakEven = Math.ceil(fixed / (revenue - variable));
+  const target = Math.ceil(fixed / (revenue * (1 - TARGET_MARGIN) - variable));
+  return {
+    /** Average monthly revenue per contract. */
+    revenue: round2(revenue),
+    breakEven,
+    target,
+    /** Support hours a month at the target, against COSTS.supportCapacity. */
+    supportHours: Math.round(target * hours),
+  };
 }
