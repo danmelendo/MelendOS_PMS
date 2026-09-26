@@ -6,7 +6,6 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Check, Copy, KeyRound, PlugZap, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { IS_DEMO } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,12 +250,6 @@ function IntegrationsPage() {
               <PlugZap className="h-4 w-4 text-info" /> Servidor MCP del hotel
             </p>
             <CopyBlock label="URL (HTTP)" text={MCP_URL} />
-            {IS_DEMO && (
-              <p className="text-xs text-muted-foreground">
-                En esta demo sin servidor los tokens son de ejemplo: el servidor MCP funciona con el
-                backend real.
-              </p>
-            )}
           </div>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p className="flex items-center gap-2 font-medium text-foreground">

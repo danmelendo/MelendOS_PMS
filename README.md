@@ -11,24 +11,24 @@
 
 ---
 
-## 🚀 Probar la demo (sin backend)
+## 🚀 Arrancar en local
 
 ```bash
 npm install
-npm run dev      # arranca Vite; abre la URL que imprime (p. ej. http://localhost:5173)
+cp .env.example .env   # y rellena los datos del proyecto Supabase de la demo
+npm run dev            # abre la URL que imprime (p. ej. http://localhost:5173)
 ```
 
-No hace falta `.env` ni ningún servicio externo. Sin variables `VITE_SUPABASE_*`, la app
-arranca contra un **backend simulado en el navegador** (`src/integrations/demo/`): un dataset
-de ejemplo persistido en `localStorage` y un cliente que imita la API de Supabase (consultas,
-auth, RPC, Edge Functions y Realtime). El pago Redsys se simula y el email es un no-op. El aviso
-flotante **«Modo demo»** permite reiniciar los datos.
+La app siempre trabaja contra un proyecto Supabase real. En desarrollo es el de la demo, que
+también es el entorno de **preproducción**: cada cambio se prueba ahí antes de llegar a
+producción. En la demo se entra eligiendo una cuenta ficticia de una lista
+(`VITE_DEMO_ACCESS=true`); en producción, con el formulario normal.
 
-| Ruta     | Qué es                                                                |
-| -------- | --------------------------------------------------------------------- |
-| `/web`   | Web pública del hotel: descubrimiento, ficha de habitación y reserva  |
-| `/stays` | App del huésped: estancias, check-in online, club de fidelización     |
-| `/today` | Panel de gestión (PMS); entras ya autenticado como administrador demo |
+| Ruta     | Qué es                                                               |
+| -------- | -------------------------------------------------------------------- |
+| `/web`   | Web pública del hotel: descubrimiento, ficha de habitación y reserva |
+| `/stays` | App del huésped: estancias, check-in online, club de fidelización    |
+| `/today` | Panel de gestión (PMS); en la demo eliges una cuenta ficticia        |
 
 ## ✨ Qué hace
 
@@ -46,7 +46,8 @@ flotante **«Modo demo»** permite reiniciar los datos.
 
 **Web pública y app del huésped**
 
-- Búsqueda de disponibilidad y precios por noche, reserva con **señal del 30 % online**.
+- Búsqueda de disponibilidad con calendario de precios por noche; pago online completo o en el
+  hotel, con política de cancelación por hotel.
 - **Prereserva:** bloquea la habitación 30 minutos mientras se completa el pago.
 - Check-in online con firma digital y subida de documentación.
 - Club de fidelización con niveles, puntos y recompensas.
@@ -56,15 +57,14 @@ flotante **«Modo demo»** permite reiniciar los datos.
 
 ## 🧱 Stack técnico
 
-| Capa           | Tecnología                                                              |
-| -------------- | ----------------------------------------------------------------------- |
-| Framework      | **TanStack Start / Router** (SPA con Vite 7)                            |
-| UI             | React 19, Tailwind CSS v4, Radix UI / shadcn, `react-hook-form` + Zod   |
-| Datos cliente  | TanStack Query                                                          |
-| Backend        | **Supabase**: Postgres, Row Level Security, Auth, Edge Functions (Deno) |
-| Backend (demo) | Mock en navegador (`src/integrations/demo/`) sobre `localStorage`       |
-| Pagos          | **Redsys** (firma `3DES` + `HMAC-SHA256`), entorno de pruebas           |
-| Tooling        | TypeScript, ESLint, Prettier, Vitest, npm                               |
+| Capa          | Tecnología                                                              |
+| ------------- | ----------------------------------------------------------------------- |
+| Framework     | **TanStack Start / Router** (SPA con Vite 7)                            |
+| UI            | React 19, Tailwind CSS v4, Radix UI / shadcn, `react-hook-form` + Zod   |
+| Datos cliente | TanStack Query                                                          |
+| Backend       | **Supabase**: Postgres, Row Level Security, Auth, Edge Functions (Deno) |
+| Pagos         | **Redsys** (firma `3DES` + `HMAC-SHA256`), entorno de pruebas           |
+| Tooling       | TypeScript, ESLint, Prettier, Vitest, npm                               |
 
 ## 🏗️ Arquitectura
 
@@ -73,15 +73,14 @@ src/
   routes/            Rutas: /web/*, /stays/*, panel /_app/*
   components/        UI compartida (editor de reservas, barra lateral, ...)
   integrations/
-    supabase/        Cliente de datos: Supabase real o mock según haya credenciales
-    demo/            Backend simulado: dataset seed + cliente mock
+    supabase/        Cliente de datos (Supabase)
     pms/             Contrato PmsConnector + implementación sobre este backend
     cms/             Contrato CmsClient (experiencias del hotel)
   lib/               Motor de precios, datos y helpers
 ```
 
-La app importa **un único cliente** (`@/integrations/supabase/client`) y el resto del código es
-agnóstico a si detrás hay Supabase o el mock. Más detalle en [`ARCHITECTURE.md`](ARCHITECTURE.md).
+La app importa **un único cliente** (`@/integrations/supabase/client`). Más detalle en
+[`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## 🛠️ Scripts
 

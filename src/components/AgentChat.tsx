@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bot, CreditCard, ExternalLink, MessageCircle, SendHorizonal, X } from "lucide-react";
-import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/lib/brand";
 import { useBrandTenant, useFeatures } from "@/lib/features";
 
@@ -95,9 +95,8 @@ export function AgentChat() {
     end.current?.scrollIntoView({ block: "end" });
   }, [lines.length, busy, open]);
 
-  // The agent needs the real backend (and a model); the mock has neither.
-  // It is part of the AI package: hotels without it do not show it.
-  if (IS_DEMO || !features.ai_agent) return null;
+  // Part of the AI package: hotels without it do not show it.
+  if (!features.ai_agent) return null;
 
   const send = async () => {
     const message = text.trim();

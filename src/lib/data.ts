@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "./roles";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -66,15 +66,14 @@ export const STATUS_COLORS: Record<string, string> = {
 
 // The catalogue is public (the web needs it), so the staff panel must scope its
 // queries to the signed-in user's hotels itself. RLS still guards every write.
-// In the backend-free demo the staff user runs both hotels: no filter.
 function useStaffTenants() {
   const { tenantIds, loading } = useRoles();
-  return { tenantIds, ready: IS_DEMO || !loading };
+  return { tenantIds, ready: !loading };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function scoped<Q extends { in: (c: string, v: string[]) => any }>(q: Q, tenantIds: string[]): Q {
-  return IS_DEMO ? q : q.in("tenant_id", tenantIds);
+  return q.in("tenant_id", tenantIds);
 }
 
 export function useRooms() {

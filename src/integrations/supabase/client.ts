@@ -1,9 +1,9 @@
 // Data client entry point. Exposes a single `supabase` instance that the whole
-// app imports. When real Supabase credentials are present it returns the genuine
-// client; otherwise it falls back to the in-browser demo mock (see IS_DEMO).
+// app imports. It needs VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+// (see .env.example): the demo project in development and pre-production, the
+// production project in production.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
-import { createMockClient } from "@/integrations/demo/mock-client";
 
 function getEnv() {
   const SUPABASE_URL =
@@ -17,14 +17,9 @@ function getEnv() {
   return { SUPABASE_URL, SUPABASE_ANON_KEY };
 }
 
-// DEMO MODE: when no Supabase credentials are configured, the app runs against
-// an in-browser mock backend (see src/integrations/demo/) so it can be explored
-// with no server, database or keys. Provide real VITE_SUPABASE_* env vars to
-// connect a genuine Supabase project instead.
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = getEnv();
-export const IS_DEMO = !SUPABASE_URL || !SUPABASE_ANON_KEY;
-/** Base URL of the Edge Functions (null in the backend-free demo). */
-export const FUNCTIONS_URL = IS_DEMO ? null : `${SUPABASE_URL}/functions/v1`;
+/** Base URL of the Edge Functions. */
+export const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 
 function createRealClient() {
   return createClient<Database>(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
@@ -37,11 +32,10 @@ function createRealClient() {
 }
 
 function createSupabaseClient() {
-  if (IS_DEMO) {
-    if (typeof console !== "undefined") {
-      console.info("[Demo] Sin credenciales Supabase: usando backend simulado en memoria.");
-    }
-    return createMockClient() as unknown as ReturnType<typeof createRealClient>;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error(
+      "Faltan VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY: copia .env.example a .env y apunta al proyecto de Supabase.",
+    );
   }
   return createRealClient();
 }

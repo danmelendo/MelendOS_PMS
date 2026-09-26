@@ -5,8 +5,7 @@
 // once, nothing charged.
 //
 // Pure logic over a small data-access interface (BookingStore), so the same
-// code runs in the Edge Function (Supabase), in the in-browser mock and, from
-// phase 2, behind the booking agent's tool.
+// code runs in the Edge Functions, behind the agent and MCP tools, and in tests.
 import { z } from "zod";
 import { eachNight, isYmd, nightsBetween, zonedHourToUtc } from "../domain/dates.ts";
 import { priceStay, round2, type DynamicRule, type PriceBreakdown } from "../domain/pricing.ts";

@@ -6,7 +6,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { ArrowLeft, CalendarDays, Users, Clock, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
-import { IS_DEMO } from "@/integrations/supabase/client";
 import { eur, formatDateLong } from "@/lib/stays";
 
 interface WebBookSearch {
@@ -37,12 +36,8 @@ function WebBookScreen() {
   const { roomId } = Route.useParams();
   const { checkIn, checkOut, guests } = Route.useSearch();
   const navigate = useNavigate();
-  // Guest details (no account needed). Prefilled in the backend-free demo.
-  const [guest, setGuest] = useState(
-    IS_DEMO
-      ? { name: "Alex Río", email: "alex@guest.demostays.example", phone: "+34 600 123 456" }
-      : { name: "", email: "", phone: "" },
-  );
+  // Guest details (no account needed).
+  const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
   const guestValid = guest.name.trim().length >= 2 && /^\S+@\S+\.\S+$/.test(guest.email.trim());
 
   const { data: propertyId } = useQuery({

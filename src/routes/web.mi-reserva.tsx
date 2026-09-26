@@ -5,7 +5,7 @@ import { ChevronRight, LogIn, LogOut, Search, Sparkles, UserRound } from "lucide
 import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
-import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { DemoAccountPicker } from "@/components/DemoAccountPicker";
 import { useAuth } from "@/lib/auth";
 import { useBrand } from "@/lib/brand";
@@ -166,7 +166,7 @@ function MyStays() {
           </h2>
           <p className="truncate text-sm text-neutral-500">{member?.email}</p>
         </div>
-        {!IS_DEMO && (
+        {
           <button
             type="button"
             onClick={() => signOut()}
@@ -174,7 +174,7 @@ function MyStays() {
           >
             <LogOut className="h-4 w-4" /> Salir
           </button>
-        )}
+        }
       </div>
 
       {features.loyalty && loyalty && (

@@ -1,16 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // DemoStaysConnector — reference PMS connector
 //
-// Implements PmsConnector on top of the existing Demo Stays backend (the
-// Supabase-shaped in-browser mock + the real pricing engine). Every method maps
-// PMS rows ↔ integration DTOs and records booking-lifecycle events in the shared
-// `booking_journal`, so the reception panel and the mobile app see one history.
+// Implements PmsConnector on top of the Demo Stays backend (Supabase: tables
+// behind RLS, database functions and Edge Functions). Every method maps PMS
+// rows ↔ integration DTOs; booking-lifecycle events reach the shared
+// `booking_journal` through database triggers.
 //
 // To integrate another PMS, write an equivalent class against its API and swap
 // the singleton exported from ./index.ts — the mobile UI is unaffected.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { calculateNightlyPrice } from "@/lib/pricing";
 import { bookingReference } from "@domain/reference.ts";
 import { CHECKIN_HOUR, CHECKOUT_HOUR } from "@/lib/data";
@@ -55,12 +55,9 @@ import type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
-// The in-browser mock is schema-less at runtime; the generated `Database` types
-// only describe the original PMS tables. This connector also reads/writes the
-// mobile + loyalty tables (properties, members, loyalty_*, signatures,
-// booking_journal) and a few extra reservation columns, so it speaks to the
-// client through a permissive handle — the same untyped marshalling boundary a
-// real PMS connector has against an external HTTP API.
+// The connector maps rows by hand, so it speaks to the client through a
+// permissive handle: the same untyped marshalling boundary a real PMS connector
+// has against an external HTTP API.
 const sb = supabase as unknown as {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   from: (table: string) => any;
@@ -149,48 +146,6 @@ export class DemoStaysConnector implements PmsConnector {
   readonly pmsName = "Demo Stays PMS";
 
   // ── helpers ────────────────────────────────────────────────────────────────
-
-  private async appendJournal(
-    bookingRef: string,
-    eventType: JournalEventType,
-    opts: {
-      memberId?: string | null;
-      propertyId?: string | null;
-      actor?: string;
-      payload?: Row;
-    } = {},
-  ) {
-    // The real backend journals through triggers; only the demo writes it here.
-    if (!IS_DEMO) return;
-    await sb.from("booking_journal").insert({
-      booking_ref: bookingRef,
-      member_id: opts.memberId ?? null,
-      property_id: opts.propertyId ?? null,
-      event_type: eventType,
-      actor: opts.actor ?? "member",
-      payload: opts.payload ?? {},
-      created_at: new Date().toISOString(),
-    });
-  }
-
-  /** Expired holds are released so they stop blocking their slot. */
-  private async sweepExpiredHolds() {
-    if (!IS_DEMO) return; // a scheduled job does it on the real backend
-    const nowIso = new Date().toISOString();
-    const { data } = await sb
-      .from("reservations")
-      .select("id,hold_expires_at,is_prebooking,status")
-      .eq("is_prebooking", true)
-      .eq("status", "pending");
-    for (const r of (data ?? []) as Row[]) {
-      if (r.hold_expires_at && r.hold_expires_at < nowIso) {
-        await sb
-          .from("reservations")
-          .update({ status: "cancelled", internal_notes: "Prereserva expirada" })
-          .eq("id", r.id);
-      }
-    }
-  }
 
   private async nightlyFromPriceByGroup(): Promise<Map<string, number>> {
     const { data } = await sb.from("rate_nightly").select("rate_group_id,price");
@@ -401,7 +356,6 @@ export class DemoStaysConnector implements PmsConnector {
     totalRooms: number;
     nights: number;
   }> {
-    await this.sweepExpiredHolds();
     const nights = nightsBetween(query.checkIn, query.checkOut);
     const [rooms, property] = await Promise.all([
       this.listRooms(query.propertyId),
@@ -477,11 +431,6 @@ export class DemoStaysConnector implements PmsConnector {
     }
     const draft = data as { reservation_id: string; access_token: string };
     saveToken(draft.reservation_id, draft.access_token);
-    await this.appendJournal(draft.reservation_id, "prebooked", {
-      memberId: input.memberId ?? null,
-      propertyId: input.propertyId,
-      payload: { checkIn: input.checkIn, checkOut: input.checkOut, hold: input.hold },
-    });
     const booking = await this.getBooking(draft.reservation_id);
     if (!booking) throw new Error("No se pudo leer la reserva");
     return booking;
@@ -492,7 +441,6 @@ export class DemoStaysConnector implements PmsConnector {
   }
 
   async getBooking(id: string): Promise<Prebooking | null> {
-    await this.sweepExpiredHolds();
     const { data } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();
     if (data) return this.mapBooking(data as Row);
     const guest = await this.guestBooking(id);
@@ -516,22 +464,6 @@ export class DemoStaysConnector implements PmsConnector {
       body: { reservation_id: id, return_url: returnUrl, kind },
     });
     if (error || !data) throw new Error(await errorMessage(error, "No se pudo iniciar el pago"));
-    if (IS_DEMO && kind === "deposit") {
-      // The demo "gateway" confirms at once; mirror what the database triggers
-      // do on the real backend (journal and loyalty points).
-      const { data: row } = await sb.from("reservations").select("*").eq("id", id).maybeSingle();
-      const r = row as Row | null;
-      if (r) {
-        await this.appendJournal(id, "confirmed", {
-          memberId: r.member_id,
-          propertyId: r.property_id,
-          payload: { paid: Number(r.deposit_amount ?? 0) },
-        });
-        if (r.member_id) {
-          await this.earnPoints(r.member_id, Number(r.total ?? 0), id, r.property_id);
-        }
-      }
-    }
     return (data as { redirect: PaymentRedirect }).redirect;
   }
 
@@ -551,11 +483,9 @@ export class DemoStaysConnector implements PmsConnector {
       ? await sb.rpc("cancel_guest_booking", { p_id: id, p_token: token })
       : await sb.rpc("cancel_my_reservation", { p_reservation_id: id });
     if (error) throw new Error(error.message ?? "No se pudo cancelar");
-    await this.appendJournal(id, "cancelled", {});
   }
 
   async listBookings(memberId: string): Promise<Prebooking[]> {
-    await this.sweepExpiredHolds();
     const { data } = await sb
       .from("reservations")
       .select("*")
@@ -657,48 +587,12 @@ export class DemoStaysConnector implements PmsConnector {
       }));
   }
 
-  private async earnPoints(
-    memberId: string,
-    euros: number,
-    reservationId: string,
-    propertyId: string | null,
-  ) {
-    const account = await this.getLoyaltyAccount(memberId);
-    const points = Math.round(euros * account.tier.pointsPerEuro);
-    if (points <= 0) return;
-    await sb
-      .from("loyalty_accounts")
-      .update({
-        points: account.points + points,
-        lifetime_points: account.lifetimePoints + points,
-      })
-      .eq("member_id", memberId);
-    await sb.from("loyalty_transactions").insert({
-      member_id: memberId,
-      type: "earn",
-      points,
-      reason: "Estancia confirmada",
-      reservation_id: reservationId,
-      created_at: new Date().toISOString(),
-    });
-    await this.appendJournal(reservationId, "points_earned", {
-      memberId,
-      propertyId,
-      payload: { points },
-    });
-  }
-
   async redeemReward(memberId: string, rewardId: string): Promise<LoyaltyAccount> {
     const { error } = await sb.rpc("redeem_reward", {
       p_member_id: memberId,
       p_reward_id: rewardId,
     });
     if (error) throw new Error(error.message ?? "No se pudo canjear");
-    const reward = (await this.listRewards(memberId)).find((r) => r.id === rewardId);
-    await this.appendJournal(`reward-${rewardId}`, "reward_redeemed", {
-      memberId,
-      payload: { reward: reward?.name, points: reward?.costPoints },
-    });
     return this.getLoyaltyAccount(memberId);
   }
 
@@ -757,7 +651,6 @@ export class DemoStaysConnector implements PmsConnector {
       });
       if (error) throw new Error(error.message ?? "No se pudo firmar");
     }
-    await this.appendJournal(reservationId, "signed", { payload: { doc: docType } });
     return (await this.getSignature(reservationId))!;
   }
 

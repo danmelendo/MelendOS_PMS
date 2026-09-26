@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FUNCTIONS_URL, supabase } from "@/integrations/supabase/client";
 
 // Access tokens for the hotel's MCP server (create_mcp_token, list_mcp_tokens,
-// revoke_mcp_token); the demo mock emulates the same functions.
+// revoke_mcp_token).
 
 export type McpScope = "read" | "write";
 

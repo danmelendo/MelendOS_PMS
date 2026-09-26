@@ -7,7 +7,7 @@ import {
   type PackageId,
 } from "@domain/features.ts";
 import { hotelPolicies, type HotelPolicies } from "@domain/policies.ts";
-import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/lib/roles";
 import { useBrand } from "@/lib/brand";
 
@@ -80,10 +80,10 @@ export function useStaffHotelModules() {
   const { tenantIds, loading } = useRoles();
   return useQuery({
     queryKey: ["staff-hotel-modules", tenantIds],
-    enabled: IS_DEMO || !loading,
+    enabled: !loading,
     queryFn: async (): Promise<StaffHotel[]> => {
       let q = supabase.from("tenants").select("id, name, plan, settings").order("name");
-      if (!IS_DEMO) q = q.in("id", tenantIds);
+      q = q.in("id", tenantIds);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []).map((t) => {

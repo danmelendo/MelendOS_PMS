@@ -3,7 +3,7 @@
 //
 // This interface IS the product story: the "Stays" mobile app integrates with a
 // PMS only through these methods. Demo Stays ships a reference implementation
-// (DemoStaysConnector) backed by its in-browser mock; integrating a different PMS
+// (DemoStaysConnector) over its Supabase backend; integrating a different PMS
 // means writing another `PmsConnector` and swapping the singleton in ./index.ts.
 // Nothing in the mobile UI changes.
 // ─────────────────────────────────────────────────────────────────────────────
