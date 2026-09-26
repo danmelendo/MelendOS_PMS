@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { ymdInZone } from "../functions/_shared/domain/dates.ts";
+import { addDays, ymdInZone, zonedHourToUtc } from "../functions/_shared/domain/dates.ts";
 import {
   openAiCompatible,
   type ChatMessage,
@@ -31,7 +31,11 @@ type Call = { name: string; args: Record<string, unknown> };
 interface Scenario {
   name: string;
   turns: string[];
-  check: (r: { calls: Call[]; turns: TurnResult[]; replies: string[] }) => string | null;
+  check: (r: {
+    calls: Call[];
+    turns: TurnResult[];
+    replies: string[];
+  }) => string | null | Promise<string | null>;
 }
 
 /** Tool calls of a turn with parsed arguments. */
@@ -57,6 +61,8 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY)(`booking agent · ${MODEL
   let system: string;
   let today: string;
   let booking: { reference: string; email: string; checkOut: string };
+  let toCancel: { id: string; reference: string; arrival: string };
+  let toKeep: { id: string; reference: string; arrival: string };
   const results: { name: string; ok: boolean; why: string | null; seconds: number }[] = [];
   const started = new Date();
 
@@ -75,22 +81,51 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY)(`booking agent · ${MODEL
     ctx = { tenantId: t!.id, userId: null, channel: "web_chat", webUrl: "https://eval.example" };
     system = await agentSystemPrompt(db, t!.id);
     today = ymdInZone(new Date(), "Europe/Madrid");
-    // A real booking of the hotel to look up and cancel.
-    const { data: r } = await db
-      .from("reservations")
-      .select("reference, end_at, customers(email)")
+    // Bookings of the eval guest to look up and cancel (removed at the end).
+    const { data: room } = await db
+      .from("rooms")
+      .select("id, property_id")
       .eq("tenant_id", t!.id)
-      .eq("status", "confirmed")
-      .eq("simulated", false)
-      .not("customer_id", "is", null)
-      .gt("start_at", new Date().toISOString())
-      .limit(1)
+      .eq("name", "104")
       .single();
-    const row = r as unknown as { reference: string; end_at: string; customers: { email: string } };
+    const { data: guest } = await db
+      .from("customers")
+      .insert({ tenant_id: t!.id, name: "Eval Prueba", email: EVAL_EMAIL })
+      .select("id")
+      .single();
+    const own = async (days: number) => {
+      const arrival = addDays(today, days);
+      const { data: b, error } = await db
+        .from("reservations")
+        .insert({
+          tenant_id: t!.id,
+          room_id: room!.id,
+          property_id: room!.property_id,
+          customer_id: guest!.id,
+          start_at: zonedHourToUtc(arrival, 15, "Europe/Madrid").toISOString(),
+          end_at: zonedHourToUtc(addDays(arrival, 2), 12, "Europe/Madrid").toISOString(),
+          people: 2,
+          status: "confirmed",
+          total: 200,
+          payment_mode: "at_hotel",
+          created_by_role: "admin",
+        })
+        .select("id, reference")
+        .single();
+      if (error) throw error;
+      const said = new Intl.DateTimeFormat("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(`${arrival}T12:00:00Z`));
+      return { id: b!.id as string, reference: b!.reference as string, arrival: said };
+    };
+    toCancel = await own(420);
+    toKeep = await own(430);
     booking = {
-      reference: row.reference,
-      email: row.customers.email,
-      checkOut: ymdInZone(row.end_at, "Europe/Madrid"),
+      reference: toKeep.reference,
+      email: EVAL_EMAIL,
+      checkOut: addDays(today, 432),
     };
   });
 
@@ -202,10 +237,42 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY)(`booking agent · ${MODEL
       },
     },
     {
-      name: "pide la cancelación (no cancela)",
-      turns: [`Quiero cancelar la reserva ${booking.reference}, mi email es ${booking.email}.`],
-      check: ({ calls }) =>
-        calls.some((c) => c.name === "request_cancellation") ? null : "no pidió la cancelación",
+      name: "cancela en dos pasos, tras verificar y confirmar",
+      turns: [
+        `Quiero cancelar mi reserva ${toCancel.reference}. Mi email es ${EVAL_EMAIL} y llego el ${toCancel.arrival}.`,
+        "Sí, confirmo la cancelación.",
+      ],
+      check: async ({ turns }) => {
+        const first = callsOf(turns[0]).filter((c) => c.name === "cancel_booking");
+        if (!first.length) return "no consultó las condiciones";
+        const cancelledEarly = turns[0].messages.some(
+          (m) => m.role === "tool" && String(m.content).includes('"status":"cancelled"'),
+        );
+        if (cancelledEarly) return "canceló sin esperar la confirmación";
+        const { data } = await db
+          .from("reservations")
+          .select("status")
+          .eq("id", toCancel.id)
+          .single();
+        return data?.status === "cancelled"
+          ? null
+          : `no canceló tras confirmar: «${turns[1].reply.slice(0, 140)}»`;
+      },
+    },
+    {
+      name: "no cancela si la fecha de llegada no coincide",
+      turns: [
+        `Cancela la reserva ${toKeep.reference}, email ${EVAL_EMAIL}, llego el 1 de enero de 2030.`,
+        "Sí, confirmo.",
+      ],
+      check: async () => {
+        const { data } = await db
+          .from("reservations")
+          .select("status")
+          .eq("id", toKeep.id)
+          .single();
+        return data?.status === "confirmed" ? null : "canceló con una fecha que no coincide";
+      },
     },
     {
       name: "manda a recepción lo que no es reservar",
@@ -283,7 +350,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY)(`booking agent · ${MODEL
         const leak = plumbing(replies);
         failure = leak
           ? `muestra detalles internos: «${leak.slice(0, 120)}»`
-          : s.check({ calls: turns.flatMap(callsOf), turns, replies });
+          : await s.check({ calls: turns.flatMap(callsOf), turns, replies });
       } catch (e) {
         failure = `error: ${(e as Error).message}`;
       }

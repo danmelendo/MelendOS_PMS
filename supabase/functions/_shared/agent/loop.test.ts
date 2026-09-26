@@ -12,6 +12,7 @@ import {
   OFF_TOPIC_REPLY,
   runAgentTurn,
   toolSpecs,
+  cancellationGuard,
 } from "./loop.ts";
 
 const ctx: ToolContext = {
@@ -343,9 +344,9 @@ describe("claims without actions", () => {
     const none = () => false;
     expect(falseClaim("Perfecto, he reservado la habitación 104.", none)).toMatch(/NO existe/);
     expect(falseClaim("¡Reserva creada! Te espero.", none)).toMatch(/create_booking_draft/);
-    expect(falseClaim("He solicitado la cancelación al hotel.", none)).toMatch(
-      /request_cancellation/,
-    );
+    expect(falseClaim("He solicitado la cancelación al hotel.", none)).toMatch(/cancel_booking/);
+    expect(falseClaim("Listo, he cancelado tu reserva.", none)).toMatch(/NO se ha cancelado/);
+    expect(falseClaim("He cancelado tu reserva.", (t) => t === "cancel_booking")).toBeNull();
     expect(
       falseClaim("He reservado la habitación.", (t) => t === "create_booking_draft"),
     ).toBeNull();
@@ -403,5 +404,30 @@ describe("claims without actions", () => {
     });
     expect(r.reply).not.toMatch(/He reservado/);
     expect(r.reservationId).toBeNull();
+  });
+});
+
+describe("cancellation confirmed by the guest", () => {
+  const terms = (reference: string) => ({
+    role: "tool" as const,
+    name: "cancel_booking",
+    tool_call_id: "c1",
+    content: JSON.stringify({ ok: true, data: { status: "needs_confirmation", reference } }),
+  });
+  const args = { reference: "b2000000", email: "laura@example.com", check_in: "2026-10-01" };
+
+  it("refuses to cancel before the terms were shown in an earlier turn", () => {
+    expect(cancellationGuard("cancel_booking", { ...args, confirm: false }, [])).toBeNull();
+    expect(cancellationGuard("cancel_booking", { ...args, confirm: true }, [])).toMatchObject({
+      ok: false,
+      error: { code: "confirmation_required" },
+    });
+    expect(
+      cancellationGuard("cancel_booking", { ...args, confirm: true }, [terms("B9999999")]),
+    ).toMatchObject({ ok: false });
+    expect(
+      cancellationGuard("cancel_booking", { ...args, confirm: true }, [terms("B2000000")]),
+    ).toBeNull();
+    expect(cancellationGuard("get_booking", { ...args, confirm: true }, [])).toBeNull();
   });
 });

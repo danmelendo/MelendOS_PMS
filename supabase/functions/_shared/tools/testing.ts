@@ -97,6 +97,7 @@ export function fakeStore(
     category?: string | null;
   }[] = [];
   const tokenHashes: Record<string, string> = {};
+  const cancelled: { id: string; channel: string; category: string | null }[] = [];
   const store: ToolStore = {
     async getRoom(id) {
       const r = ROOMS.find((x) => x.id === id);
@@ -171,9 +172,16 @@ export function fakeStore(
       });
       return { id: `req-${requests.length - 1}`, created: true };
     },
+    async cancelBooking(tenantId, id, channel, category) {
+      const b = bookings.find((x) => x.tenant_id === tenantId && x.id === id);
+      if (!b) throw new Error("Reserva no encontrada");
+      b.status = "cancelled";
+      cancelled.push({ id, channel, category });
+      return { refund: b.deposit_paid ? b.deposit_amount : 0 };
+    },
     async setAccessTokenHash(_t, id, hash) {
       tokenHashes[id] = hash;
     },
   };
-  return { store, inserted, requests, tokenHashes };
+  return { store, inserted, requests, tokenHashes, cancelled };
 }

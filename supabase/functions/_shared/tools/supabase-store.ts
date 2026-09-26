@@ -214,6 +214,16 @@ export function supabaseToolStore(db: SupabaseClient): ToolStore {
       );
       return { id: (open as unknown as { id: string }).id, created: false };
     },
+    async cancelBooking(tenantId, reservationId, channel, category) {
+      const { data, error } = await db.rpc("cancel_booking_for_channel", {
+        p_tenant: tenantId,
+        p_reservation: reservationId,
+        p_channel: channel,
+        p_category: category,
+      });
+      if (error) throw new Error(error.message);
+      return { refund: Number((data as { refund?: number } | null)?.refund ?? 0) };
+    },
     async setAccessTokenHash(tenantId, reservationId, hash) {
       must(
         await db

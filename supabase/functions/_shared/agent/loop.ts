@@ -139,11 +139,11 @@ export function falseClaim(reply: string, done: (tool: string) => boolean): stri
     return "Nota del sistema (el cliente no la ve): la reserva NO existe porque no has llamado a create_booking_draft. Llámala ahora con los datos que te ha dado el cliente, o pídele lo que falte. No digas que está reservada.";
   }
   const cancelled =
-    /\b(he|hemos) (solicitado|pedido|enviado|tramitado) (la )?cancelaci|\bsolicitud de cancelación (enviada|registrada|creada)/.test(
+    /\b(he|hemos) (cancelado|anulado|solicitado|pedido|enviado|tramitado) (tu |la )?(reserva|cancelaci)|\breserva (cancelada|anulada)\b|\bsolicitud de cancelación (enviada|registrada|creada)/.test(
       text,
     );
-  if (cancelled && !done("request_cancellation")) {
-    return "Nota del sistema (el cliente no la ve): la cancelación NO se ha solicitado porque no has llamado a request_cancellation. Llámala ahora con la referencia y el email del cliente, o pídele lo que falte.";
+  if (cancelled && !done("cancel_booking")) {
+    return "Nota del sistema (el cliente no la ve): la reserva NO se ha cancelado porque no has llamado a cancel_booking. Llámala con la referencia, el email y la fecha de llegada que te dé el cliente, o pídele lo que falte.";
   }
   return null;
 }
@@ -167,7 +167,50 @@ export function looksOffTopic(reply: string): boolean {
   );
 }
 
-const EMAIL_TOOLS = new Set(["create_booking_draft", "get_booking", "request_cancellation"]);
+const EMAIL_TOOLS = new Set(["create_booking_draft", "get_booking", "cancel_booking"]);
+
+/**
+ * A cancellation is confirmed by the guest, not by the model: cancel_booking
+ * with confirm true is only accepted when an earlier turn of this conversation
+ * showed the terms of that same booking (confirm false), so the guest has
+ * written at least once since.
+ */
+export function cancellationGuard(
+  name: string,
+  args: unknown,
+  history: ChatMessage[],
+): { ok: false; error: { code: string; message: string } } | null {
+  if (name !== "cancel_booking") return null;
+  const a = (args ?? {}) as { confirm?: unknown; reference?: unknown };
+  if (a.confirm !== true) return null;
+  const ref = String(a.reference ?? "")
+    .trim()
+    .toUpperCase();
+  const shown = history.some((m) => {
+    if (m.role !== "tool" || m.name !== "cancel_booking") return false;
+    try {
+      const out = JSON.parse(String(m.content)) as {
+        ok?: boolean;
+        data?: { status?: string; reference?: string };
+      };
+      return (
+        out.ok === true && out.data?.status === "needs_confirmation" && out.data.reference === ref
+      );
+    } catch {
+      return false;
+    }
+  });
+  return shown
+    ? null
+    : {
+        ok: false,
+        error: {
+          code: "confirmation_required",
+          message:
+            "Primero llama a cancel_booking con confirm false, explica las condiciones al cliente y espera a que confirme en un mensaje nuevo.",
+        },
+      };
+}
 
 /**
  * Guests' personal data must come from the guest, not from the model: a small
@@ -277,10 +320,11 @@ export async function runAgentTurn(
       const name = call.function.name;
       result.toolsCalled.push(name);
       const args = parseArgs(call.function.arguments);
-      const refused = guestDataGuard(name, args, [
-        ...opts.history.filter((m) => m.role === "user").map((m) => String(m.content)),
-        opts.userMessage,
-      ]);
+      const refused =
+        guestDataGuard(name, args, [
+          ...opts.history.filter((m) => m.role === "user").map((m) => String(m.content)),
+          opts.userMessage,
+        ]) ?? cancellationGuard(name, args, opts.history);
       const out = refused ?? (await box.run(name, args));
       if (!out.ok) failed.add(name);
       else failed.delete(name);
@@ -312,7 +356,11 @@ export async function runAgentTurn(
             label: `Pagar la reserva (${euros(data.amount)})`,
             url: data.payment_url,
           });
-        } else if (name === "request_cancellation" && result.outcome === "answered") {
+        } else if (
+          name === "cancel_booking" &&
+          data.status === "pending_hotel_review" &&
+          result.outcome === "answered"
+        ) {
           result.outcome = "handoff";
         }
       }
