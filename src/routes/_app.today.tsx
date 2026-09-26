@@ -16,6 +16,7 @@ import {
 } from "@/components/ReservationExtrasInfo";
 import { Plus, LogIn, LogOut, BedDouble, Receipt } from "lucide-react";
 import { toast } from "sonner";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app/today")({
   component: TodayPage,
@@ -28,6 +29,8 @@ const INACTIVE = ["cancelled", "no_show", "rejected"];
 // in house, plus tonight's occupancy.
 function TodayPage() {
   const qc = useQueryClient();
+  // Group management looks, it does not operate.
+  const { canOperate } = useRoles();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [folioId, setFolioId] = useState<string | null>(null);
@@ -163,14 +166,16 @@ function TodayPage() {
             })}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditId(undefined);
-            setOpen(true);
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Nueva reserva
-        </Button>
+        {canOperate && (
+          <Button
+            onClick={() => {
+              setEditId(undefined);
+              setOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Nueva reserva
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
@@ -214,7 +219,7 @@ function TodayPage() {
             row(
               r,
               <>
-                {r.status === "confirmed" && (
+                {r.status === "confirmed" && canOperate && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -233,7 +238,7 @@ function TodayPage() {
             row(
               r,
               <>
-                {r.status === "in_progress" && (
+                {r.status === "in_progress" && canOperate && (
                   <Button
                     size="sm"
                     variant="outline"

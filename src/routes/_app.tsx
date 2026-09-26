@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CopilotWidget } from "@/components/CopilotWidget";
 import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { session, loading } = useAuth();
+  const { isGroup, canOperate } = useRoles();
   if (loading)
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -45,6 +47,12 @@ function AppLayout() {
               <NotificationBell />
             </div>
           </header>
+          {isGroup && !canOperate && (
+            <div className="border-b bg-info/10 px-4 py-2 text-xs text-info">
+              Dirección de grupo: ves y gestionas todos los hoteles del grupo, en modo consulta para
+              la operativa (reservas, cobros y mensajes los lleva cada hotel).
+            </div>
+          )}
           <main className="flex-1 p-4 md:p-6 bg-muted/20">
             <Outlet />
           </main>

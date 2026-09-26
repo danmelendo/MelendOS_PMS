@@ -43,14 +43,16 @@ async function ensureUser(email) {
 
 for (const s of STAFF) {
   const userId = await ensureUser(s.email);
-  const { error } = await admin
-    .from("tenant_members")
-    .upsert(
-      { tenant_id: sid(s.tenant), user_id: userId, role: s.role },
-      { onConflict: "tenant_id,user_id" },
-    );
-  if (error) throw error;
-  console.log(`staff  ${s.role.padEnd(9)} ${s.email}`);
+  for (const tenant of s.tenants) {
+    const { error } = await admin
+      .from("tenant_members")
+      .upsert(
+        { tenant_id: sid(tenant), user_id: userId, role: s.role },
+        { onConflict: "tenant_id,user_id" },
+      );
+    if (error) throw error;
+  }
+  console.log(`staff  ${s.role.padEnd(9)} ${s.email} (${s.tenants.join(", ")})`);
 }
 
 const guestId = await ensureUser(GUEST.email);

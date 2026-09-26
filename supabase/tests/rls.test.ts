@@ -1722,4 +1722,96 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(log).toEqual(["guest_identity.saved", "guest_identity.viewed"]);
     });
   });
+
+  describe("group management role", () => {
+    const groupUser = "00000000-0000-4000-8000-000000000009";
+
+    it("reads and manages every hotel of the group, but does not operate", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        "insert into auth.users (id, email, aud, role) values ($1, 'grupo@test.demostays.example', 'authenticated', 'authenticated') on conflict (id) do nothing",
+        [groupUser],
+      );
+      await client.query(
+        "insert into public.tenant_members (tenant_id, user_id, role) values ($1, $3, 'group'), ($2, $3, 'group')",
+        [ids.lumen, ids.albora, groupUser],
+      );
+      const booking = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role)
+           values ($1, $2, now() + interval '260 days', now() + interval '262 days', 'confirmed', 200, 'admin')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      const request = (
+        await client.query<{ id: string }>(
+          "insert into public.cancellation_requests (tenant_id, reservation_id, channel) values ($1, $2, 'web') returning id",
+          [ids.lumen, booking],
+        )
+      ).rows[0].id;
+
+      const seesBoth = await attempt(
+        "authenticated",
+        groupUser,
+        async () =>
+          (
+            await client.query(
+              "select count(distinct tenant_id)::int as n from public.reservations where tenant_id in ($1, $2)",
+              [ids.lumen, ids.albora],
+            )
+          ).rows[0].n,
+      );
+      const book = await attempt("authenticated", groupUser, () =>
+        client.query(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role)
+           values ($1, $2, now() + interval '270 days', now() + interval '272 days', 'confirmed', 100, 'admin')`,
+          [ids.lumen, ids["lumen-room-101"]],
+        ),
+      );
+      const checkIn = await attempt("authenticated", groupUser, () =>
+        client.query("update public.reservations set status = 'in_progress' where id = $1", [
+          booking,
+        ]),
+      );
+      const decide = await attempt("authenticated", groupUser, () =>
+        client.query("select public.decide_cancellation($1, true)", [request]),
+      );
+      const message = await attempt("authenticated", groupUser, () =>
+        client.query(
+          "insert into public.stay_messages (tenant_id, reservation_id, sender, body, staff_id) values ($1, $2, 'staff', 'Hola', $3)",
+          [ids.lumen, booking, groupUser],
+        ),
+      );
+      const rates = await attempt(
+        "authenticated",
+        groupUser,
+        async () =>
+          (
+            await client.query(
+              "update public.rate_nightly set price = price + 1 where tenant_id = $1 returning id",
+              [ids.albora],
+            )
+          ).rowCount,
+      );
+      const tokens = await attempt("authenticated", groupUser, () =>
+        client.query("select public.list_mcp_tokens($1)", [ids.albora]),
+      );
+      const reception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("update public.reservations set status = 'in_progress' where id = $1", [
+          booking,
+        ]),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(seesBoth).toEqual({ ok: true, value: 2 });
+      for (const [what, r] of Object.entries({ book, checkIn, decide, message })) {
+        expect(r.ok, what).toBe(false);
+        if (!r.ok) expect(r.error, what).toMatch(/grupo|row-level security/);
+      }
+      expect(rates.ok && rates.value).toBeGreaterThan(0);
+      expect(tokens.ok).toBe(true);
+      expect(reception.ok).toBe(true);
+    });
+  });
 });

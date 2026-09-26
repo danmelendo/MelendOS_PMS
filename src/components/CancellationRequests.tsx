@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { eur } from "@/lib/data";
+import { useRoles } from "@/lib/roles";
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ type Decision = { id: string; approve: boolean };
 // deposits are handled with the payment provider.
 export function CancellationRequests() {
   const qc = useQueryClient();
+  const { canOperate } = useRoles();
   const [pending, setPending] = useState<Decision | null>(null);
   const [note, setNote] = useState("");
   const [category, setCategory] = useState<CancellationCategory | "">("");
@@ -194,7 +196,7 @@ export function CancellationRequests() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : !canOperate ? null : (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
                     size="sm"

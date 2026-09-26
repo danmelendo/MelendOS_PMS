@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .maybeSingle()
     : { data: null };
-  if (member?.role !== "admin") {
+  if (member?.role !== "admin" && member?.role !== "group") {
     return json({ error: "Solo un administrador del hotel puede cambiar el plan" }, 403);
   }
 

@@ -11,11 +11,11 @@ export const Route = createFileRoute("/_app/admin/manual")({
 });
 
 function ManualReservationPage() {
-  const { isAdmin, loading } = useRoles();
+  const { isAdmin, canOperate, loading } = useRoles();
   const [open, setOpen] = useState(false);
 
   if (loading) return null;
-  if (!isAdmin) return <Navigate to="/today" />;
+  if (!isAdmin || !canOperate) return <Navigate to="/today" />;
 
   return (
     <div className="space-y-4">
