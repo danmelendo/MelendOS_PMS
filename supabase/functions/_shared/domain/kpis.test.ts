@@ -5,6 +5,9 @@ import {
   dailyKpis,
   leadTimeBuckets,
   monthlyKpis,
+  parseStayFacts,
+  roomPerformance,
+  weekdayKpis,
   summarize,
   type StayFact,
 } from "./kpis.ts";
@@ -121,5 +124,69 @@ describe("booking metrics", () => {
       bookings: 0,
     });
     expect(s).not.toHaveProperty("day");
+  });
+});
+
+describe("roomPerformance", () => {
+  // 2026-03-02 is a Monday; Friday 6 and Saturday 7 are weekend nights.
+  const facts = [
+    fact({ roomId: "r1", checkIn: "2026-03-02", checkOut: "2026-03-05", roomRevenue: 300 }),
+    fact({ roomId: "r2", checkIn: "2026-03-06", checkOut: "2026-03-08", roomRevenue: 400 }),
+    fact({ roomId: "r3", checkIn: "2026-03-02", checkOut: "2026-03-04", status: "cancelled" }),
+  ];
+
+  it("ranks rooms by occupancy, least booked first, including rooms never sold", () => {
+    const rows = roomPerformance(facts, ["r1", "r2", "r3"], "2026-03-02", "2026-03-08");
+    expect(rows.map((r) => [r.roomId, r.sold])).toEqual([
+      ["r3", 0],
+      ["r2", 2],
+      ["r1", 3],
+    ]);
+    expect(rows[2]).toMatchObject({ nights: 7, revenue: 300, adr: 100 });
+  });
+
+  it("splits weekday and weekend nights", () => {
+    const weekday = roomPerformance(facts, ["r1", "r2"], "2026-03-02", "2026-03-08", "weekday");
+    expect(weekday.map((r) => [r.roomId, r.sold, r.nights])).toEqual([
+      ["r2", 0, 5],
+      ["r1", 3, 5],
+    ]);
+    const weekend = roomPerformance(facts, ["r1", "r2"], "2026-03-02", "2026-03-08", "weekend");
+    expect(weekend.map((r) => [r.roomId, r.sold, r.nights])).toEqual([
+      ["r1", 0, 2],
+      ["r2", 2, 2],
+    ]);
+  });
+});
+
+describe("weekdayKpis and parseStayFacts", () => {
+  it("groups occupancy by night of the week, Monday first", () => {
+    const rows = weekdayKpis(
+      [fact({ checkIn: "2026-03-02", checkOut: "2026-03-03" })],
+      2,
+      "2026-03-02",
+      "2026-03-08",
+    );
+    expect(rows.map((r) => r.night)).toEqual([
+      "lunes",
+      "martes",
+      "miércoles",
+      "jueves",
+      "viernes",
+      "sábado",
+      "domingo",
+    ]);
+    expect(rows[0]).toMatchObject({ available: 2, sold: 1, occupancy: 0.5 });
+  });
+
+  it("reads the rows of report_stays", () => {
+    const parsed = parseStayFacts({
+      rooms: { t1: 4 },
+      stays: [
+        ["t1", "r1", "2026-03-01", "2026-03-03", "2026-02-01", null, "completed", null, 2, 200],
+      ],
+    });
+    expect(parsed.rooms).toEqual({ t1: 4 });
+    expect(parsed.stays[0]).toEqual(fact({ channel: null }));
   });
 });

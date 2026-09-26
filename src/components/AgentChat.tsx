@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, CreditCard, ExternalLink, MessageCircle, SendHorizonal, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/lib/brand";
 import { useBrandTenant, useFeatures } from "@/lib/features";
+import { Formatted } from "@/components/FormattedText";
 
 // The booking agent on the public website. The server keeps the conversation
 // (agent-chat function); the browser only remembers its id for the session.
@@ -21,45 +22,6 @@ interface Line {
 
 const GREETING =
   "¡Hola! Soy el asistente de reservas. Dime fechas y cuántas personas sois y te digo qué habitaciones hay libres y a qué precio.";
-
-/** Bold (**x**), bullet lists and line breaks, as React nodes (no HTML). */
-function Formatted({ text }: { text: string }) {
-  const inline = (s: string, key: string): ReactNode[] =>
-    s
-      .split(/(\*\*[^*]+\*\*)/g)
-      .map((part, i) =>
-        part.startsWith("**") && part.endsWith("**") ? (
-          <strong key={`${key}-${i}`}>{part.slice(2, -2)}</strong>
-        ) : (
-          part
-        ),
-      );
-  const blocks: ReactNode[] = [];
-  let list: string[] = [];
-  const flush = (key: string) => {
-    if (!list.length) return;
-    blocks.push(
-      <ul key={key} className="my-1 list-disc space-y-0.5 pl-5">
-        {list.map((l, i) => (
-          <li key={i}>{inline(l, `${key}-${i}`)}</li>
-        ))}
-      </ul>,
-    );
-    list = [];
-  };
-  text.split("\n").forEach((raw, i) => {
-    const line = raw.trim();
-    const item = /^(?:[-*•]|\d+\.)\s+(.*)$/.exec(line);
-    if (item) {
-      list.push(item[1]);
-      return;
-    }
-    flush(`l${i}`);
-    if (line) blocks.push(<p key={`p${i}`}>{inline(line, `p${i}`)}</p>);
-  });
-  flush("end");
-  return <div className="space-y-1.5">{blocks}</div>;
-}
 
 export function AgentChat() {
   const { brandId } = useBrand();
