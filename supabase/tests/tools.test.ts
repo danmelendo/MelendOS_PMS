@@ -98,10 +98,19 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY || !SUPABASE_PUBLISHABLE_K
         total: quote.total,
       });
 
-      const request = await run("request_cancellation", { reference: draft.reference, email });
-      expect(request.already_requested).toBe(false);
-      const again = await run("request_cancellation", { reference: draft.reference, email });
-      expect(again).toMatchObject({ already_requested: true, request_id: request.request_id });
+      // Cancelling: terms first, then the cancellation (the booking is still
+      // unpaid, so it is free) through the same SQL rules as the guest's web.
+      const who = { reference: draft.reference, email, check_in: stay.check_in };
+      const terms = await run("cancel_booking", who);
+      expect(terms).toMatchObject({ status: "needs_confirmation", free_cancellation: true });
+      const done = await run("cancel_booking", { ...who, confirm: true, reason_category: "work" });
+      expect(done).toMatchObject({ status: "cancelled", refund_online: 0 });
+      const { data: row } = await db
+        .from("reservations")
+        .select("status, cancellation_category")
+        .eq("id", draft.reservation_id)
+        .single();
+      expect(row).toEqual({ status: "cancelled", cancellation_category: "work" });
     });
 
     it("keeps each hotel's bookings apart", async () => {
