@@ -47,6 +47,25 @@ export type OccupancyBand = "low" | "medium" | "high";
  * is what resolves the catalogue's indeterminate ranges into a concrete "for your
  * dates" price.
  */
+/** What the date pickers price: a room, a property or every hotel of a tenant. */
+export interface PriceCalendarQuery {
+  roomId?: string;
+  propertyId?: string;
+  tenantId?: string;
+  /** First night (yyyy-MM-dd) and number of nights (max 62). */
+  from: string;
+  days: number;
+  guests?: number;
+}
+
+export interface PriceCalendarNight {
+  date: string;
+  /** Average price of one night in the free rooms (euros); null = all taken. */
+  price: number | null;
+  min_price: number | null;
+  free_rooms: number;
+}
+
 export interface PricePreview {
   available: number;
   totalRooms: number;

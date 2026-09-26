@@ -18,6 +18,7 @@ import {
   eur0,
 } from "@/lib/stays";
 import { HotelCoverArt } from "@/components/cover-art";
+import { DateRangePicker } from "@/components/DateRangePicker";
 import type { AssetType } from "@/integrations/pms";
 
 export const Route = createFileRoute("/web/hotel/$hotelId")({
@@ -98,31 +99,19 @@ function WebHotelDetail() {
 
         {/* ── Date + filter bar ── */}
         <div className="mt-8 flex flex-wrap items-end gap-4  bg-white p-4 shadow-sm ring-1 ring-neutral-100">
-          <div className="flex items-end gap-3">
-            <label className="block">
-              <span className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                <CalendarDays className="h-3 w-3" /> Entrada
-              </span>
-              <input
-                type="date"
-                value={checkIn}
-                min={dateOffset(0)}
-                onChange={(e) => setCheckIn(e.target.value)}
-                className="border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                <CalendarDays className="h-3 w-3" /> Salida
-              </span>
-              <input
-                type="date"
-                value={checkOut}
-                min={checkIn}
-                onChange={(e) => setCheckOut(e.target.value)}
-                className="border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm"
-              />
-            </label>
+          <div className="w-full sm:w-72">
+            <span className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              <CalendarDays className="h-3 w-3" /> Fechas
+            </span>
+            <DateRangePicker
+              checkIn={checkIn}
+              checkOut={checkOut}
+              pricing={{ propertyId: hotelId }}
+              onChange={({ checkIn: ci, checkOut: co }) => {
+                setCheckIn(ci);
+                setCheckOut(co);
+              }}
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             {ASSET_FILTERS.map((f) => (

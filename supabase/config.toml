@@ -440,3 +440,6 @@ verify_jwt = false
 
 [functions.mcp]
 verify_jwt = false
+
+[functions.price-calendar]
+verify_jwt = false

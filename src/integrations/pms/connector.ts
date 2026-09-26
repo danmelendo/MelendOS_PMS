@@ -24,6 +24,8 @@ import type {
   PmsProperty,
   PmsProvince,
   PmsRoom,
+  PriceCalendarNight,
+  PriceCalendarQuery,
   PricePreview,
   PropertyBrand,
   PaymentRedirect,
@@ -92,6 +94,8 @@ export interface PmsConnector {
   searchAvailability(query: AvailabilityQuery): Promise<RoomOffer[]>;
   /** Occupancy-aware price preview for a property over the selected dates. */
   getPricePreview(query: AvailabilityQuery): Promise<PricePreview>;
+  /** Fare calendar: average nightly price of the free rooms, per night. */
+  getPriceCalendar(query: PriceCalendarQuery): Promise<PriceCalendarNight[]>;
 
   // ── Prebookings (prereservas) & reservations ──
   createPrebooking(input: CreatePrebookingInput): Promise<Prebooking>;

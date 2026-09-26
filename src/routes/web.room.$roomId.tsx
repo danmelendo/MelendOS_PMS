@@ -184,6 +184,7 @@ function WebRoomDetail() {
                 <DateRangePicker
                   checkIn={checkIn}
                   checkOut={checkOut}
+                  pricing={{ roomId }}
                   onChange={({ checkIn: ci, checkOut: co }) => {
                     setCheckIn(ci);
                     setCheckOut(co);

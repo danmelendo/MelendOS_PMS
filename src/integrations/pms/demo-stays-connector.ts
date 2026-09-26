@@ -40,6 +40,8 @@ import type {
   PmsProvince,
   PmsRoom,
   PaymentRedirect,
+  PriceCalendarNight,
+  PriceCalendarQuery,
   PricePreview,
   PropertyBrand,
   Reward,
@@ -370,6 +372,23 @@ export class DemoStaysConnector implements PmsConnector {
       fromNight: cheapest ? cheapest.pricePerNight : null,
       fromTotal: cheapest ? cheapest.price : null,
     };
+  }
+
+  async getPriceCalendar(query: PriceCalendarQuery): Promise<PriceCalendarNight[]> {
+    // Priced on the server with the booking engine (price-calendar).
+    const { data, error } = await supabase.functions.invoke("price-calendar", {
+      body: {
+        room_id: query.roomId,
+        property_id: query.propertyId,
+        tenant_id: query.tenantId,
+        from: query.from,
+        days: query.days,
+        guests: query.guests ?? 1,
+      },
+    });
+    if (error || !data)
+      throw new Error(await errorMessage(error, "No se pudieron cargar los precios"));
+    return (data as { nights: PriceCalendarNight[] }).nights;
   }
 
   /** Shared availability + occupancy pricing used by both methods above, so the
