@@ -143,7 +143,13 @@ def export_day(con: duckdb.DuckDBPyConnection, day: dt.date, out: Path) -> list[
     """Writes the Parquet files of every hotel for a day. Returns (lake path, file)."""
     check_whitelist()
     written: list[tuple[str, Path]] = []
-    tenants = [r[0] for r in con.execute("SELECT id::varchar FROM pg.public.tenants ORDER BY 1").fetchall()]
+    # Only hotels with the data_lake module (data package), see lake_tenants().
+    tenants = [
+        r[0]
+        for r in con.execute(
+            "SELECT id FROM postgres_query('pg', 'select id::text as id from public.lake_tenants() id')"
+        ).fetchall()
+    ]
     start = dt.datetime.combine(day, dt.time(), tzinfo=dt.timezone.utc)
     for tenant in tenants:
         jobs = [

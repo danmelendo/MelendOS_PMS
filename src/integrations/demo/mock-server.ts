@@ -5,7 +5,7 @@
 import { isBlocking, type RoomReservation } from "@domain/availability.ts";
 import { ymdInZone } from "@domain/dates.ts";
 import { bookingReference } from "@domain/reference.ts";
-import { tenantFeatures } from "@domain/features.ts";
+import { PACKAGE_IDS, tenantFeatures } from "@domain/features.ts";
 import { hotelPolicies } from "@domain/policies.ts";
 import { reviewAuthor } from "@domain/reviews.ts";
 import {
@@ -256,7 +256,9 @@ async function getGuestBooking(args: Record<string, unknown>) {
 function reportStays(args: Record<string, unknown>) {
   const from = String(args.p_from);
   const to = String(args.p_to);
-  const tenants = db().tenants.filter((t) => !args.p_tenant || t.id === args.p_tenant);
+  const tenants = db().tenants.filter(
+    (t) => (!args.p_tenant || t.id === args.p_tenant) && tenantFeatures(t.plan, t.settings).reports,
+  );
   const rooms: Record<string, number> = {};
   const stays: unknown[][] = [];
   for (const t of tenants) {
@@ -575,6 +577,10 @@ function recordDeskPayment(args: Record<string, unknown>) {
 async function createMcpToken(args: Record<string, unknown>) {
   const name = String(args.p_name ?? "").trim();
   const days = Number(args.p_days ?? 90);
+  const tenant = db().tenants.find((t) => t.id === args.p_tenant);
+  if (!tenantFeatures(tenant?.plan, tenant?.settings).mcp) {
+    return fail("El hotel no tiene contratado el módulo de integraciones IA");
+  }
   if (!name || name.length > 80) return fail("Pon un nombre de hasta 80 caracteres");
   if (!(days >= 1 && days <= 365)) return fail("La caducidad debe estar entre 1 y 365 días");
   const tokens = (db().mcp_tokens ??= []);
@@ -817,6 +823,16 @@ export async function mockServerFunction(
       if (e instanceof BookingError) return fail(e.message, e.code);
       throw e;
     }
+  }
+  if (name === "tenant-modules") {
+    // The browser demo always lets you try packages (see the Edge Function).
+    const t = db().tenants.find((x) => x.id === body.tenant_id);
+    if (!t) return fail("Hotel no encontrado", "not_found");
+    const wanted = Array.isArray(body.packages) ? (body.packages as string[]) : [];
+    const packages = PACKAGE_IDS.filter((p) => wanted.includes(p));
+    t.settings = { ...(t.settings ?? {}), packages };
+    persist();
+    return ok({ packages });
   }
   if (name === "price-calendar") {
     const tenantOf = (table: string, id: unknown) =>

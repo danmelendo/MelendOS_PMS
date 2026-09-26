@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useHotelsWith } from "@/lib/features";
+import { ModuleOff } from "@/components/ModuleOff";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Check, Copy, KeyRound, PlugZap, ShieldCheck } from "lucide-react";
@@ -19,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRoles } from "@/lib/roles";
-import { useStaffHotels } from "@/lib/reports";
 import {
   MCP_URL,
   mcpSnippets,
@@ -176,7 +177,7 @@ function TokenRow({
 // tools through MCP, with a token per integration.
 function IntegrationsPage() {
   const { isAdmin, loading } = useRoles();
-  const { data: hotels } = useStaffHotels();
+  const { data: hotels } = useHotelsWith("mcp");
   const [hotel, setHotel] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [write, setWrite] = useState(false);
@@ -208,6 +209,9 @@ function IntegrationsPage() {
       },
     );
   };
+
+  // Straight to the URL without the module in any of the staff's hotels.
+  if (hotels && hotels.length === 0) return <ModuleOff feature="mcp" hotel="tus hoteles" />;
 
   return (
     <div className="space-y-6">

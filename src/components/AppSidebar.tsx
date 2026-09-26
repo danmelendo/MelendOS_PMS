@@ -32,6 +32,7 @@ import {
   BookOpenCheck,
   Smartphone,
   PlugZap,
+  Boxes,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,30 +41,36 @@ import { IS_DEMO } from "@/integrations/supabase/client";
 import { DEMO_ACCESS, demoAccounts, demoSignIn } from "@/lib/demo-access";
 import { useRoles } from "@/lib/roles";
 import { useInboxLive, useUnreadCount } from "@/lib/chat";
+import { useAnyHotelHas } from "@/lib/features";
+import type { Feature } from "@domain/features.ts";
 
-const items = [
+// `feature`: shown only if one of the staff member's hotels has the module.
+type NavItem = { to: string; label: string; icon: typeof Calendar; feature?: Feature };
+
+const items: NavItem[] = [
   { to: "/today", label: "Hoy", icon: Calendar },
   { to: "/calendar", label: "Calendario", icon: CalendarDays },
-  { to: "/messages", label: "Mensajes", icon: MessagesSquare },
+  { to: "/messages", label: "Mensajes", icon: MessagesSquare, feature: "chat" },
   { to: "/reservations", label: "Reservas", icon: ClipboardList },
   { to: "/customers", label: "Clientes", icon: Users },
   { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
-  { to: "/reports", label: "Informes", icon: BarChart3 },
-  { to: "/reviews", label: "Reseñas", icon: Star },
-] as const;
+  { to: "/reports", label: "Informes", icon: BarChart3, feature: "reports" },
+  { to: "/reviews", label: "Reseñas", icon: Star, feature: "reviews" },
+];
 
 // Active item: gold inset bar + gold icon, on the navy sidebar.
 const ACTIVE_ITEM =
   "data-[active=true]:shadow-[inset_3px_0_0_var(--sidebar-primary)] data-[active=true]:[&>a>svg]:text-sidebar-primary";
 
-const adminItems = [
+const adminItems: NavItem[] = [
   { to: "/admin/manual", label: "Reserva manual", icon: Wand2 },
   { to: "/rooms", label: "Habitaciones", icon: DoorOpen },
   { to: "/rates", label: "Tarifas", icon: Tag },
   { to: "/extras", label: "Extras", icon: PackagePlus },
   { to: "/promos", label: "Códigos promo", icon: Ticket },
-  { to: "/integrations", label: "Integraciones IA", icon: PlugZap },
-] as const;
+  { to: "/integrations", label: "Integraciones IA", icon: PlugZap, feature: "mcp" },
+  { to: "/plan", label: "Plan y módulos", icon: Boxes },
+];
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
@@ -71,6 +78,8 @@ export function AppSidebar() {
   const unread = useUnreadCount();
   const { signOut, user } = useAuth();
   const { isAdmin } = useRoles();
+  const has = useAnyHotelHas();
+  const visible = (i: NavItem) => !i.feature || has(i.feature);
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -95,7 +104,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Operativa</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => {
+              {items.filter(visible).map((item) => {
                 const active = path === item.to || path.startsWith(item.to + "/");
                 return (
                   <SidebarMenuItem key={item.to}>
@@ -130,7 +139,7 @@ export function AppSidebar() {
             <SidebarGroupLabel>Admin</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {adminItems.map((item) => {
+                {adminItems.filter(visible).map((item) => {
                   const active = path === item.to;
                   return (
                     <SidebarMenuItem key={item.to}>

@@ -17,6 +17,11 @@ first.**
 
 - Written every day at 03:15 UTC by `.github/workflows/lake.yml` (it can also be
   run by hand from the Actions tab).
+- Only hotels with the `data_lake` module (the "Datos" package, see
+  `supabase/functions/_shared/domain/features.ts`) are exported, since
+  26/09/2026. The job asks the database for them (`public.lake_tenants()`). Both
+  demo hotels have it. A hotel that drops the package keeps its earlier files
+  until the retention removes them.
 
 ## Tables
 

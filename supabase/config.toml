@@ -443,3 +443,6 @@ verify_jwt = false
 
 [functions.price-calendar]
 verify_jwt = false
+
+[functions.tenant-modules]
+verify_jwt = false
