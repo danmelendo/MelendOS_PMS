@@ -176,6 +176,7 @@ try {
   check("unexpected error", false, e.message);
 } finally {
   if (reservationId) await service.from("reservations").delete().eq("id", reservationId);
+  await service.from("customers").delete().eq("email", "mcp-e2e@example.com");
   if (tokenIds.length) {
     for (const id of tokenIds) {
       await service

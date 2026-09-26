@@ -1606,4 +1606,120 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(row).toEqual({ cancellation_category: "work", cancellation_note: "Llamó el cliente" });
     });
   });
+
+  describe("guest identities (sensitive data)", () => {
+    /** Staff member who signed in `ago` seconds ago (the JWT's amr claim). */
+    async function identify(userId: string, ago: number) {
+      await client.query("reset role");
+      const claims = {
+        sub: userId,
+        role: "authenticated",
+        amr: [{ method: "password", timestamp: Math.floor(Date.now() / 1000) - ago }],
+      };
+      await client.query(
+        "select set_config('request.jwt.claims', $1, true), set_config('request.headers', '{}', true)",
+        [JSON.stringify(claims)],
+      );
+      await client.query("set local role authenticated");
+    }
+    /** Runs fn as that identity and keeps what it did. */
+    async function signedIn<T>(userId: string, ago: number, fn: () => Promise<T>): Promise<T> {
+      await identify(userId, ago);
+      try {
+        return await fn();
+      } finally {
+        await client.query("reset role");
+      }
+    }
+    /** Runs fn as that identity in a savepoint that is always rolled back. */
+    const tryAs = async <T>(userId: string, ago: number, fn: () => Promise<T>) => {
+      await client.query("savepoint t");
+      try {
+        await identify(userId, ago);
+        return { ok: true as const, value: await fn() };
+      } catch (e) {
+        return { ok: false as const, error: (e as Error).message };
+      } finally {
+        await client.query("rollback to savepoint t");
+        await client.query("reset role");
+      }
+    };
+    const identity = {
+      document_type: "dni",
+      document_number: "12345678z",
+      nationality: "es",
+      birth_date: "1985-04-12",
+      address_line: "Calle Mayor, 1",
+      city: "Valencia",
+      country: "ES",
+    };
+
+    it("reception records them but cannot read them back", async () => {
+      await client.query("savepoint setup");
+      const c = (
+        await client.query<{ id: string }>(
+          "insert into public.customers (tenant_id, name, email) values ($1, 'Ana Test', 'ana.id@example.com') returning id",
+          [ids.lumen],
+        )
+      ).rows[0].id;
+      await signedIn(users.lumenReception, 30, () =>
+        client.query("select public.save_guest_identity($1, $2)", [c, identity]),
+      );
+      const readByReception = await tryAs(users.lumenReception, 30, () =>
+        client.query("select public.get_guest_identity($1)", [c]),
+      );
+      const tableRead = await tryAs(users.lumenAdmin, 30, () =>
+        client.query("select * from public.guest_identities"),
+      );
+      const fresh = await tryAs(
+        users.lumenAdmin,
+        60,
+        async () =>
+          (await client.query("select public.get_guest_identity($1) as g", [c])).rows[0].g,
+      );
+      const stale = await tryAs(users.lumenAdmin, 3600, () =>
+        client.query("select public.get_guest_identity($1)", [c]),
+      );
+      const otherHotel = await tryAs(users.alboraAdmin, 30, () =>
+        client.query("select public.get_guest_identity($1)", [c]),
+      );
+      const directory = await signedIn(
+        users.lumenReception,
+        30,
+        async () =>
+          (
+            await client.query(
+              "select * from public.customer_directory($1, 'Ana Test') where id = $2",
+              [ids.lumen, c],
+            )
+          ).rows[0],
+      );
+      const writeOther = await tryAs(users.alboraAdmin, 30, () =>
+        client.query("select public.save_guest_identity($1, $2)", [c, identity]),
+      );
+      await signedIn(users.lumenAdmin, 60, () =>
+        client.query("select public.get_guest_identity($1)", [c]),
+      );
+      const log = (
+        await client.query("select action from public.audit_log where entity_id = $1 order by at", [
+          c,
+        ])
+      ).rows.map((r) => r.action);
+      await client.query("rollback to savepoint setup");
+
+      expect(readByReception.ok).toBe(false);
+      expect(tableRead.ok).toBe(false);
+      expect(fresh).toMatchObject({
+        ok: true,
+        value: { document_number: "12345678Z", nationality: "ES", city: "Valencia" },
+      });
+      expect(stale.ok).toBe(false);
+      if (!stale.ok) expect(stale.error).toMatch(/identificarte/);
+      expect(otherHotel.ok).toBe(false);
+      expect(writeOther.ok).toBe(false);
+      expect(directory).toMatchObject({ has_identity: true, name: "Ana Test" });
+      expect(JSON.stringify(directory)).not.toContain("12345678");
+      expect(log).toEqual(["guest_identity.saved", "guest_identity.viewed"]);
+    });
+  });
 });
