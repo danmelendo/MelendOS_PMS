@@ -1,8 +1,7 @@
 // Stay extension requested by the guest: the extra nights are priced with the
 // same engine as a booking (quoteStay) and must be free; reception approves
 // the request (public.decide_extension), which moves the check-out.
-// Shared by the stays-extend Edge Function, the demo mock and, later, the
-// booking agent.
+// Used by the stays-extend Edge Function (and, later, the booking agent).
 import { z } from "zod";
 import { isYmd, nightsBetween, ymdInZone } from "../domain/dates.ts";
 import { BookingError, quoteStay, type BookingStore } from "./bookings.ts";

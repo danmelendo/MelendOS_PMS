@@ -2,10 +2,9 @@
 //
 // Generates stays day by day of arrival from a demand curve (season, day of
 // week, local events, yearly growth), with realistic lead times, lengths of
-// stay, cancellations and no-shows. Deterministic for a given seed, so the
-// browser mock and the demo database get the same history.
+// stay, cancellations and no-shows. Deterministic for a given seed.
 //
-// Used by scripts/simulate-history.ts (database) and the mock seed.
+// Used by scripts/simulate-history.ts (demo / pre-production database).
 import { addDays, dayOfWeek, eachNight, nightsBetween, type Ymd } from "../domain/dates.ts";
 import { round2 } from "../domain/pricing.ts";
 

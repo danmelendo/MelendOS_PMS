@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // Guest reviews through the database functions (get_reviews, get_my_review,
-// submit_review, reply_review); the demo mock emulates the same functions.
+// submit_review, reply_review).
 
 export interface Review {
   id: string;

@@ -1,7 +1,6 @@
-// Room occupancy rules shared by the mock backend, the panel and (from phase 1)
-// the Edge Functions. The Postgres trigger `check_reservation_gap` is the real
-// guard; this module mirrors it so the demo behaves the same and so the rule
-// can be tested.
+// Room occupancy rules shared by the panel and the Edge Functions. The
+// Postgres trigger `check_reservation_gap` is the real guard; this module
+// mirrors it so the panel can warn before saving and so the rule can be tested.
 //
 // A reservation occupies its room for [start, end + cleaning). Two reservations
 // of the same room conflict when those windows overlap.

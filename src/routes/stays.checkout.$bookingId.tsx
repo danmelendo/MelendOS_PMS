@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { pms } from "@/integrations/pms";
-import { IS_DEMO } from "@/integrations/supabase/client";
+import { DEMO_ACCESS } from "@/lib/demo-access";
 import { followPaymentRedirect, paymentReturnSearch } from "@/lib/payments";
 import { eur, formatDateShort } from "@/lib/stays";
 
@@ -92,9 +92,9 @@ function CheckoutScreen() {
       </div>
 
       <div className="mt-3  bg-[var(--brand-soft)] px-3 py-2.5 text-xs text-[var(--brand)]">
-        {IS_DEMO
-          ? "Pago simulado (la demo no cobra). En producción el pago pasa por la pasarela del hotel."
-          : "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."}
+        {DEMO_ACCESS
+          ? "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."
+          : "Pago seguro con la pasarela del hotel."}
       </div>
 
       <div className="mt-5">

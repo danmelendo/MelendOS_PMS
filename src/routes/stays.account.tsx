@@ -1,18 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  UserRound,
-  Mail,
-  Phone,
-  BadgeCheck,
-  RotateCcw,
-  Building2,
-  Plug,
-  Globe,
-} from "lucide-react";
-import { toast } from "sonner";
+import { UserRound, Mail, Phone, BadgeCheck, Building2, Plug, Globe } from "lucide-react";
 import { useMember } from "@/lib/member-session";
 import { pms } from "@/integrations/pms";
-import { resetDemoDb } from "@/integrations/demo/seed";
 
 export const Route = createFileRoute("/stays/account")({
   component: AccountScreen,
@@ -20,12 +9,6 @@ export const Route = createFileRoute("/stays/account")({
 
 function AccountScreen() {
   const { member } = useMember();
-
-  const resetData = () => {
-    resetDemoDb();
-    toast.success("Datos de la demo reiniciados");
-    setTimeout(() => window.location.reload(), 600);
-  };
 
   return (
     <div className="px-5 pt-6">
@@ -73,17 +56,6 @@ function AccountScreen() {
           </a>
         </div>
       </div>
-
-      <button
-        onClick={resetData}
-        className="mt-4 flex w-full items-center justify-center gap-2  border border-neutral-200 bg-white py-3 text-sm font-medium text-neutral-600"
-      >
-        <RotateCcw className="h-4 w-4" /> Reiniciar datos de la demo
-      </button>
-
-      <p className="mt-4 pb-2 text-center text-[11px] text-neutral-400">
-        Demo · datos en tu navegador (localStorage)
-      </p>
     </div>
   );
 }

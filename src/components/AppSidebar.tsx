@@ -37,7 +37,6 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IS_DEMO } from "@/integrations/supabase/client";
 import { DEMO_ACCESS, demoAccounts, demoSignIn } from "@/lib/demo-access";
 import { useRoles } from "@/lib/roles";
 import { useInboxLive, useUnreadCount } from "@/lib/chat";
@@ -191,7 +190,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         {/* Demo on the real backend: switch profile to see each hotel's data. */}
-        {DEMO_ACCESS && !IS_DEMO && (
+        {DEMO_ACCESS && (
           <label className="px-2 group-data-[collapsible=icon]:hidden">
             <span className="mb-1 block text-[11px] text-sidebar-foreground/60">Ver como</span>
             <select

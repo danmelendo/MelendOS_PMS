@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { addDays, ymdInZone, type Ymd } from "@domain/dates.ts";
 import type { StayFact } from "@domain/kpis.ts";
-import { IS_DEMO, supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/lib/roles";
 
-// Data for the dashboards: stay facts from the report_stays function (the mock
-// emulates it), turned into KPIs by the shared code in @domain/kpis.ts.
+// Data for the dashboards: stay facts from the report_stays function, turned
+// into KPIs by the shared code in @domain/kpis.ts.
 
 export const HOTEL_TZ = "Europe/Madrid";
 
@@ -52,10 +52,10 @@ export function useStaffHotels() {
   const { tenantIds, loading } = useRoles();
   return useQuery({
     queryKey: ["reports", "hotels", tenantIds],
-    enabled: IS_DEMO || !loading,
+    enabled: !loading,
     queryFn: async () => {
       let q = supabase.from("tenants").select("id, name").order("name");
-      if (!IS_DEMO) q = q.in("id", tenantIds);
+      q = q.in("id", tenantIds);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as { id: string; name: string }[];

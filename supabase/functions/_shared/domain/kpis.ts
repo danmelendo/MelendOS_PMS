@@ -1,6 +1,5 @@
-// Hotel KPIs from stay facts. One implementation for the panel on the real
-// backend (facts from the `report_stays` SQL function) and in the demo mock
-// (facts from the in-browser data), so both show the same numbers.
+// Hotel KPIs from stay facts (the `report_stays` SQL function only projects
+// the data; the maths lives here, tested).
 //
 // Definitions (standard hotel metrics):
 // - A stay occupies the nights checkIn … checkOut-1, in the hotel's timezone.

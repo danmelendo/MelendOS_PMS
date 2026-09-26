@@ -4,7 +4,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { BrandProvider } from "@/lib/brand";
-import { DemoBanner } from "@/components/DemoBanner";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -42,7 +41,6 @@ function RootComponent() {
         <BrandProvider>
           <TooltipProvider>
             <Outlet />
-            <DemoBanner />
             <Toaster richColors position="top-right" />
           </TooltipProvider>
         </BrandProvider>

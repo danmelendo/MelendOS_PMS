@@ -1,15 +1,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // SupabaseCmsClient: hotel experiences from the `experiences` table.
 //
-// Same CmsClient contract as the demo client, so no screen changes. Sign-ups
-// are kept in the browser for now (like the demo); storing them server-side
-// (and updating `attending`) is a follow-up.
+// Sign-ups are kept in the browser for now; storing them server-side (and
+// updating `attending`) is a follow-up.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { supabase } from "@/integrations/supabase/client";
 import type { CmsClient } from "./client";
 import type { EventCategory, HotelEvent } from "./types";
-import { CATEGORY_ACCENT, loadRsvps, saveRsvps } from "./demo-cms-client";
+import { CATEGORY_ACCENT, loadRsvps, saveRsvps } from "./rsvps";
 
 interface ExperienceRow {
   id: string;
