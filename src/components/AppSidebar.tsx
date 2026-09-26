@@ -33,6 +33,7 @@ import {
   Smartphone,
   PlugZap,
   Boxes,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,6 +55,7 @@ const items: NavItem[] = [
   { to: "/customers", label: "Clientes", icon: Users },
   { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/reports", label: "Informes", icon: BarChart3, feature: "reports" },
+  { to: "/copilot", label: "Copiloto", icon: Sparkles, feature: "copilot" },
   { to: "/reviews", label: "Reseñas", icon: Star, feature: "reviews" },
 ];
 

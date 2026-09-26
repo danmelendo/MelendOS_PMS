@@ -21,6 +21,7 @@ export const FEATURES = [
   "experiences",
   "ai_agent",
   "mcp",
+  "copilot",
   "loyalty",
   "reports",
   "data_lake",
@@ -64,6 +65,12 @@ export const MODULES: Record<Feature, ModuleInfo> = {
   mcp: {
     name: "Integraciones IA (MCP)",
     description: "Conecta Claude u otros asistentes a las herramientas de reservas del hotel.",
+    package: "ai",
+  },
+  copilot: {
+    name: "Copiloto de gestión",
+    description:
+      "Preguntas sobre el negocio en lenguaje natural, respondidas con los datos del hotel.",
     package: "ai",
   },
   loyalty: {

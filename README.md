@@ -55,6 +55,38 @@ producción. En la demo se entra eligiendo una cuenta ficticia de una lista
 - Todo consume el PMS a través de un **conector tipado** (`src/integrations/pms/`, interfaz
   `PmsConnector`): integrar otro PMS es implementar esa interfaz.
 
+## 🤖 Capa de IA
+
+Tres piezas sobre las mismas reglas del servidor. El modelo nunca toca la base de datos: solo
+usa herramientas tipadas (Zod) que aplican el hotel y los permisos en el servidor. Proveedor
+intercambiable: cualquier API compatible con OpenAI (en desarrollo, un modelo local con Ollama).
+
+- **Agente de reservas** en la web pública: busca, cotiza, reserva y gestiona cancelaciones
+  conversando. Los enlaces de pago llegan como botones construidos por el servidor.
+- **Servidor MCP** por hotel ([`docs/mcp.md`](docs/mcp.md)): las mismas herramientas para
+  Claude u otros asistentes, con tokens de solo lectura o de lectura y escritura.
+- **Copiloto del administrador** en el panel: preguntas sobre el negocio («¿qué habitación se
+  reserva menos entre semana?», «resume las peticiones del mes») respondidas con los datos del
+  hotel.
+
+**Por qué el copiloto usa consultas predefinidas y no SQL generado por el modelo.** Son siete
+herramientas de solo lectura (resumen del negocio, rendimiento por habitación, ocupación por día,
+peticiones, reseñas, pendientes y operativa del día) que calculan con el mismo código que los
+informes del panel. Frente a dejar que el modelo escriba SQL:
+
+- **Seguridad:** no hay SQL que inyectar ni consultas que se salgan del hotel. Además se
+  ejecutan con la sesión del propio usuario, así que RLS limita los datos a sus hoteles.
+- **Fiabilidad:** un modelo pequeño escribe SQL poco fiable; elegir una herramienta y sus
+  parámetros lo hace bien. Las métricas (ocupación, ADR, RevPAR) tienen una sola definición,
+  probada.
+- **Coste y latencia predecibles:** cada herramienta hace consultas acotadas (máximo 400 días).
+- Contrapartida: solo responde lo que cubren las herramientas. Una pregunta nueva es una
+  herramienta nueva con su test, no un prompt.
+
+**Evaluaciones** contra un modelo real y la base de la demo (`npm run eval:agent`,
+`npm run eval:copilot`): puntúan lo que hace el asistente (herramienta, argumentos y que la
+respuesta sea fiel a los datos), no la redacción.
+
 ## 🧱 Stack técnico
 
 | Capa          | Tecnología                                                              |

@@ -41,6 +41,7 @@ import { Route as AppJournalRouteImport } from './routes/_app.journal'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppExtrasRouteImport } from './routes/_app.extras'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppCopilotRouteImport } from './routes/_app.copilot'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 import { Route as WebUploadBookingIdRouteImport } from './routes/web.upload.$bookingId'
 import { Route as WebSignBookingIdRouteImport } from './routes/web.sign.$bookingId'
@@ -219,6 +220,11 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCopilotRoute = AppCopilotRouteImport.update({
+  id: '/copilot',
+  path: '/copilot',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/stays': typeof StaysRouteWithChildren
   '/web': typeof WebRouteWithChildren
   '/calendar': typeof AppCalendarRoute
+  '/copilot': typeof AppCopilotRoute
   '/customers': typeof AppCustomersRoute
   '/extras': typeof AppExtrasRoute
   '/integrations': typeof AppIntegrationsRoute
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
   '/calendar': typeof AppCalendarRoute
+  '/copilot': typeof AppCopilotRoute
   '/customers': typeof AppCustomersRoute
   '/extras': typeof AppExtrasRoute
   '/integrations': typeof AppIntegrationsRoute
@@ -420,6 +428,7 @@ export interface FileRoutesById {
   '/stays': typeof StaysRouteWithChildren
   '/web': typeof WebRouteWithChildren
   '/_app/calendar': typeof AppCalendarRoute
+  '/_app/copilot': typeof AppCopilotRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/extras': typeof AppExtrasRoute
   '/_app/integrations': typeof AppIntegrationsRoute
@@ -473,6 +482,7 @@ export interface FileRouteTypes {
     | '/stays'
     | '/web'
     | '/calendar'
+    | '/copilot'
     | '/customers'
     | '/extras'
     | '/integrations'
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/reservar'
     | '/reservar-ok'
     | '/calendar'
+    | '/copilot'
     | '/customers'
     | '/extras'
     | '/integrations'
@@ -574,6 +585,7 @@ export interface FileRouteTypes {
     | '/stays'
     | '/web'
     | '/_app/calendar'
+    | '/_app/copilot'
     | '/_app/customers'
     | '/_app/extras'
     | '/_app/integrations'
@@ -854,6 +866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/copilot': {
+      id: '/_app/copilot'
+      path: '/copilot'
+      fullPath: '/copilot'
+      preLoaderRoute: typeof AppCopilotRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/calendar': {
       id: '/_app/calendar'
       path: '/calendar'
@@ -985,6 +1004,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppCalendarRoute: typeof AppCalendarRoute
+  AppCopilotRoute: typeof AppCopilotRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppExtrasRoute: typeof AppExtrasRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
@@ -1003,6 +1023,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppCalendarRoute: AppCalendarRoute,
+  AppCopilotRoute: AppCopilotRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppExtrasRoute: AppExtrasRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,

@@ -2,7 +2,13 @@
 // before answering. Tools run on the server with the tenant from the context
 // (never from the model); their errors go back to the model as data so it can
 // recover. Portable: any OpenAI-compatible model (see llm.ts).
-import { runTool, toolSchemas, type ToolContext, type ToolStore } from "../tools/registry.ts";
+import {
+  runTool,
+  toolSchemas,
+  type ToolContext,
+  type ToolResult,
+  type ToolStore,
+} from "../tools/registry.ts";
 import type { ChatMessage, LlmClient, ToolSpec } from "./llm.ts";
 
 export const MAX_STEPS = 6;
@@ -45,6 +51,17 @@ export function toolSpecs(): ToolSpec[] {
     };
   });
   return cachedSpecs;
+}
+
+/** The tools a turn can use: their specs for the model and how to run them. */
+export interface ToolBox {
+  specs: ToolSpec[];
+  run(name: string, args: unknown): Promise<ToolResult>;
+}
+
+/** The booking agent's tools (tools/registry.ts) for one hotel. */
+export function bookingTools(store: ToolStore, ctx: ToolContext): ToolBox {
+  return { specs: toolSpecs(), run: (name, args) => runTool(name, args, store, ctx) };
 }
 
 function parseArgs(raw: string): unknown {
@@ -183,16 +200,17 @@ export function guestDataGuard(
 const FALLBACK =
   "Ahora mismo no puedo completar la consulta. Puedes reservar en la web o escribir a recepción.";
 
-export async function runAgentTurn(opts: {
-  llm: LlmClient;
-  store: ToolStore;
-  ctx: ToolContext;
-  system: string;
-  /** Earlier messages of the conversation (without the system prompt). */
-  history: ChatMessage[];
-  userMessage: string;
-}): Promise<TurnResult> {
-  const { llm, store, ctx } = opts;
+export async function runAgentTurn(
+  opts: {
+    llm: LlmClient;
+    system: string;
+    /** Earlier messages of the conversation (without the system prompt). */
+    history: ChatMessage[];
+    userMessage: string;
+  } & ({ store: ToolStore; ctx: ToolContext } | { tools: ToolBox }),
+): Promise<TurnResult> {
+  const { llm } = opts;
+  const box = "tools" in opts ? opts.tools : bookingTools(opts.store, opts.ctx);
   const turn: ChatMessage[] = [{ role: "user", content: opts.userMessage }];
   const result: TurnResult = {
     reply: FALLBACK,
@@ -220,12 +238,12 @@ export async function runAgentTurn(opts: {
     ];
     let res;
     try {
-      res = await llm.complete(messages, toolSpecs());
+      res = await llm.complete(messages, box.specs);
     } catch (e) {
       // Small models now and then emit a broken tool call (the provider answers
       // 5xx): one retry usually gets a clean one.
       if (!/LLM 5\d\d/.test((e as Error).message)) throw e;
-      res = await llm.complete(messages, toolSpecs());
+      res = await llm.complete(messages, box.specs);
     }
     result.inputTokens += res.inputTokens;
     result.outputTokens += res.outputTokens;
@@ -263,7 +281,7 @@ export async function runAgentTurn(opts: {
         ...opts.history.filter((m) => m.role === "user").map((m) => String(m.content)),
         opts.userMessage,
       ]);
-      const out = refused ?? (await runTool(name, args, store, ctx));
+      const out = refused ?? (await box.run(name, args));
       if (!out.ok) failed.add(name);
       else failed.delete(name);
       let shown: unknown = out;

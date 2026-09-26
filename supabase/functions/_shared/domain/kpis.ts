@@ -11,7 +11,7 @@
 // - Room revenue excludes extras and is spread evenly over the stay's nights.
 // - Booking metrics (lead time, cancellations, channels) use the stays created
 //   in the period.
-import { addDays, eachNight, nightsBetween, type Ymd } from "./dates.ts";
+import { addDays, dayOfWeek, eachNight, nightsBetween, type Ymd } from "./dates.ts";
 import { round2 } from "./pricing.ts";
 
 export interface StayFact {
@@ -183,3 +183,114 @@ export function summarize(facts: StayFact[], rooms: number, from: Ymd, to: Ymd) 
   const { day: _day, ...totals } = withRates(from, available, sold, revenue);
   return { ...totals, ...bookingStats(facts, from, to) };
 }
+
+/** Rows of report_stays(): [tenant, room, check_in, check_out, created, cancelled, status, channel, guests, room_revenue]. */
+export function parseStayFacts(raw: { rooms?: Record<string, number>; stays?: unknown[][] }) {
+  return {
+    rooms: raw.rooms ?? {},
+    stays: (raw.stays ?? []).map(
+      (s): StayFact => ({
+        tenantId: String(s[0]),
+        roomId: String(s[1]),
+        checkIn: String(s[2]),
+        checkOut: String(s[3]),
+        created: String(s[4]),
+        cancelled: s[5] == null ? null : String(s[5]),
+        status: String(s[6]),
+        channel: s[7] == null ? null : String(s[7]),
+        guests: Number(s[8]),
+        roomRevenue: Number(s[9]),
+      }),
+    ),
+  };
+}
+
+/** Friday and Saturday nights are the weekend (same as the weekend rates). */
+export type NightFilter = "all" | "weekday" | "weekend";
+const WEEKEND_NIGHTS = new Set([5, 6]);
+const keepNight = (d: Ymd, f: NightFilter) =>
+  f === "all" || WEEKEND_NIGHTS.has(dayOfWeek(d)) === (f === "weekend");
+
+export interface RoomKpi {
+  roomId: string;
+  nights: number;
+  sold: number;
+  revenue: number;
+  occupancy: number;
+  adr: number;
+}
+
+/** Sold nights, occupancy and revenue per room over [from, to], least booked first. */
+export function roomPerformance(
+  facts: StayFact[],
+  roomIds: string[],
+  from: Ymd,
+  to: Ymd,
+  filter: NightFilter = "all",
+): RoomKpi[] {
+  const days = daysIn(from, to).filter((d) => keepNight(d, filter));
+  const inRange = new Set(days);
+  const acc = new Map(roomIds.map((id) => [id, { sold: 0, revenue: 0 }]));
+  for (const f of facts) {
+    const room = acc.get(f.roomId);
+    if (!room || !isSold(f)) continue;
+    const nights = eachNight(f.checkIn, f.checkOut);
+    for (const d of nights) {
+      if (!inRange.has(d)) continue;
+      room.sold += 1;
+      room.revenue += f.roomRevenue / nights.length;
+    }
+  }
+  return [...acc]
+    .map(([roomId, a]) => ({
+      roomId,
+      nights: days.length,
+      sold: a.sold,
+      revenue: round2(a.revenue),
+      occupancy: ratio(a.sold, days.length),
+      adr: round2(ratio(a.revenue, a.sold)),
+    }))
+    .sort((a, b) => a.occupancy - b.occupancy || a.revenue - b.revenue);
+}
+
+export const WEEKDAY_NAMES = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+] as const;
+
+/** Occupancy and ADR by night of the week (Monday first). */
+export function weekdayKpis(facts: StayFact[], rooms: number, from: Ymd, to: Ymd) {
+  const byDow = new Map<number, { available: number; sold: number; revenue: number }>();
+  for (const d of dailyKpis(facts, rooms, from, to)) {
+    const dow = dayOfWeek(d.day);
+    const a = byDow.get(dow) ?? { available: 0, sold: 0, revenue: 0 };
+    a.available += d.available;
+    a.sold += d.sold;
+    a.revenue += d.revenue;
+    byDow.set(dow, a);
+  }
+  return [1, 2, 3, 4, 5, 6, 0]
+    .filter((dow) => byDow.has(dow))
+    .map((dow) => {
+      const a = byDow.get(dow)!;
+      const { day: _day, ...rest } = withRates(from, a.available, a.sold, a.revenue);
+      return { night: WEEKDAY_NAMES[dow], ...rest };
+    });
+}
+
+/** Who made the booking (reservations.created_by_role), for people. */
+export const CHANNEL_LABELS: Record<string, string> = {
+  public: "Web directa",
+  admin: "Recepción / teléfono",
+  staff: "Recepción / teléfono",
+  reception: "Recepción / teléfono",
+  agent: "Asistente IA",
+  mcp: "Integración IA (MCP)",
+  member: "Club (app)",
+  other: "Otros",
+};

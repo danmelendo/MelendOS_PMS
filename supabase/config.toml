@@ -446,3 +446,6 @@ verify_jwt = false
 
 [functions.tenant-modules]
 verify_jwt = false
+
+[functions.admin-copilot]
+verify_jwt = false

@@ -17,7 +17,8 @@
     "test:db": "vitest run --config vitest.db.config.ts",
     "db:types": "supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts",
     "db:seed-auth": "node --env-file=.env scripts/seed-auth.mjs",
-    "eval:agent": "vitest run --config vitest.eval.config.ts"
+    "eval:agent": "vitest run --config vitest.eval.config.ts supabase/evals/agent.eval.ts",
+    "eval:copilot": "vitest run --config vitest.eval.config.ts supabase/evals/copilot.eval.ts"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

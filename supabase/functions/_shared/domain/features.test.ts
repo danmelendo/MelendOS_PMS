@@ -19,7 +19,7 @@ describe("tenantFeatures", () => {
 
   it("uses the packages the hotel contracted", () => {
     const f = tenantFeatures("starter", { packages: ["ai", "data", "nonsense"] });
-    expect(on(f)).toEqual(["ai_agent", "mcp", "reports", "data_lake"]);
+    expect(on(f)).toEqual(["ai_agent", "mcp", "copilot", "reports", "data_lake"]);
     expect(tenantPackages("pro", { packages: [] })).toEqual([]);
     expect(on(tenantFeatures("pro", { packages: [] }))).toEqual([]);
   });

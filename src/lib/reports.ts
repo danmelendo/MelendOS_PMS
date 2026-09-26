@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { addDays, ymdInZone, type Ymd } from "@domain/dates.ts";
-import type { StayFact } from "@domain/kpis.ts";
+import { parseStayFacts, type StayFact } from "@domain/kpis.ts";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/lib/roles";
 
@@ -15,33 +15,13 @@ export interface StayFacts {
   stays: StayFact[];
 }
 
-type Raw = { rooms: Record<string, number>; stays: unknown[][] };
-
-function parse(raw: Raw): StayFacts {
-  return {
-    rooms: raw.rooms ?? {},
-    stays: (raw.stays ?? []).map((s) => ({
-      tenantId: String(s[0]),
-      roomId: String(s[1]),
-      checkIn: String(s[2]),
-      checkOut: String(s[3]),
-      created: String(s[4]),
-      cancelled: s[5] == null ? null : String(s[5]),
-      status: String(s[6]),
-      channel: s[7] == null ? null : String(s[7]),
-      guests: Number(s[8]),
-      roomRevenue: Number(s[9]),
-    })),
-  };
-}
-
 export function useStayFacts(from: Ymd, to: Ymd) {
   return useQuery({
     queryKey: ["reports", "stays", from, to],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("report_stays", { p_from: from, p_to: to });
       if (error) throw error;
-      return parse(data as unknown as Raw);
+      return parseStayFacts(data as Parameters<typeof parseStayFacts>[0]);
     },
     staleTime: 60_000,
   });
@@ -88,13 +68,4 @@ export function periodRange(period: Period, now = new Date()) {
   return { today, from, to, lyFrom: addDays(from, -364), lyTo: addDays(to, -364) };
 }
 
-export const CHANNELS: Record<string, string> = {
-  public: "Web directa",
-  admin: "Recepción / teléfono",
-  staff: "Recepción / teléfono",
-  reception: "Recepción / teléfono",
-  agent: "Asistente IA",
-  mcp: "Integración IA (MCP)",
-  member: "Club (app)",
-  other: "Otros",
-};
+export { CHANNEL_LABELS as CHANNELS } from "@domain/kpis.ts";

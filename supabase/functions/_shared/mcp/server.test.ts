@@ -39,8 +39,8 @@ async function connect(scopes: string[], recentCalls = 0) {
   return { client, logs, ...fake };
 }
 
-const text = (r: { content?: unknown }) =>
-  JSON.parse((r.content as { text: string }[])[0].text) as Record<string, unknown>;
+const text = (r: unknown) =>
+  JSON.parse((r as { content: { text: string }[] }).content[0].text) as Record<string, unknown>;
 
 describe("MCP server", () => {
   it("lists only the read-only tools for a read token", async () => {
