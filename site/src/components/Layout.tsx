@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CalendarCheck, Hotel } from "lucide-react";
+import { CalendarCheck } from "lucide-react";
 import { BRAND, PAGES, SALES } from "../config";
 
 type Page = "home" | "hostels" | "compliance" | "pricing" | "demo" | "privacy" | "notfound";
@@ -7,13 +7,7 @@ type Page = "home" | "hostels" | "compliance" | "pricing" | "demo" | "privacy" |
 export function Logo({ onNavy = false }: { onNavy?: boolean }) {
   return (
     <span className="flex items-center gap-2">
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${
-          onNavy ? "bg-navy-gold text-navy-gold-foreground" : "bg-navy text-navy-gold"
-        }`}
-      >
-        <Hotel className="h-4 w-4" aria-hidden="true" />
-      </span>
+      <img src="/isologo.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
       <span
         className={`text-base font-semibold tracking-tight whitespace-nowrap ${onNavy ? "text-navy-strong" : "text-foreground"}`}
       >

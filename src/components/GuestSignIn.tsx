@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useHotelWebsite } from "@/lib/features";
 import { Link } from "@tanstack/react-router";
 import { BedDouble, LogIn, Mail } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { DemoAccountPicker } from "@/components/DemoAccountPicker";
 export function GuestSignIn() {
   const { signIn } = useAuth();
   const { brand } = useBrand();
+  const website = useHotelWebsite();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -86,17 +88,17 @@ export function GuestSignIn() {
           </span>
         </p>
         <Link
-          to="/web/hotels"
+          to="/stays"
           className="flex w-full items-center justify-center gap-2 border border-neutral-300 bg-white py-3 font-semibold text-neutral-800"
         >
           <BedDouble className="h-4 w-4" /> Ver habitaciones y reservar
         </Link>
-        <Link
-          to="/web"
+        <a
+          href={website.href}
           className="block py-2 text-center text-neutral-500 underline-offset-4 hover:underline"
         >
           Volver a la web del hotel
-        </Link>
+        </a>
       </div>
     </div>
   );

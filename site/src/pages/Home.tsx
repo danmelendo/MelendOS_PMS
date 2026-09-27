@@ -394,6 +394,18 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* Brand */}
+      <section className="bg-[#050c13]">
+        <img
+          src="/melend-os.jpg"
+          alt="Melend/OS, el sistema operativo para hoteles independientes"
+          width={1400}
+          height={700}
+          loading="lazy"
+          className="mx-auto block h-auto w-full max-w-6xl"
+        />
+      </section>
+
       {/* CTA */}
       <section className="bg-navy">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 md:flex-row md:items-center">

@@ -51,13 +51,15 @@ export function PricingPage() {
   const [sla, setSla] = useState<SlaId | "">("");
 
   const suggested = suggestPlan(rooms, hotels, addons);
+  // The Hostal plan has no SLA: its card keeps the included support.
+  const slaFor = (plan: PlanId) => (sla && PLANS[plan].slaAvailable ? sla : null);
   const priceOf = (plan: PlanId) =>
     quote({
       plan,
       rooms,
       hotels: Math.max(hotels, PLANS[plan].minHotels),
       addons: plan === "starter" ? addons : [],
-      sla: sla || null,
+      sla: slaFor(plan),
       annual,
     });
   const toggleAddon = (id: AddonId, on: boolean) =>
@@ -167,6 +169,7 @@ export function PricingPage() {
             const plan = PLANS[id];
             const q = priceOf(id);
             const list = listPrice(id, { sla: sla || null, annual });
+            const planSla = slaFor(id);
             const best = id === suggested;
             const needsHotels = hotels < plan.minHotels;
             return (
@@ -193,9 +196,9 @@ export function PricingPage() {
                   Mínimo {eur(list.minimum, list.minimum % 1 ? 2 : 0)}/mes
                   {plan.minHotels > 1 ? ` · desde ${plan.minHotels} hoteles` : ""}
                 </p>
-                {(sla || annual) && (
+                {(planSla || annual) && (
                   <p className="mt-1 text-xs font-medium text-info-foreground">
-                    {[sla && `SLA ${SLA_TIERS[sla].name} incluido`, annual && "pago anual"]
+                    {[planSla && `SLA ${SLA_TIERS[planSla].name} incluido`, annual && "pago anual"]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
@@ -209,9 +212,9 @@ export function PricingPage() {
                       <span className="font-semibold tabular-nums">
                         {eur(q.effectiveMonthly, 2)}/mes
                       </span>
-                      {sla && (
+                      {planSla && (
                         <span className="block text-xs text-muted-foreground">
-                          De ellos, SLA {SLA_TIERS[sla].name}:{" "}
+                          De ellos, SLA {SLA_TIERS[planSla].name}:{" "}
                           {eur(q.lines[q.lines.length - 1].amount * (1 - q.discount), 2)}
                         </span>
                       )}
@@ -231,9 +234,11 @@ export function PricingPage() {
                   ))}
                   <li className="flex gap-2">
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" />
-                    {sla
-                      ? `SLA ${SLA_TIERS[sla].name}: respuesta crítica en ${SLA_TIERS[sla].response.critical}, disponibilidad ${pct(SLA_TIERS[sla].uptime)}`
-                      : `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. SLA opcional`}
+                    {planSla
+                      ? `SLA ${SLA_TIERS[planSla].name}: respuesta crítica en ${SLA_TIERS[planSla].response.critical}, disponibilidad ${pct(SLA_TIERS[planSla].uptime)}`
+                      : plan.slaAvailable
+                        ? `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. SLA opcional`
+                        : `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. Sin SLA en este plan`}
                   </li>
                 </ul>
                 {id === "starter" && (
@@ -356,9 +361,9 @@ export function PricingPage() {
             </h2>
             <p className="mt-2 text-muted-foreground">
               Todos los planes incluyen soporte en horario laboral. Si tu hotel no puede esperar,
-              contrata un SLA: compromisos de respuesta y disponibilidad en el contrato, compensados
-              en la factura si no los cumplimos. Se cobra como un porcentaje de tu cuota, con un
-              mínimo, y puedes cambiarlo cada mes.
+              contrata un SLA (planes Esencial, Profesional y Grupo): compromisos de respuesta y
+              disponibilidad en el contrato, compensados en la factura si no los cumplimos. Se cobra
+              como un porcentaje de tu cuota, con un mínimo, y puedes cambiarlo cada mes.
             </p>
           </div>
           <div className="mt-6 overflow-x-auto rounded-xl border">

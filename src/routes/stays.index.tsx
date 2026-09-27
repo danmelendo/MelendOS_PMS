@@ -10,7 +10,7 @@ import { NightlyPrice } from "@/components/NightlyPrice";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { HotelCoverArt } from "@/components/cover-art";
 import type { AssetType } from "@/integrations/pms";
-import { useBrandTenant, useFeatures } from "@/lib/features";
+import { useBrandTenant, useFeatures, useHotelWebsite } from "@/lib/features";
 
 export const Route = createFileRoute("/stays/")({
   component: DiscoverScreen,
@@ -27,6 +27,7 @@ function DiscoverScreen() {
   const features = useFeatures();
   const { member } = useMember();
   const { brand, brandId } = useBrand();
+  const website = useHotelWebsite();
   const { data: tenant } = useBrandTenant();
   const [province, setProvince] = useState<string | null>(null);
   const [checkIn, setCheckIn] = useState(dateOffset(7));
@@ -54,7 +55,7 @@ function DiscoverScreen() {
       {/* Header */}
       <header className="px-5 pb-3 pt-6">
         <a
-          href="/web"
+          href={website.href}
           className="mb-3 inline-flex items-center gap-1 border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Volver a la web

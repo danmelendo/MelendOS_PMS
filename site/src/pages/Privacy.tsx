@@ -1,21 +1,23 @@
 import { Layout } from "../components/Layout";
-import { SALES } from "../config";
+import { BRAND, PRIVACY_EMAIL } from "../config";
 
-// Privacy notice for the lead forms. The controller's legal details are
-// placeholders until the company exists: fill them in before publishing.
+// Privacy notice for the lead forms. Melend/OS has no company yet (Dan,
+// 27/09/2026: "nada de datos de empresa que aún no existen"), so it names the
+// project and its privacy address; add the legal identity when it exists.
 export function PrivacyPage() {
   return (
     <Layout page="privacy">
       <article className="mx-auto max-w-3xl space-y-6 px-4 py-14 text-sm leading-relaxed sm:px-6">
         <h1 className="text-3xl font-semibold tracking-tight">Política de privacidad</h1>
-        <p className="rounded-md border border-gold/50 bg-gold/10 p-3">
-          Pendiente de completar con los datos de la sociedad antes de publicar la web.
-        </p>
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Responsable</h2>
           <p>
-            [Razón social], NIF [NIF], con domicilio en [dirección]. Contacto:{" "}
-            {SALES.email || "[email]"}.
+            El equipo de {BRAND}, un proyecto en fase de lanzamiento. Para cualquier cuestión sobre
+            tus datos, escríbenos a{" "}
+            <a className="font-medium underline" href={`mailto:${PRIVACY_EMAIL}`}>
+              {PRIVACY_EMAIL}
+            </a>
+            .
           </p>
         </section>
         <section className="space-y-2">
@@ -40,16 +42,21 @@ export function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Quién más los ve</h2>
           <p>
-            Nuestros proveedores de alojamiento y base de datos, como encargados del tratamiento. No
-            vendemos ni cedemos tus datos.
+            Los proveedores que nos prestan el servicio, como encargados del tratamiento: el
+            alojamiento de la web (Vercel), la base de datos (Supabase) y el envío de emails
+            (Resend). No vendemos ni cedemos tus datos.
           </p>
         </section>
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Tus derechos</h2>
           <p>
-            Acceso, rectificación, supresión, oposición, limitación y portabilidad, escribiendo a{" "}
-            {SALES.email || "[email]"}. Si no quedas satisfecho, puedes reclamar ante la Agencia
-            Española de Protección de Datos (aepd.es).
+            Acceso, rectificación, supresión, oposición, limitación y portabilidad, y retirar tu
+            consentimiento o darte de baja de las novedades en cualquier momento, escribiendo a{" "}
+            <a className="font-medium underline" href={`mailto:${PRIVACY_EMAIL}`}>
+              {PRIVACY_EMAIL}
+            </a>
+            . Si no quedas satisfecho, puedes reclamar ante la Agencia Española de Protección de
+            Datos (aepd.es).
           </p>
         </section>
       </article>

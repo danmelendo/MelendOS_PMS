@@ -86,9 +86,10 @@ export interface InboxMessage extends ChatMessage {
  * Live updates for the reception inbox (real backend). Mount it once: the
  * panel sidebar does, so every inbox query refreshes when a message arrives.
  */
-export function useInboxLive() {
+export function useInboxLive(enabled = true) {
   const qc = useQueryClient();
   useEffect(() => {
+    if (!enabled) return;
     const channel = supabase
       .channel("stay-messages")
       .on("postgres_changes", { event: "*", schema: "public", table: "stay_messages" }, () =>
@@ -98,13 +99,14 @@ export function useInboxLive() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [qc]);
+  }, [qc, enabled]);
 }
 
 /** Recent messages of the staff member's hotels, newest first. */
-export function useInbox() {
+export function useInbox(enabled = true) {
   return useQuery({
     queryKey: ["chat", "inbox"],
+    enabled,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stay_messages")
@@ -118,8 +120,8 @@ export function useInbox() {
   });
 }
 
-export function useUnreadCount() {
-  const { data } = useInbox();
+export function useUnreadCount(enabled = true) {
+  const { data } = useInbox(enabled);
   return (data ?? []).filter((m) => m.sender === "guest" && !m.read_at).length;
 }
 

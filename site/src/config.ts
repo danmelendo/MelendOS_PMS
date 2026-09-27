@@ -16,3 +16,6 @@ export const PAGES = {
   demo: "/demo/",
   privacy: "/privacidad/",
 } as const;
+
+/** Where people exercise their data rights or unsubscribe. */
+export const PRIVACY_EMAIL = "privacidad@melendo.app";

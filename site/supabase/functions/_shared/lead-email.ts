@@ -100,6 +100,8 @@ ${link ? `<div style="padding:16px 20px"><a href="${esc(link)}" style="backgroun
 // ── Confirmation to the person who asked for the demo ────────────────────────
 
 const BRAND = "Melend/OS";
+/** Where leads unsubscribe or exercise their data rights (same as the web's privacy page). */
+export const PRIVACY_EMAIL = "privacidad@melendo.app";
 
 /** Calendar file (iCalendar) of a demo call; `uid` keeps it stable per lead. */
 export function demoIcs(slot: string, uid: string, minutes = 30) {
@@ -154,13 +156,14 @@ ${paragraphs.map((p, i) => `<p style="margin:14px 0">${i === 0 ? esc(p) : p}</p>
 ${pricing ? `<p style="margin:18px 0 6px"><a href="${esc(pricing)}" style="color:#2d63b8">Consulta los precios</a></p>` : ""}
 <p style="margin:18px 0 0">Un saludo,<br>El equipo de ${BRAND}</p>
 </div>
-<div style="padding:12px 24px;border-top:1px solid #eef1f5;font-size:12px;color:#8a96aa">Recibes este email porque lo solicitaste en la web de ${BRAND}. Si no has sido tú, ignóralo.</div>
+<div style="padding:12px 24px;border-top:1px solid #eef1f5;font-size:12px;color:#8a96aa">Recibes este email porque lo solicitaste en la web de ${BRAND}. Si no has sido tú, ignóralo. Para darte de baja o ejercer tus derechos sobre tus datos, escribe a <a href="mailto:${PRIVACY_EMAIL}" style="color:#8a96aa">${PRIVACY_EMAIL}</a>.</div>
 </div></body></html>`;
   const text = [
     ...paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
     ...(pricing ? ["", `Precios: ${pricing}`] : []),
     "",
     `Un saludo,\nEl equipo de ${BRAND}`,
+    `Para darte de baja o ejercer tus derechos sobre tus datos: ${PRIVACY_EMAIL}`,
   ].join("\n\n");
   return { subject, html, text, ics: demo ? demoIcs(lead.slot_start!, lead.id) : null };
 }

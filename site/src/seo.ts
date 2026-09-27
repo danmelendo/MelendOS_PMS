@@ -115,7 +115,7 @@ function structuredData(page: PageSeo, base: string) {
       "@id": `${base}/#org`,
       name: BRAND,
       url: `${base}/`,
-      logo: `${base}/favicon.svg`,
+      logo: `${base}/isologo-256.png`,
     },
   ];
   if (page.product) {
@@ -158,7 +158,7 @@ function structuredData(page: PageSeo, base: string) {
 /** Head tags for a page: title, description, canonical, social cards, JSON-LD. */
 export function headTags(page: PageSeo, base: string) {
   const url = `${base}${page.path}`;
-  const image = `${base}/og.png`;
+  const image = `${base}/og.jpg`;
   const tags = [
     `<title>${esc(page.title)}</title>`,
     `<meta name="description" content="${esc(page.description)}" />`,

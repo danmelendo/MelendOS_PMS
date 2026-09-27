@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bot, MessagesSquare, Receipt, SendHorizonal } from "lucide-react";
@@ -44,6 +44,7 @@ type Stay = {
 
 // Reception inbox: one conversation per booking, unread first.
 function MessagesPage() {
+  const { canMessage, loading } = useRoles();
   const { data: inbox } = useInbox();
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -78,6 +79,8 @@ function MessagesPage() {
 
   const current = threads.find((t) => t.id === selected);
 
+  if (loading) return null;
+  if (!canMessage) return <Navigate to="/today" />;
   return (
     <div className="space-y-4">
       <div>

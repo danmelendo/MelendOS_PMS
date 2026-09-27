@@ -118,3 +118,16 @@ export function useHotelsWith(feature: Feature) {
   const q = useStaffHotelModules();
   return { ...q, data: q.data?.filter((h) => h.features[feature]) };
 }
+
+/**
+ * The hotel's own website, where "back to the web" goes from the guest app.
+ * Each hotel sets it in settings.website_url (the booking engine is embedded
+ * there or on a subdomain); without it, the demo's public web.
+ */
+export function useHotelWebsite(): { href: string; external: boolean } {
+  const { data } = useBrandTenant();
+  const url = (data?.settings as { website_url?: unknown } | null)?.website_url;
+  return typeof url === "string" && /^https?:\/\//.test(url)
+    ? { href: url, external: true }
+    : { href: "/web", external: false };
+}
