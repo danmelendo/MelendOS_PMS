@@ -6,10 +6,12 @@
 //
 // Run: npm run test:db
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import pg from "pg";
 import { FEATURES, tenantFeatures } from "../functions/_shared/domain/features.ts";
 import { CANCELLATION_CATEGORY_IDS } from "../functions/_shared/domain/cancellations.ts";
+import { travellerIssues, type SesTraveller } from "../functions/_shared/domain/ses.ts";
 
 const DB_URL = process.env.SUPABASE_DB_URL;
 const sid = (k: string) => {
@@ -1952,6 +1954,334 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(anon).toEqual({ name: "Cliente eliminado", email: null, phone: null });
       expect(kept).toEqual({ customer_id: guest });
       expect(identity).toBe(0);
+    });
+  });
+
+  describe("traveller register (SES.HOSPEDAJES)", () => {
+    const enable = (tenant: string, on = true) =>
+      client.query(
+        `insert into public.ses_settings (tenant_id, enabled) values ($1, $2)
+         on conflict (tenant_id) do update set enabled = excluded.enabled`,
+        [tenant, on],
+      );
+    // Far in the future, 5 days apart: no clash with real or other test stays.
+    let nextDay = 600;
+    const book = async (status: string, simulated = false, days = (nextDay += 5)) =>
+      (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, people, status, total, created_by_role, simulated)
+           values ($1, $2, now() + make_interval(days => $3), now() + make_interval(days => $3 + 2), 2, $4, 200, 'admin', $5)
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"], days, status, simulated],
+        )
+      ).rows[0].id;
+    const queue = async (reservation: string) =>
+      (
+        await client.query(
+          "select kind, operation, status from public.ses_communications where reservation_id = $1 order by created_at, operation desc",
+          [reservation],
+        )
+      ).rows
+        .map((r) => `${r.kind}${r.operation}:${r.status}`)
+        .sort(); // one transaction: same created_at
+    const traveller = {
+      first_name: "Laura",
+      last_name1: "Gómez",
+      last_name2: "Ruiz",
+      document_type: "NIF",
+      document_number: "12345678-z",
+      document_support: "abc123456",
+      birth_date: "1990-05-01",
+      nationality: "esp",
+      sex: "M",
+      address: "Calle Mayor 1",
+      municipality_code: "46250",
+      postal_code: "46001",
+      country: "ESP",
+      email: "Laura@Example.com",
+    };
+
+    it("queues bookings, changes, cancellations and check-ins, only for real bookings of hotels that use it", async () => {
+      await client.query("savepoint setup");
+      await enable(ids.lumen, false);
+      const off = await book("confirmed");
+      await enable(ids.lumen);
+      const simulated = await book("confirmed", true);
+      const unpaid = await book("pending");
+      const pendingRh = await queue(unpaid);
+      await client.query("update public.reservations set status = 'confirmed' where id = $1", [
+        unpaid,
+      ]);
+      const onConfirm = await queue(unpaid);
+
+      // Reported, then the dates change: cancel it and report it again.
+      const moved = await book("confirmed");
+      await client.query(
+        "update public.ses_communications set status = 'accepted', ses_code = 'c-1' where reservation_id = $1",
+        [moved],
+      );
+      await client.query(
+        "update public.reservations set end_at = end_at + interval '1 day' where id = $1",
+        [moved],
+      );
+      const afterMove = await queue(moved);
+
+      // Cancelled before sending: nothing to withdraw. After: a "B".
+      const early = await book("confirmed");
+      await client.query("update public.reservations set status = 'cancelled' where id = $1", [
+        early,
+      ]);
+      const late = await book("confirmed");
+      await client.query(
+        "update public.ses_communications set status = 'accepted', ses_code = 'c-2' where reservation_id = $1",
+        [late],
+      );
+      await client.query("update public.reservations set status = 'cancelled' where id = $1", [
+        late,
+      ]);
+
+      const stay = await book("confirmed");
+      await client.query("update public.reservations set status = 'in_progress' where id = $1", [
+        stay,
+      ]);
+      const result = {
+        off: await queue(off),
+        simulated: await queue(simulated),
+        early: await queue(early),
+        late: await queue(late),
+        stay: await queue(stay),
+      };
+      await client.query("rollback to savepoint setup");
+
+      expect(pendingRh).toEqual([]);
+      expect(onConfirm).toEqual(["RHA:pending"]);
+      expect(afterMove).toEqual(["RHA:accepted", "RHA:pending", "RHB:pending"]);
+      expect(result).toEqual({
+        off: [],
+        simulated: [],
+        early: ["RHA:skipped"],
+        late: ["RHA:accepted", "RHB:pending"],
+        stay: ["PVA:pending", "RHA:pending"],
+      });
+    });
+
+    it("keeps the guests' data sealed: reception records it and sees it masked", async () => {
+      await client.query("savepoint setup");
+      await enable(ids.lumen);
+      const r = await book("in_progress");
+      await client.query(
+        "update public.ses_communications set status = 'blocked' where reservation_id = $1",
+        [r],
+      );
+      const id = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query("select public.save_stay_traveller($1, $2) as id", [
+              r,
+              { ...traveller, is_holder: true },
+            ])
+          ).rows[0].id,
+      );
+      const child = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query("select public.save_stay_traveller($1, $2) as id", [
+              r,
+              { first_name: "Pedro", last_name1: "Gómez", birth_date: "2018-01-01" },
+            ])
+          ).rows[0].id,
+      );
+      const stored = (
+        await client.query(
+          "select document_number, document_support, nationality, email from public.stay_travellers where id = $1",
+          [id],
+        )
+      ).rows[0];
+      // A correction only changes what it sends (the panel never shows the rest).
+      await asIdentity("authenticated", users.lumenReception, () =>
+        client.query("select public.save_stay_traveller($1, $2, $3)", [
+          r,
+          { first_name: "Laura", address: "Calle Nueva 2" },
+          id,
+        ]),
+      );
+      const corrected = (
+        await client.query(
+          "select address, document_number, email, is_holder from public.stay_travellers where id = $1",
+          [id],
+        )
+      ).rows[0];
+      const list = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () => (await client.query("select * from public.list_stay_travellers($1)", [r])).rows,
+      );
+      const unblocked = await queue(r);
+      const tableRead = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select * from public.stay_travellers"),
+      );
+      const otherHotel = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.save_stay_traveller($1, $2)", [r, traveller]),
+      );
+      const otherList = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select * from public.list_stay_travellers($1)", [r]),
+      );
+      const otherQueue = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () =>
+          (
+            await client.query(
+              "select count(*) as n from public.ses_communications where reservation_id = $1",
+              [r],
+            )
+          ).rows[0].n,
+      );
+      const anon = await attempt("anon", undefined, () =>
+        client.query("select public.save_stay_traveller($1, $2)", [r, traveller]),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(stored).toEqual({
+        document_number: "12345678Z",
+        document_support: "ABC123456",
+        nationality: "ESP",
+        email: "laura@example.com",
+      });
+      expect(corrected).toEqual({
+        address: "Calle Nueva 2",
+        document_number: "12345678Z",
+        email: "laura@example.com",
+        is_holder: true,
+      });
+      expect(list).toHaveLength(2);
+      expect(list[0]).toMatchObject({
+        id,
+        is_holder: true,
+        document_type: "NIF",
+        document_hint: "••••••78Z",
+        is_minor: false,
+        missing: [],
+      });
+      expect(list[1]).toMatchObject({ id: child, is_minor: true });
+      expect(list[1].missing).toEqual(["address", "postal_code", "country", "phone", "kinship"]);
+      expect(JSON.stringify(list)).not.toContain("12345678");
+      expect(unblocked).toEqual(["PVA:pending", "RHA:pending"]);
+      expect(tableRead.ok).toBe(false);
+      expect(otherHotel.ok).toBe(false);
+      expect(otherList.ok).toBe(false);
+      expect(otherQueue).toEqual({ ok: true, value: "0" });
+      expect(anon.ok).toBe(false);
+    });
+
+    it("lets only management configure it, and only the server read the credentials", async () => {
+      const testPassword = randomUUID(); // generated: no credential-looking literal in the repo
+      await client.query("savepoint setup");
+      const property = (
+        await client.query<{ id: string }>(
+          "select id from public.properties where tenant_id = $1 limit 1",
+          [ids.lumen],
+        )
+      ).rows[0].id;
+      const settings = {
+        enabled: true,
+        environment: "pre",
+        landlord_code: "0000000101",
+        establishments: { [property]: "0000000042" },
+      };
+      const byReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.save_ses_settings($1, $2)", [ids.lumen, settings]),
+      );
+      const otherHotel = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.save_ses_settings($1, $2)", [ids.lumen, settings]),
+      );
+      await asIdentity("authenticated", users.lumenAdmin, async () => {
+        await client.query("select public.save_ses_settings($1, $2)", [ids.lumen, settings]);
+        await client.query("select public.save_ses_credentials($1, $2, $3)", [
+          ids.lumen,
+          "B00000000",
+          testPassword,
+        ]);
+      });
+      const seen = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query(
+              `select s.environment, s.landlord_code, s.has_credentials, e.code
+                 from public.ses_settings s join public.ses_establishments e using (tenant_id)
+                where s.tenant_id = $1 and e.property_id = $2`,
+              [ids.lumen, property],
+            )
+          ).rows[0],
+      );
+      const staffReadsSecret = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.ses_credentials($1)", [ids.lumen]),
+      );
+      await client.query("set local role service_role");
+      const secret = (await client.query("select public.ses_credentials($1) as c", [ids.lumen]))
+        .rows[0].c;
+      await client.query("reset role");
+      await client.query("rollback to savepoint setup");
+
+      expect(byReception.ok).toBe(false);
+      expect(otherHotel.ok).toBe(false);
+      expect(seen).toEqual({
+        environment: "pre",
+        landlord_code: "0000000101",
+        has_credentials: true,
+        code: "0000000042",
+      });
+      expect(staffReadsSecret.ok).toBe(false);
+      expect(secret).toMatchObject({ user: "B00000000", password: testPassword });
+    });
+
+    it("asks the same required fields in SQL as in the shared validation", async () => {
+      const cases: SesTraveller[] = [
+        {
+          ...traveller,
+          document_number: "12345678Z",
+          nationality: "ESP",
+          document_support: "ABC123456",
+        },
+        { first_name: "Ana", last_name1: null, birth_date: null },
+        {
+          first_name: "Ana",
+          last_name1: "Ruiz",
+          birth_date: "2015-01-01",
+          country: "FRA",
+          email: "a@b.co",
+          address: "Rue 1",
+          postal_code: "75001",
+        },
+        {
+          first_name: "Ana",
+          last_name1: "Ruiz",
+          birth_date: "1980-01-01",
+          document_type: "NIE",
+          document_number: "X1234567L",
+          country: "ESP",
+          phone: "600",
+          address: "C/ 1",
+          postal_code: "46001",
+        },
+      ];
+      for (const t of cases) {
+        const sql = (
+          await client.query(
+            `select public.ses_traveller_missing(
+               jsonb_populate_record(null::public.stay_travellers, $1::jsonb), '2026-10-01') as m`,
+            [t],
+          )
+        ).rows[0].m as string[];
+        const ts = [...new Set(travellerIssues(t, "2026-10-01").map((i) => i.field))];
+        expect(sql.sort()).toEqual(ts.sort());
+      }
     });
   });
 });

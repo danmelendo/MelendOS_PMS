@@ -34,6 +34,7 @@ import {
   PlugZap,
   Boxes,
   Network,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,6 +42,7 @@ import { toast } from "sonner";
 import { DEMO_ACCESS, demoAccounts, demoSignIn } from "@/lib/demo-access";
 import { useRoles } from "@/lib/roles";
 import { useInboxLive, useUnreadCount } from "@/lib/chat";
+import { useSesAttention } from "@/lib/ses";
 import { useAnyHotelHas } from "@/lib/features";
 import type { Feature } from "@domain/features.ts";
 
@@ -53,6 +55,7 @@ const items: NavItem[] = [
   { to: "/messages", label: "Mensajes", icon: MessagesSquare, feature: "chat" },
   { to: "/reservations", label: "Reservas", icon: ClipboardList },
   { to: "/customers", label: "Clientes", icon: Users },
+  { to: "/travellers", label: "Registro de viajeros", icon: ShieldCheck },
   { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/reports", label: "Informes", icon: BarChart3, feature: "reports" },
   { to: "/reviews", label: "Reseñas", icon: Star, feature: "reviews" },
@@ -77,6 +80,7 @@ export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   useInboxLive();
   const unread = useUnreadCount();
+  const { data: sesAttention = 0 } = useSesAttention();
   const { signOut, user } = useAuth();
   const { isAdmin, isGroup, canOperate } = useRoles();
   const has = useAnyHotelHas();
@@ -123,6 +127,14 @@ export function AppSidebar() {
                       <Link to={item.to} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
                         <span>{item.label}</span>
+                        {item.to === "/travellers" && sesAttention > 0 && (
+                          <span
+                            className="ml-auto min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-semibold text-white"
+                            aria-label={`${sesAttention} comunicaciones que revisar`}
+                          >
+                            {sesAttention}
+                          </span>
+                        )}
                         {item.to === "/messages" && unread > 0 && (
                           <span
                             className="ml-auto min-w-5 rounded-full bg-sidebar-primary px-1.5 text-center text-[11px] font-semibold text-sidebar-primary-foreground"
