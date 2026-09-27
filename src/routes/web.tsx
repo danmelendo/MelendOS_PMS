@@ -50,7 +50,7 @@ function WebLayout() {
     <div className="min-h-[100svh] bg-[#f4f6f9] text-neutral-900">
       {/* Top bar — single row on tablet/desktop, two rows on phones so nothing
           overflows. The nav drops to a scrollable second row on small screens. */}
-      <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/85 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/85 backdrop-blur print:hidden">
         <div className="mx-auto max-w-6xl px-4 sm:px-5">
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-4">
             <Link to="/web" className="flex min-w-0 items-center gap-2">
@@ -116,7 +116,7 @@ function WebLayout() {
 
       <AgentChat />
 
-      <footer className="mt-16 border-t border-neutral-200 bg-white">
+      <footer className="mt-16 border-t border-neutral-200 bg-white print:hidden">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-neutral-500 sm:flex-row">
           <p>
             © {new Date().getFullYear()} {brand.name} · Demo de Melend/OS

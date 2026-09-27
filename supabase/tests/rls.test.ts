@@ -12,6 +12,9 @@ import pg from "pg";
 import { FEATURES, tenantFeatures } from "../functions/_shared/domain/features.ts";
 import { CANCELLATION_CATEGORY_IDS } from "../functions/_shared/domain/cancellations.ts";
 import { travellerIssues, type SesTraveller } from "../functions/_shared/domain/ses.ts";
+import { DEFAULT_VAT, taxBreakdown, type TaxRow } from "../functions/_shared/domain/invoicing.ts";
+import { qrUrl } from "../functions/_shared/domain/verifactu.ts";
+import { huella } from "../functions/_shared/verifactu/hash.ts";
 
 const DB_URL = process.env.SUPABASE_DB_URL;
 const sid = (k: string) => {
@@ -2282,6 +2285,345 @@ describe.skipIf(!DB_URL)("RLS", () => {
         const ts = [...new Set(travellerIssues(t, "2026-10-01").map((i) => i.field))];
         expect(sql.sort()).toEqual(ts.sort());
       }
+    });
+  });
+
+  describe("invoices with VERI*FACTU", () => {
+    const AEAT_ALTA = {
+      IDEmisorFactura: "89890001K",
+      NumSerieFactura: "12345678/G33",
+      FechaExpedicionFactura: "01-01-2024",
+      TipoFactura: "F1",
+      CuotaTotal: "12.35",
+      ImporteTotal: "123.45",
+      Huella: "",
+      FechaHoraHusoGenRegistro: "2024-01-01T19:20:30+01:00",
+    };
+    const sqlHash = async (r: Record<string, string>) =>
+      (
+        await client.query("select public.verifactu_hash($1::text[], $2::text[]) as h", [
+          Object.keys(r),
+          Object.values(r),
+        ])
+      ).rows[0].h as string;
+
+    it("computes the AEAT's fingerprints, VAT and breakdowns like the shared code", async () => {
+      // The AEAT's own examples (huella v0.1.2, cases 1 to 3).
+      expect(await sqlHash(AEAT_ALTA)).toBe(
+        "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60",
+      );
+      const second = {
+        ...AEAT_ALTA,
+        NumSerieFactura: "12345679/G34",
+        Huella: "3C464DAF61ACB827C65FDA19F352A4E3BDC2C640E9E9FC4CC058073F38F12F60",
+        FechaHoraHusoGenRegistro: "2024-01-01T19:20:35+01:00",
+      };
+      expect(await sqlHash(second)).toBe(await huella(second));
+      const anulacion = {
+        IDEmisorFacturaAnulada: "89890001K",
+        NumSerieFacturaAnulada: "12345679/G34",
+        FechaExpedicionFacturaAnulada: "01-01-2024",
+        Huella: "F7B94CFD8924EDFF273501B01EE5153E4CE8F259766F88CF6ACB8935802A2B97",
+        FechaHoraHusoGenRegistro: "2024-01-01T19:20:40+01:00",
+      };
+      expect(await sqlHash(anulacion)).toBe(
+        "177547C0D57AC74748561D054A9CEC14B4C4EA23D1BEFD6F2E69E3A388F90C68",
+      );
+
+      for (const kind of Object.keys(DEFAULT_VAT)) {
+        const r = (
+          await client.query("select public.invoice_vat_rate($1, $2) as r", [ids.lumen, kind])
+        ).rows[0].r;
+        expect([kind, Number(r)]).toEqual([kind, DEFAULT_VAT[kind as keyof typeof DEFAULT_VAT]]);
+      }
+
+      const cases = [
+        [
+          { qty: 1, unit_price: 231.5, vat_rate: 10 },
+          { qty: 2, unit_price: 12.9, vat_rate: 10 },
+          { qty: 1, unit_price: 15, vat_rate: 21 },
+        ],
+        [{ qty: 1.5, unit_price: 0.99, vat_rate: 21 }],
+        [{ qty: -1.5, unit_price: 0.99, vat_rate: 4 }],
+        [
+          { qty: 1, unit_price: -0.13, vat_rate: 4 },
+          { qty: 3, unit_price: 33.33, vat_rate: 10 },
+        ],
+      ];
+      for (const lines of cases) {
+        const sql = (
+          await client.query("select public.invoice_breakdown($1) as b", [JSON.stringify(lines)])
+        ).rows[0].b;
+        expect({
+          rows: sql.rows.map((r: TaxRow) => ({
+            rate: Number(r.rate),
+            base: Number(r.base),
+            tax: Number(r.tax),
+          })),
+          base: Number(sql.base),
+          tax: Number(sql.tax),
+          total: Number(sql.total),
+        }).toEqual(taxBreakdown(lines));
+      }
+    });
+
+    it("issues, replaces, rectifies and cancels invoices on one unchangeable chain", async () => {
+      await client.query("savepoint setup");
+      const group = "00000000-0000-4000-8000-000000000019";
+      await client.query(
+        "insert into auth.users (id, email, aud, role) values ($1, 'grupo.fiscal@test.demostays.example', 'authenticated', 'authenticated') on conflict (id) do nothing",
+        [group],
+      );
+      await client.query(
+        "insert into public.tenant_members (tenant_id, user_id, role) values ($1, $2, 'group') on conflict do nothing",
+        [ids.lumen, group],
+      );
+      const settings = { enabled: true, issuer_nif: "B12345674", issuer_name: "Hotel Lumen S.L." };
+      const byReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.save_fiscal_settings($1, $2)", [ids.lumen, settings]),
+      );
+      await asIdentity("authenticated", users.lumenAdmin, () =>
+        client.query("select public.save_fiscal_settings($1, $2)", [ids.lumen, settings]),
+      );
+      const book = async (days: number, total: number) =>
+        (
+          await client.query<{ id: string }>(
+            `insert into public.reservations (tenant_id, room_id, start_at, end_at, people, status, total, created_by_role)
+             values ($1, $2, now() + make_interval(days => $3), now() + make_interval(days => $3 + 2), 2, 'completed', $4, 'admin')
+             returning id`,
+            [ids.lumen, ids["lumen-room-101"], days, total],
+          )
+        ).rows[0].id;
+      const stay = await book(800, 231.5);
+      const big = await book(810, 900);
+      await client.query(
+        `insert into public.folio_charges (tenant_id, reservation_id, category, description, qty, unit_price)
+         values ($1, $2, 'laundry', 'Lavandería', 1, 15), ($1, $2, 'food', 'Cena', 2, 12.9)`,
+        [ids.lumen, stay],
+      );
+      const before =
+        (
+          await client.query(
+            "select hash from public.verifactu_records where tenant_id = $1 and environment = 'simulated' order by seq desc limit 1",
+            [ids.lumen],
+          )
+        ).rows[0]?.hash ?? null;
+
+      const issue = (reservation: string, who: string) =>
+        attempt("authenticated", who, () =>
+          client.query("select public.issue_invoice($1, null)", [reservation]),
+        );
+      const byGroup = await issue(stay, group);
+      const otherHotel = await issue(stay, users.alboraAdmin);
+      const overLimit = await issue(big, users.lumenReception);
+      const simplified = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (await client.query("select public.issue_invoice($1, null) as id", [stay])).rows[0]
+            .id as string,
+      );
+      const twice = await issue(stay, users.lumenReception);
+      const f3 = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query("select public.exchange_simplified_invoice($1, $2) as id", [
+              simplified,
+              { name: "Viajes Prueba S.A.", nif: "a12345674" },
+            ])
+          ).rows[0].id as string,
+      );
+      const rect = await asIdentity(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query(
+              "select public.rectify_invoice($1, $2, 'Cena cobrada de más') as id",
+              [
+                f3,
+                JSON.stringify([
+                  { kind: "food", description: "Devolución cena", qty: 1, unit_price: -12.9 },
+                ]),
+              ],
+            )
+          ).rows[0].id as string,
+      );
+      const cancelByReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.cancel_invoice($1, 'Error')", [rect]),
+      );
+      await asIdentity("authenticated", users.lumenAdmin, () =>
+        client.query("select public.cancel_invoice($1, 'Emitida por error')", [rect]),
+      );
+
+      const invoices = (
+        await client.query(
+          "select id, type, number, issue_date::text as issue_date, status, recipient, base, tax, total, qr_url, replaces_ids, corrects_id from public.tax_invoices where reservation_id = $1 order by array_position(array['F2', 'F3', 'R1'], type)",
+          [stay],
+        )
+      ).rows;
+      const records = (
+        await client.query(
+          "select * from public.verifactu_records where environment = 'simulated' and invoice_id = any($1) order by seq",
+          [invoices.map((i) => i.id)],
+        )
+      ).rows;
+      const tamper = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query("update public.verifactu_records set hash = $1 where id = $2", [
+              "0".repeat(64),
+              records[0].id,
+            ])
+          ).rowCount,
+      );
+      await client.query("savepoint owner");
+      let ownerTamper = "";
+      try {
+        await client.query("update public.tax_invoices set total = 1 where id = $1", [simplified]);
+      } catch (e) {
+        ownerTamper = (e as Error).message;
+      }
+      await client.query("rollback to savepoint owner");
+      const guestRead = await attempt(
+        "anon",
+        undefined,
+        async () => (await client.query("select count(*) as n from public.tax_invoices")).rows[0].n,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(byReception.ok).toBe(false);
+      expect(byGroup.ok).toBe(false);
+      expect(otherHotel.ok).toBe(false);
+      expect(overLimit.ok).toBe(false);
+      if (!overLimit.ok) expect(overLimit.error).toMatch(/factura completa/);
+      expect(twice.ok).toBe(false);
+      if (!twice.ok) expect(twice.error).toMatch(/ya tiene factura/);
+      expect(cancelByReception.ok).toBe(false);
+      expect(tamper).toEqual({ ok: true, value: 0 }); // no update policy: nothing changes
+      expect(ownerTamper).toMatch(/no se puede modificar/);
+      expect(guestRead).toEqual({ ok: true, value: "0" }); // RLS: sees no invoice
+
+      expect(invoices.map((i) => [i.type, i.status])).toEqual([
+        ["F2", "replaced"],
+        ["F3", "issued"],
+        ["R1", "cancelled"],
+      ]);
+      const [s1, s3, r1] = invoices;
+      expect(s1.number).toMatch(/^PS\d{4}-\d{6}$/);
+      expect(s3.number).toMatch(/^PF\d{4}-\d{6}$/);
+      expect(r1.number).toMatch(/^PR\d{4}-\d{6}$/);
+      // 231,50 + 2 × 12,90 at 10 % and 15 at 21 %.
+      const expected = taxBreakdown([
+        { qty: 1, unit_price: 231.5, vat_rate: 10 },
+        { qty: 2, unit_price: 12.9, vat_rate: 10 },
+        { qty: 1, unit_price: 15, vat_rate: 21 },
+      ]);
+      expect([Number(s1.base), Number(s1.tax), Number(s1.total)]).toEqual([
+        expected.base,
+        expected.tax,
+        272.3,
+      ]);
+      expect(s3.replaces_ids).toEqual([s1.id]);
+      expect(s3.recipient).toEqual({ name: "Viajes Prueba S.A.", nif: "A12345674", address: null });
+      expect(r1.corrects_id).toBe(s3.id);
+      expect(Number(r1.total)).toBe(-12.9);
+      expect(s1.qr_url).toBe(
+        qrUrl({
+          environment: "simulated",
+          nif: "B12345674",
+          number: s1.number,
+          issueDate: s1.issue_date,
+          total: 272.3,
+        }),
+      );
+
+      // The chain: alta F2, alta F3, alta R1, anulación R1; each linked to the previous.
+      expect(records.map((r) => [r.kind, r.invoice_number])).toEqual([
+        ["alta", s1.number],
+        ["alta", s3.number],
+        ["alta", r1.number],
+        ["anulacion", r1.number],
+      ]);
+      expect(records[0].prev_hash).toBe(before);
+      for (const [i, r] of records.entries()) {
+        if (i > 0) expect(r.prev_hash).toBe(records[i - 1].hash);
+        const expected =
+          r.kind === "alta"
+            ? await huella({
+                IDEmisorFactura: r.issuer_nif,
+                NumSerieFactura: r.invoice_number,
+                FechaExpedicionFactura: r.issue_date,
+                TipoFactura: r.invoice_type,
+                CuotaTotal: r.cuota_total,
+                ImporteTotal: r.importe_total,
+                Huella: r.prev_hash ?? "",
+                FechaHoraHusoGenRegistro: r.generated_at,
+              })
+            : await huella({
+                IDEmisorFacturaAnulada: r.issuer_nif,
+                NumSerieFacturaAnulada: r.invoice_number,
+                FechaExpedicionFacturaAnulada: r.issue_date,
+                Huella: r.prev_hash ?? "",
+                FechaHoraHusoGenRegistro: r.generated_at,
+              });
+        expect(r.hash).toBe(expected);
+        expect(r.generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+        expect(r.status).toBe("pending");
+      }
+      expect([records[0].cuota_total, records[0].importe_total]).toEqual(["25.99", "272.30"]);
+    });
+
+    it("keeps production on and the certificate for the server only", async () => {
+      await client.query("savepoint setup");
+      await asIdentity("authenticated", users.lumenAdmin, async () => {
+        await client.query("select public.save_fiscal_settings($1, $2)", [
+          ids.lumen,
+          {
+            enabled: true,
+            environment: "prod",
+            issuer_nif: "B12345674",
+            issuer_name: "Hotel Lumen S.L.",
+          },
+        ]);
+        await client.query("select public.save_verifactu_certificate($1, $2, $3)", [
+          ids.lumen,
+          "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+          "-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----",
+        ]);
+      });
+      const switchOff = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.save_fiscal_settings($1, $2)", [ids.lumen, { enabled: false }]),
+      );
+      const staffReads = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.verifactu_certificate($1)", [ids.lumen]),
+      );
+      const staffPurges = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.purge_simulated_invoices($1)", [randomUUID()]),
+      );
+      await client.query("set local role service_role");
+      const cert = (await client.query("select public.verifactu_certificate($1) as c", [ids.lumen]))
+        .rows[0].c;
+      await client.query("reset role");
+      const installation = (
+        await client.query(
+          "select installation_number, has_certificate from public.fiscal_settings where tenant_id = $1",
+          [ids.lumen],
+        )
+      ).rows[0];
+      await client.query("rollback to savepoint setup");
+
+      expect(switchOff.ok).toBe(false);
+      if (!switchOff.ok) expect(switchOff.error).toMatch(/no se desactiva/);
+      expect(staffReads.ok).toBe(false);
+      expect(staffPurges.ok).toBe(false);
+      expect(cert.cert).toMatch(/BEGIN CERTIFICATE/);
+      expect(installation.has_certificate).toBe(true);
+      expect(installation.installation_number).toBeTruthy();
     });
   });
 });

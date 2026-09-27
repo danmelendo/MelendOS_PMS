@@ -860,6 +860,65 @@ export type Database = {
           },
         ]
       }
+      fiscal_settings: {
+        Row: {
+          activated_at: string | null
+          enabled: boolean
+          environment: string
+          has_certificate: boolean
+          installation_number: string | null
+          issuer_address: string | null
+          issuer_name: string | null
+          issuer_nif: string | null
+          next_send_at: string | null
+          simplified_limit: number
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+          wait_seconds: number
+        }
+        Insert: {
+          activated_at?: string | null
+          enabled?: boolean
+          environment?: string
+          has_certificate?: boolean
+          installation_number?: string | null
+          issuer_address?: string | null
+          issuer_name?: string | null
+          issuer_nif?: string | null
+          next_send_at?: string | null
+          simplified_limit?: number
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+          wait_seconds?: number
+        }
+        Update: {
+          activated_at?: string | null
+          enabled?: boolean
+          environment?: string
+          has_certificate?: boolean
+          installation_number?: string | null
+          issuer_address?: string | null
+          issuer_name?: string | null
+          issuer_nif?: string | null
+          next_send_at?: string | null
+          simplified_limit?: number
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          wait_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folio_charges: {
         Row: {
           amount: number | null
@@ -1092,6 +1151,32 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      invoice_series: {
+        Row: {
+          next_number: number
+          series: string
+          tenant_id: string
+        }
+        Insert: {
+          next_number?: number
+          series: string
+          tenant_id: string
+        }
+        Update: {
+          next_number?: number
+          series?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_series_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2699,6 +2784,112 @@ export type Database = {
           },
         ]
       }
+      tax_invoices: {
+        Row: {
+          base: number
+          breakdown: Json
+          cancel_reason: string | null
+          corrects_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          environment: string
+          id: string
+          issue_date: string
+          issuer_address: string | null
+          issuer_name: string
+          issuer_nif: string
+          lines: Json
+          number: string
+          qr_url: string
+          reason: string | null
+          recipient: Json | null
+          replaces_ids: string[] | null
+          reservation_id: string | null
+          status: string
+          tax: number
+          tenant_id: string
+          total: number
+          type: string
+        }
+        Insert: {
+          base: number
+          breakdown: Json
+          cancel_reason?: string | null
+          corrects_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          environment: string
+          id?: string
+          issue_date: string
+          issuer_address?: string | null
+          issuer_name: string
+          issuer_nif: string
+          lines: Json
+          number: string
+          qr_url: string
+          reason?: string | null
+          recipient?: Json | null
+          replaces_ids?: string[] | null
+          reservation_id?: string | null
+          status?: string
+          tax: number
+          tenant_id: string
+          total: number
+          type: string
+        }
+        Update: {
+          base?: number
+          breakdown?: Json
+          cancel_reason?: string | null
+          corrects_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          environment?: string
+          id?: string
+          issue_date?: string
+          issuer_address?: string | null
+          issuer_name?: string
+          issuer_nif?: string
+          lines?: Json
+          number?: string
+          qr_url?: string
+          reason?: string | null
+          recipient?: Json | null
+          replaces_ids?: string[] | null
+          reservation_id?: string | null
+          status?: string
+          tax?: number
+          tenant_id?: string
+          total?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoices_corrects_id_fkey"
+            columns: ["corrects_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -2802,11 +2993,136 @@ export type Database = {
           },
         ]
       }
+      verifactu_records: {
+        Row: {
+          attempts: number
+          created_at: string
+          created_by: string | null
+          csv: string | null
+          cuota_total: string | null
+          environment: string
+          error: string | null
+          error_code: string | null
+          generated_at: string
+          hash: string
+          id: string
+          importe_total: string | null
+          invoice_id: string
+          invoice_number: string
+          invoice_type: string | null
+          issue_date: string
+          issuer_nif: string
+          kind: string
+          last_attempt_at: string | null
+          prev_hash: string | null
+          prev_issue_date: string | null
+          prev_issuer_nif: string | null
+          prev_number: string | null
+          rechazo_previo: string | null
+          sent_at: string | null
+          seq: number
+          sin_registro_previo: boolean
+          status: string
+          subsanacion: boolean
+          tenant_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          created_by?: string | null
+          csv?: string | null
+          cuota_total?: string | null
+          environment: string
+          error?: string | null
+          error_code?: string | null
+          generated_at: string
+          hash: string
+          id?: string
+          importe_total?: string | null
+          invoice_id: string
+          invoice_number: string
+          invoice_type?: string | null
+          issue_date: string
+          issuer_nif: string
+          kind: string
+          last_attempt_at?: string | null
+          prev_hash?: string | null
+          prev_issue_date?: string | null
+          prev_issuer_nif?: string | null
+          prev_number?: string | null
+          rechazo_previo?: string | null
+          sent_at?: string | null
+          seq: number
+          sin_registro_previo?: boolean
+          status?: string
+          subsanacion?: boolean
+          tenant_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          created_by?: string | null
+          csv?: string | null
+          cuota_total?: string | null
+          environment?: string
+          error?: string | null
+          error_code?: string | null
+          generated_at?: string
+          hash?: string
+          id?: string
+          importe_total?: string | null
+          invoice_id?: string
+          invoice_number?: string
+          invoice_type?: string | null
+          issue_date?: string
+          issuer_nif?: string
+          kind?: string
+          last_attempt_at?: string | null
+          prev_hash?: string | null
+          prev_issue_date?: string | null
+          prev_issuer_nif?: string | null
+          prev_number?: string | null
+          rechazo_previo?: string | null
+          sent_at?: string | null
+          seq?: number
+          sin_registro_previo?: boolean
+          status?: string
+          subsanacion?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifactu_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verifactu_records_tenant_id_invoice_id_fkey"
+            columns: ["tenant_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      aeat_amount: { Args: { n: number }; Returns: string }
+      append_verifactu_record: {
+        Args: {
+          p_invoice: Database["public"]["Tables"]["tax_invoices"]["Row"]
+          p_kind: string
+          p_rechazo_previo?: string
+          p_sin_registro_previo?: boolean
+          p_subsanacion?: boolean
+        }
+        Returns: string
+      }
       archive_expired_promo_codes: { Args: never; Returns: number }
       cancel_booking_as_guest: {
         Args: {
@@ -2829,12 +3145,17 @@ export type Database = {
         Args: { p_category?: string; p_id: string; p_token: string }
         Returns: undefined
       }
+      cancel_invoice: {
+        Args: { p_invoice: string; p_reason: string }
+        Returns: undefined
+      }
       cancel_my_reservation: {
         Args: { p_category?: string; p_reservation_id: string }
         Returns: undefined
       }
       cancel_stale_pending_reservations: { Args: never; Returns: number }
       channel_secret: { Args: { p_channel: string }; Returns: string }
+      check_invoice_recipient: { Args: { p: Json }; Returns: Json }
       confirm_payment: {
         Args: {
           p_amount: number
@@ -2864,6 +3185,20 @@ export type Database = {
           p_tenant: string
         }
         Returns: Json
+      }
+      create_tax_invoice: {
+        Args: {
+          p_corrects?: string
+          p_description: string
+          p_lines: Json
+          p_reason?: string
+          p_recipient: Json
+          p_replaces?: string[]
+          p_reservation: string
+          p_type: string
+          s: Database["public"]["Tables"]["fiscal_settings"]["Row"]
+        }
+        Returns: string
       }
       current_tenant_id: { Args: never; Returns: string }
       customer_directory: {
@@ -2911,6 +3246,10 @@ export type Database = {
       delete_channel: { Args: { p_channel: string }; Returns: undefined }
       delete_customer: { Args: { p_customer_id: string }; Returns: string }
       delete_stay_traveller: { Args: { p_id: string }; Returns: undefined }
+      exchange_simplified_invoice: {
+        Args: { p_invoice: string; p_recipient: Json }
+        Returns: string
+      }
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number
@@ -2929,6 +3268,31 @@ export type Database = {
         }
         Returns: string
       }
+      fiscal_ready: {
+        Args: { p_tenant: string }
+        Returns: {
+          activated_at: string | null
+          enabled: boolean
+          environment: string
+          has_certificate: boolean
+          installation_number: string | null
+          issuer_address: string | null
+          issuer_name: string | null
+          issuer_nif: string | null
+          next_send_at: string | null
+          simplified_limit: number
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+          wait_seconds: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fiscal_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       folio_balance: { Args: { p_reservation_id: string }; Returns: number }
       get_folio: {
         Args: { p_reservation_id: string; p_token?: string }
@@ -2939,6 +3303,42 @@ export type Database = {
         Returns: Json
       }
       get_guest_identity: { Args: { p_customer_id: string }; Returns: Json }
+      get_guest_invoices: {
+        Args: { p_reservation_id: string; p_token?: string }
+        Returns: {
+          base: number
+          breakdown: Json
+          cancel_reason: string | null
+          corrects_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          environment: string
+          id: string
+          issue_date: string
+          issuer_address: string | null
+          issuer_name: string
+          issuer_nif: string
+          lines: Json
+          number: string
+          qr_url: string
+          reason: string | null
+          recipient: Json | null
+          replaces_ids: string[] | null
+          reservation_id: string | null
+          status: string
+          tax: number
+          tenant_id: string
+          total: number
+          type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tax_invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_my_review: {
         Args: { p_reservation_id: string; p_token?: string }
         Returns: Json
@@ -3079,6 +3479,13 @@ export type Database = {
         Args: { p_tenant: string }
         Returns: number
       }
+      invoice_breakdown: { Args: { p_lines: Json }; Returns: Json }
+      invoice_lines_for: { Args: { p_reservation: string }; Returns: Json }
+      invoice_preview: { Args: { p_reservation: string }; Returns: Json }
+      invoice_vat_rate: {
+        Args: { p_kind: string; p_tenant: string }
+        Returns: number
+      }
       is_cancellation_category: { Args: { p: string }; Returns: boolean }
       is_group_only: { Args: { p_tenant: string }; Returns: boolean }
       is_member_user: {
@@ -3087,6 +3494,10 @@ export type Database = {
       }
       is_tenant_member: { Args: { p_tenant: string }; Returns: boolean }
       is_tenant_staff: { Args: { p_tenant: string }; Returns: boolean }
+      issue_invoice: {
+        Args: { p_recipient?: Json; p_reservation: string }
+        Returns: string
+      }
       lake_tenants: { Args: never; Returns: string[] }
       list_mcp_tokens: { Args: { p_tenant: string }; Returns: Json }
       list_stay_travellers: {
@@ -3107,6 +3518,10 @@ export type Database = {
       }
       mcp_token_auth: { Args: { p_token_hash: string }; Returns: Json }
       module_package: { Args: { p_feature: string }; Returns: string }
+      next_invoice_number: {
+        Args: { p_prefix: string; p_tenant: string; p_year: number }
+        Returns: string
+      }
       order_service: {
         Args: {
           p_note?: string
@@ -3120,6 +3535,10 @@ export type Database = {
       record_desk_payment: {
         Args: { p_amount: number; p_method: string; p_reservation_id: string }
         Returns: undefined
+      }
+      rectify_invoice: {
+        Args: { p_invoice: string; p_lines: Json; p_reason: string }
+        Returns: string
       }
       redeem_promo_code: { Args: { p_id: string }; Returns: undefined }
       redeem_reward: {
@@ -3143,6 +3562,10 @@ export type Database = {
         }
         Returns: string
       }
+      resubmit_invoice: {
+        Args: { p_invoice: string; p_recipient?: Json }
+        Returns: string
+      }
       review_author: { Args: { p_name: string }; Returns: string }
       revoke_mcp_token: { Args: { p_id: string }; Returns: undefined }
       room_busy_windows: {
@@ -3152,6 +3575,10 @@ export type Database = {
           room_id: string
           start_at: string
         }[]
+      }
+      save_fiscal_settings: {
+        Args: { p_data: Json; p_tenant: string }
+        Returns: undefined
       }
       save_guest_identity: {
         Args: { p_customer_id: string; p_data: Json }
@@ -3173,6 +3600,10 @@ export type Database = {
       save_stay_traveller: {
         Args: { p_data: Json; p_id?: string; p_reservation: string }
         Returns: string
+      }
+      save_verifactu_certificate: {
+        Args: { p_cert: string; p_key: string; p_tenant: string }
+        Returns: undefined
       }
       seconds_since_sign_in: { Args: never; Returns: number }
       send_stay_message: {
@@ -3242,6 +3673,23 @@ export type Database = {
           id: string
         }[]
       }
+      verifactu_certificate: { Args: { p_tenant: string }; Returns: Json }
+      verifactu_hash: {
+        Args: { p_fields: string[]; p_values: string[] }
+        Returns: string
+      }
+      verifactu_now: { Args: { p_tz: string }; Returns: string }
+      verifactu_qr_url: {
+        Args: {
+          p_date: string
+          p_env: string
+          p_nif: string
+          p_number: string
+          p_total: number
+        }
+        Returns: string
+      }
+      verifactu_tick: { Args: never; Returns: undefined }
     }
     Enums: {
       cancellation_status: "pending" | "approved" | "rejected"

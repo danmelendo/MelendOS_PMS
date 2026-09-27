@@ -35,6 +35,7 @@ import {
   Boxes,
   Network,
   ShieldCheck,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,6 +57,7 @@ const items: NavItem[] = [
   { to: "/reservations", label: "Reservas", icon: ClipboardList },
   { to: "/customers", label: "Clientes", icon: Users },
   { to: "/travellers", label: "Registro de viajeros", icon: ShieldCheck },
+  { to: "/invoices", label: "Facturas", icon: Receipt },
   { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/reports", label: "Informes", icon: BarChart3, feature: "reports" },
   { to: "/reviews", label: "Reseñas", icon: Star, feature: "reviews" },

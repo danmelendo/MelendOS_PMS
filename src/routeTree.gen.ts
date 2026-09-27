@@ -28,6 +28,7 @@ import { Route as StaysInvoicesRouteImport } from './routes/stays.invoices'
 import { Route as StaysIncidentsRouteImport } from './routes/stays.incidents'
 import { Route as StaysExperiencesRouteImport } from './routes/stays.experiences'
 import { Route as StaysAccountRouteImport } from './routes/stays.account'
+import { Route as InvoiceInvoiceIdRouteImport } from './routes/invoice.$invoiceId'
 import { Route as AppTravellersRouteImport } from './routes/_app.travellers'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
@@ -39,6 +40,7 @@ import { Route as AppPromosRouteImport } from './routes/_app.promos'
 import { Route as AppPlanRouteImport } from './routes/_app.plan'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppJournalRouteImport } from './routes/_app.journal'
+import { Route as AppInvoicesRouteImport } from './routes/_app.invoices'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppExtrasRouteImport } from './routes/_app.extras'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
@@ -61,6 +63,7 @@ import { Route as StaysChatBookingIdRouteImport } from './routes/stays.chat.$boo
 import { Route as StaysBookingBookingIdRouteImport } from './routes/stays.booking.$bookingId'
 import { Route as StaysBookRoomIdRouteImport } from './routes/stays.book.$roomId'
 import { Route as AppAdminManualRouteImport } from './routes/_app.admin.manual'
+import { Route as WebInvoiceBookingIdInvoiceIdRouteImport } from './routes/web.invoice.$bookingId.$invoiceId'
 
 const WebRoute = WebRouteImport.update({
   id: '/web',
@@ -156,6 +159,11 @@ const StaysAccountRoute = StaysAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => StaysRoute,
 } as any)
+const InvoiceInvoiceIdRoute = InvoiceInvoiceIdRouteImport.update({
+  id: '/invoice/$invoiceId',
+  path: '/invoice/$invoiceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppTravellersRoute = AppTravellersRouteImport.update({
   id: '/travellers',
   path: '/travellers',
@@ -209,6 +217,11 @@ const AppMessagesRoute = AppMessagesRouteImport.update({
 const AppJournalRoute = AppJournalRouteImport.update({
   id: '/journal',
   path: '/journal',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvoicesRoute = AppInvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
@@ -321,6 +334,12 @@ const AppAdminManualRoute = AppAdminManualRouteImport.update({
   path: '/admin/manual',
   getParentRoute: () => AppRoute,
 } as any)
+const WebInvoiceBookingIdInvoiceIdRoute =
+  WebInvoiceBookingIdInvoiceIdRouteImport.update({
+    id: '/invoice/$bookingId/$invoiceId',
+    path: '/invoice/$bookingId/$invoiceId',
+    getParentRoute: () => WebRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -334,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof AppCustomersRoute
   '/extras': typeof AppExtrasRoute
   '/integrations': typeof AppIntegrationsRoute
+  '/invoices': typeof AppInvoicesRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
   '/plan': typeof AppPlanRoute
@@ -345,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/rooms': typeof AppRoomsRoute
   '/today': typeof AppTodayRoute
   '/travellers': typeof AppTravellersRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
   '/stays/incidents': typeof StaysIncidentsRoute
@@ -374,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
   '/web/upload/$bookingId': typeof WebUploadBookingIdRoute
+  '/web/invoice/$bookingId/$invoiceId': typeof WebInvoiceBookingIdInvoiceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -385,6 +407,7 @@ export interface FileRoutesByTo {
   '/customers': typeof AppCustomersRoute
   '/extras': typeof AppExtrasRoute
   '/integrations': typeof AppIntegrationsRoute
+  '/invoices': typeof AppInvoicesRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
   '/plan': typeof AppPlanRoute
@@ -396,6 +419,7 @@ export interface FileRoutesByTo {
   '/rooms': typeof AppRoomsRoute
   '/today': typeof AppTodayRoute
   '/travellers': typeof AppTravellersRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
   '/stays/incidents': typeof StaysIncidentsRoute
@@ -425,6 +449,7 @@ export interface FileRoutesByTo {
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
   '/web/upload/$bookingId': typeof WebUploadBookingIdRoute
+  '/web/invoice/$bookingId/$invoiceId': typeof WebInvoiceBookingIdInvoiceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -440,6 +465,7 @@ export interface FileRoutesById {
   '/_app/customers': typeof AppCustomersRoute
   '/_app/extras': typeof AppExtrasRoute
   '/_app/integrations': typeof AppIntegrationsRoute
+  '/_app/invoices': typeof AppInvoicesRoute
   '/_app/journal': typeof AppJournalRoute
   '/_app/messages': typeof AppMessagesRoute
   '/_app/plan': typeof AppPlanRoute
@@ -451,6 +477,7 @@ export interface FileRoutesById {
   '/_app/rooms': typeof AppRoomsRoute
   '/_app/today': typeof AppTodayRoute
   '/_app/travellers': typeof AppTravellersRoute
+  '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
   '/stays/incidents': typeof StaysIncidentsRoute
@@ -480,6 +507,7 @@ export interface FileRoutesById {
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
   '/web/upload/$bookingId': typeof WebUploadBookingIdRoute
+  '/web/invoice/$bookingId/$invoiceId': typeof WebInvoiceBookingIdInvoiceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -495,6 +523,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/extras'
     | '/integrations'
+    | '/invoices'
     | '/journal'
     | '/messages'
     | '/plan'
@@ -506,6 +535,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/today'
     | '/travellers'
+    | '/invoice/$invoiceId'
     | '/stays/account'
     | '/stays/experiences'
     | '/stays/incidents'
@@ -535,6 +565,7 @@ export interface FileRouteTypes {
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
     | '/web/upload/$bookingId'
+    | '/web/invoice/$bookingId/$invoiceId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -546,6 +577,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/extras'
     | '/integrations'
+    | '/invoices'
     | '/journal'
     | '/messages'
     | '/plan'
@@ -557,6 +589,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/today'
     | '/travellers'
+    | '/invoice/$invoiceId'
     | '/stays/account'
     | '/stays/experiences'
     | '/stays/incidents'
@@ -586,6 +619,7 @@ export interface FileRouteTypes {
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
     | '/web/upload/$bookingId'
+    | '/web/invoice/$bookingId/$invoiceId'
   id:
     | '__root__'
     | '/'
@@ -600,6 +634,7 @@ export interface FileRouteTypes {
     | '/_app/customers'
     | '/_app/extras'
     | '/_app/integrations'
+    | '/_app/invoices'
     | '/_app/journal'
     | '/_app/messages'
     | '/_app/plan'
@@ -611,6 +646,7 @@ export interface FileRouteTypes {
     | '/_app/rooms'
     | '/_app/today'
     | '/_app/travellers'
+    | '/invoice/$invoiceId'
     | '/stays/account'
     | '/stays/experiences'
     | '/stays/incidents'
@@ -640,6 +676,7 @@ export interface FileRouteTypes {
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
     | '/web/upload/$bookingId'
+    | '/web/invoice/$bookingId/$invoiceId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -650,6 +687,7 @@ export interface RootRouteChildren {
   ReservarOkRoute: typeof ReservarOkRoute
   StaysRoute: typeof StaysRouteWithChildren
   WebRoute: typeof WebRouteWithChildren
+  InvoiceInvoiceIdRoute: typeof InvoiceInvoiceIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -787,6 +825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaysAccountRouteImport
       parentRoute: typeof StaysRoute
     }
+    '/invoice/$invoiceId': {
+      id: '/invoice/$invoiceId'
+      path: '/invoice/$invoiceId'
+      fullPath: '/invoice/$invoiceId'
+      preLoaderRoute: typeof InvoiceInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/travellers': {
       id: '/_app/travellers'
       path: '/travellers'
@@ -862,6 +907,13 @@ declare module '@tanstack/react-router' {
       path: '/journal'
       fullPath: '/journal'
       preLoaderRoute: typeof AppJournalRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/invoices': {
+      id: '/_app/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof AppInvoicesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/integrations': {
@@ -1018,6 +1070,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminManualRouteImport
       parentRoute: typeof AppRoute
     }
+    '/web/invoice/$bookingId/$invoiceId': {
+      id: '/web/invoice/$bookingId/$invoiceId'
+      path: '/invoice/$bookingId/$invoiceId'
+      fullPath: '/web/invoice/$bookingId/$invoiceId'
+      preLoaderRoute: typeof WebInvoiceBookingIdInvoiceIdRouteImport
+      parentRoute: typeof WebRoute
+    }
   }
 }
 
@@ -1027,6 +1086,7 @@ interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRoute
   AppExtrasRoute: typeof AppExtrasRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
+  AppInvoicesRoute: typeof AppInvoicesRoute
   AppJournalRoute: typeof AppJournalRoute
   AppMessagesRoute: typeof AppMessagesRoute
   AppPlanRoute: typeof AppPlanRoute
@@ -1047,6 +1107,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCustomersRoute: AppCustomersRoute,
   AppExtrasRoute: AppExtrasRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
+  AppInvoicesRoute: AppInvoicesRoute,
   AppJournalRoute: AppJournalRoute,
   AppMessagesRoute: AppMessagesRoute,
   AppPlanRoute: AppPlanRoute,
@@ -1115,6 +1176,7 @@ interface WebRouteChildren {
   WebRoomRoomIdRoute: typeof WebRoomRoomIdRoute
   WebSignBookingIdRoute: typeof WebSignBookingIdRoute
   WebUploadBookingIdRoute: typeof WebUploadBookingIdRoute
+  WebInvoiceBookingIdInvoiceIdRoute: typeof WebInvoiceBookingIdInvoiceIdRoute
 }
 
 const WebRouteChildren: WebRouteChildren = {
@@ -1131,6 +1193,7 @@ const WebRouteChildren: WebRouteChildren = {
   WebRoomRoomIdRoute: WebRoomRoomIdRoute,
   WebSignBookingIdRoute: WebSignBookingIdRoute,
   WebUploadBookingIdRoute: WebUploadBookingIdRoute,
+  WebInvoiceBookingIdInvoiceIdRoute: WebInvoiceBookingIdInvoiceIdRoute,
 }
 
 const WebRouteWithChildren = WebRoute._addFileChildren(WebRouteChildren)
@@ -1143,6 +1206,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReservarOkRoute: ReservarOkRoute,
   StaysRoute: StaysRouteWithChildren,
   WebRoute: WebRouteWithChildren,
+  InvoiceInvoiceIdRoute: InvoiceInvoiceIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
