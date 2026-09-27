@@ -51,6 +51,29 @@ function (service role) touches it.
 The function only returns free times, never who booked; it rejects bots with a honeypot field,
 limits 3 leads per email and 5 per IP a day, and a unique index prevents double-booking a slot.
 
+## Admin panel and lead emails
+
+- **`/admin/`**: leads with filters, upcoming demos, conversion, status and internal notes,
+  CSV export and delete (right to erasure). Not indexed (`noindex`, `robots.txt`, out of the
+  sitemap). Sign-in with email and password; public sign-up is disabled on the sales project.
+- **Who can see it**: users listed in `public.sales_admins` (RLS on `leads`; migration
+  `20260927120000_sales_admins.sql`). To add someone: create the user in Supabase → Auth (or with
+  the Auth admin API) and `insert into public.sales_admins (user_id, email) select id, email from
+auth.users where email = '…';`
+- **Email for every new lead** (function `leads`, via [Resend](https://resend.com)). Secrets on
+  the sales project:
+
+  | Secret               | Value                                                                    |
+  | -------------------- | ------------------------------------------------------------------------ |
+  | `LEADS_NOTIFY_EMAIL` | recipients, comma separated (set: `danielgomez@melendo.app`)             |
+  | `RESEND_API_KEY`     | Resend API key                                                           |
+  | `LEADS_FROM_EMAIL`   | sender once the domain is verified, e.g. `Melend/OS <leads@melendo.app>` |
+  | `SITE_URL`           | public URL of the site, for the "Abrir en el panel" link                 |
+
+  Without a verified domain Resend only sends from `onboarding@resend.dev` to the address of the
+  Resend account itself, which is enough if that account is `danielgomez@melendo.app`. The email
+  content is built in `supabase/functions/_shared/lead-email.ts` (tested).
+
 ## Deploy on Vercel
 
 Import the GitHub repository in Vercel with **Root Directory `site`** (framework Vite; build
