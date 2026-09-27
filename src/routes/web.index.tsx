@@ -36,10 +36,11 @@ const ROOM_KINDS = [
 ];
 
 function WebHome() {
-  const { brand, brandId } = useBrand();
+  const { brand, brandId, tenantId } = useBrand();
   const { data: hotels } = useQuery({
     queryKey: ["pms", "properties-web", brandId],
-    queryFn: () => pms.listProperties({ brand: brandId }),
+    enabled: !!tenantId,
+    queryFn: () => pms.listProperties({ tenantId: tenantId ?? undefined }),
   });
   const { data: events } = useQuery({
     queryKey: ["cms", "events-web"],

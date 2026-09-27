@@ -44,8 +44,10 @@ const NAV = [
 
 function WebLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { brand } = useBrand();
+  const { brand, ready } = useBrand();
 
+  // Until the hotel is known (domain lookup), nothing of another hotel shows.
+  if (!ready) return <div className="min-h-screen bg-white" />;
   return (
     <div className="min-h-[100svh] bg-[#f4f6f9] text-neutral-900">
       {/* Top bar — single row on tablet/desktop, two rows on phones so nothing

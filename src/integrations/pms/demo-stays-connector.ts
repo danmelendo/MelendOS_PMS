@@ -221,9 +221,13 @@ export class DemoStaysConnector implements PmsConnector {
 
   // ── Discovery ────────────────────────────────────────────────────────────────
 
-  async listProvinces(filter?: { brand?: PropertyBrand }): Promise<PmsProvince[]> {
+  async listProvinces(filter?: {
+    brand?: PropertyBrand;
+    tenantId?: string;
+  }): Promise<PmsProvince[]> {
     let pq = sb.from("properties").select("province_id,brand").eq("active", true);
     if (filter?.brand) pq = pq.eq("brand", filter.brand);
+    if (filter?.tenantId) pq = pq.eq("tenant_id", filter.tenantId);
     const [{ data: provinces }, { data: properties }] = await Promise.all([
       sb.from("provinces").select("*").order("sort_order"),
       pq,
@@ -246,10 +250,12 @@ export class DemoStaysConnector implements PmsConnector {
   async listProperties(filter?: {
     provinceId?: string;
     brand?: PropertyBrand;
+    tenantId?: string;
   }): Promise<PmsProperty[]> {
     let q = sb.from("properties").select("*").eq("active", true).order("sort_order");
     if (filter?.provinceId) q = q.eq("province_id", filter.provinceId);
     if (filter?.brand) q = q.eq("brand", filter.brand);
+    if (filter?.tenantId) q = q.eq("tenant_id", filter.tenantId);
     const [{ data: properties }, { data: provinces }, { data: rooms }, fromByGroup] =
       await Promise.all([
         q,

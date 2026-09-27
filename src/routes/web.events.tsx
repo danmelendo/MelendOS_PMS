@@ -16,12 +16,13 @@ export const Route = createFileRoute("/web/events")({
 const CATEGORIES: EventCategory[] = ["gastronomy", "wellness", "culture", "outdoor", "family"];
 
 function WebEvents() {
-  const { brandId } = useBrand();
+  const { brandId, tenantId } = useBrand();
   const [category, setCategory] = useState<EventCategory | null>(null);
 
   const { data: hotels } = useQuery({
     queryKey: ["pms", "properties-web", brandId],
-    queryFn: () => pms.listProperties({ brand: brandId }),
+    enabled: !!tenantId,
+    queryFn: () => pms.listProperties({ tenantId: tenantId ?? undefined }),
   });
   const hotelIds = new Set((hotels ?? []).map((h) => h.id));
 
