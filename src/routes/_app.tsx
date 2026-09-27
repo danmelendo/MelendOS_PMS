@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
 import { Smartphone, Globe } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -14,6 +15,11 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   const { session, loading } = useAuth();
   const { isGroup, canOperate } = useRoles();
+  // Panel scrollbars (styles.css: html.panel).
+  useEffect(() => {
+    document.documentElement.classList.add("panel");
+    return () => document.documentElement.classList.remove("panel");
+  }, []);
   if (loading)
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
