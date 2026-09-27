@@ -1,109 +1,115 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Brand layer: one tech base, two hotels.
+// Brand layer: one booking engine, one brand per hotel.
 //
-// Each hotel is a tenant with its own brand (name, accent colour, copy) on the
-// same booking engine, payments and management stack. A single config object
-// swaps what the public web and guest app show, while every screen, the PMS
-// connector and the backend stay identical. The active brand is persisted in
-// localStorage and exposes its accent as the `--brand` CSS variable, so the web
-// and the app re-skin live from the switcher. A production build would resolve
-// the brand from the domain/tenant instead of a visible switch.
+// Each hotel is a tenant with its own web identity (name, colour, texts, logo
+// and photos) in tenants.brand, edited from the panel ("Web y dominio"). The
+// public web and the guest app resolve the hotel from the host name:
+// 1. the hotel's own (sub)domain, tenants.domain (e.g. reservas.suhotel.com,
+//    a CNAME to the platform);
+// 2. <slug>.<VITE_PLATFORM_DOMAIN> (the subdomain every hotel gets);
+// 3. otherwise the demo: a switcher between the hotels, remembered in the
+//    browser. On a hotel's domain there is no switcher.
+// The accent is exposed as the `--brand` CSS variable, so every screen
+// re-skins without knowing which hotel it shows.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { brandOf, hostHotel, type Brand, type BrandId, type TenantRow } from "@/lib/hotel-web";
 
-export type BrandId = "urban" | "coast";
+export type { Brand, BrandId } from "@/lib/hotel-web";
 
-export interface Brand {
-  id: BrandId;
-  /** Full brand name shown in headers. */
-  name: string;
-  /** Short label for the switcher pill. */
-  short: string;
-  /** Primary accent (hex). Drives the `--brand` CSS variable. */
-  accent: string;
-  /** HSL triplet used for hero gradients (matches the accent hue). */
-  heroAccent: string;
-  /** Uppercase eyebrow shown above hero/section titles. */
-  eyebrow: string;
-  /** One-line positioning. */
-  tagline: string;
-  /** Who the brand is for (used in copy). */
-  audience: string;
-  /** Public-web hero copy. */
-  heroTitle: string;
-  heroSubtitle: string;
-  /** Word used for a bookable unit. */
-  unitWord: string;
-  /** Seed `brand` tag the discovery filters on. */
-  propertyBrand: BrandId;
-}
+/** Shown until the hotel is known (no other hotel's name flashes on a domain). */
+const PLACEHOLDER: Brand = brandOf({
+  id: "",
+  slug: "",
+  name: "",
+  domain: null,
+  brand: { accent: "#1F3A5F" },
+  settings: null,
+});
 
-export const BRANDS: Record<BrandId, Brand> = {
-  urban: {
-    id: "urban",
-    name: "Hotel Lumen",
-    short: "Lumen",
-    accent: "#1F3A5F",
-    heroAccent: "214 51% 25%",
-    eyebrow: "Hotel Lumen · Boutique urbano",
-    tagline: "Un hotel boutique en el centro histórico de Valencia",
-    audience: "viajeros urbanos",
-    heroTitle: "Duerme en el centro, vive la ciudad",
-    heroSubtitle:
-      "Habitaciones de diseño a un paseo de la catedral y el mercado, con rooftop, desayuno de producto local y atención 24 h.",
-    unitWord: "habitación",
-    propertyBrand: "urban",
-  },
-  coast: {
-    id: "coast",
-    name: "Albora Hotel & Spa",
-    short: "Albora",
-    accent: "#0F6E8C",
-    heroAccent: "194 81% 30%",
-    eyebrow: "Albora · Hotel de costa",
-    tagline: "Frente al Mediterráneo, en la Costa Blanca",
-    audience: "familias y parejas",
-    heroTitle: "El mar a un paso de tu habitación",
-    heroSubtitle:
-      "Habitaciones con vistas al mar, spa, pádel y experiencias en la bahía de Altea. Reserva directa al mejor precio.",
-    unitWord: "habitación",
-    propertyBrand: "coast",
-  },
-};
-
-const DEFAULT_BRAND: BrandId = "urban";
 const KEY = "stays-brand";
+/** Old demo keys, before brands came from the database. */
+const LEGACY: Record<string, string> = { urban: "hotel-lumen", coast: "albora-hotel-spa" };
 
 interface BrandCtx {
   brand: Brand;
   brandId: BrandId;
+  tenantId: string | null;
   setBrand: (id: BrandId) => void;
+  /** Hotels of the demo switcher (empty on a hotel's own domain). */
+  hotels: Brand[];
+  /** The host name fixes the hotel: no switcher. */
+  locked: boolean;
+  ready: boolean;
 }
 
 const Ctx = createContext<BrandCtx | null>(null);
 
-function readBrand(): BrandId {
-  if (typeof window === "undefined") return DEFAULT_BRAND;
-  const v = window.localStorage.getItem(KEY);
-  return v === "urban" || v === "coast" ? v : DEFAULT_BRAND;
+const COLUMNS = "id, slug, name, domain, brand, settings";
+
+function readSaved(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(KEY);
+    return v ? (LEGACY[v] ?? v) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function BrandProvider({ children }: { children: ReactNode }) {
-  const [brandId, setBrandIdState] = useState<BrandId>(readBrand);
-  const brand = BRANDS[brandId];
+  const host = typeof window === "undefined" ? null : hostHotel(window.location.hostname);
+  const [chosen, setChosen] = useState<string | null>(readSaved);
 
-  // Persist + expose the accent as a global CSS variable so every `var(--brand)`
-  // utility (and toasts/portals outside the React tree) re-skins instantly.
+  const { data, isLoading } = useQuery({
+    queryKey: ["brand-hotels", host?.domain ?? host?.slug ?? "demo"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      let q = supabase.from("tenants").select(COLUMNS).order("name");
+      if (host?.domain) q = q.eq("domain", host.domain);
+      else if (host?.slug) q = q.eq("slug", host.slug);
+      const { data, error } = await q;
+      if (error) throw error;
+      return ((data ?? []) as TenantRow[]).map(brandOf);
+    },
+  });
+
+  // A hotel's host that matches no hotel falls back to the demo list.
+  const locked = !!host && !!data?.length;
+  const hotels = useMemo(() => data ?? [], [data]);
+  const brand =
+    (locked
+      ? hotels[0]
+      : (hotels.find((h) => h.id === chosen) ??
+        hotels.find((h) => h.id === "hotel-lumen") ??
+        hotels[0])) ?? PLACEHOLDER;
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(KEY, brandId);
+    if (typeof window === "undefined" || !brand.id) return;
     document.documentElement.style.setProperty("--brand", brand.accent);
-  }, [brandId, brand.accent]);
+    if (!locked) {
+      try {
+        window.localStorage.setItem(KEY, brand.id);
+      } catch {
+        /* private mode: the choice is not remembered */
+      }
+    }
+  }, [brand.id, brand.accent, locked]);
 
   const value = useMemo<BrandCtx>(
-    () => ({ brand, brandId, setBrand: setBrandIdState }),
-    [brand, brandId],
+    () => ({
+      brand,
+      brandId: brand.id,
+      tenantId: brand.tenantId,
+      setBrand: setChosen,
+      hotels: locked ? [] : hotels,
+      locked,
+      ready: !isLoading && !!brand.id,
+    }),
+    [brand, hotels, locked, isLoading],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

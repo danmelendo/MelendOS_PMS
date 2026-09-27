@@ -72,6 +72,7 @@ const adminItems: NavItem[] = [
   { to: "/rates", label: "Tarifas", icon: Tag },
   { to: "/extras", label: "Extras", icon: PackagePlus },
   { to: "/promos", label: "Códigos promo", icon: Ticket },
+  { to: "/website", label: "Web y dominio", icon: Globe },
   { to: "/channels", label: "Canales", icon: Network, feature: "channels" },
   { to: "/integrations", label: "Integraciones IA", icon: PlugZap, feature: "mcp" },
   { to: "/plan", label: "Plan y módulos", icon: Boxes },

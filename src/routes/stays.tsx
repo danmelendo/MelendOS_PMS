@@ -104,7 +104,7 @@ function StaysLayout() {
 
 function StaysShell() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { brand } = useBrand();
+  const { brand, ready } = useBrand();
   const website = useHotelWebsite();
   const { needsSignIn, memberId } = useMember();
   const features = useFeatures();
@@ -115,6 +115,7 @@ function StaysShell() {
       (item.to !== "/stays/experiences" || features.experiences),
   );
 
+  if (!ready) return <div className="min-h-[100svh] bg-[#e9edf2]" />;
   return (
     <>
       <WatchPoller />

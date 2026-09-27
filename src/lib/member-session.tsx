@@ -22,19 +22,19 @@ const Ctx = createContext<MemberCtx | null>(null);
 
 export function MemberProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
-  const { brandId } = useBrand();
+  const { tenantId } = useBrand();
 
   // The user's account in the hotel of the active brand.
   const { data: accountId, isLoading: resolving } = useQuery({
-    queryKey: ["member-account", user?.id, brandId],
-    enabled: !!user,
+    queryKey: ["member-account", user?.id, tenantId],
+    enabled: !!user && !!tenantId,
     queryFn: async () => {
-      const [{ data: accounts }, { data: hotels }] = await Promise.all([
-        supabase.from("members").select("id, tenant_id").eq("user_id", user!.id),
-        supabase.from("properties").select("tenant_id").eq("brand", brandId),
-      ]);
-      const tenants = new Set((hotels ?? []).map((h) => h.tenant_id));
-      return (accounts ?? []).find((a) => tenants.has(a.tenant_id))?.id ?? null;
+      const { data: accounts } = await supabase
+        .from("members")
+        .select("id, tenant_id")
+        .eq("user_id", user!.id)
+        .eq("tenant_id", tenantId!);
+      return accounts?.[0]?.id ?? null;
     },
   });
 

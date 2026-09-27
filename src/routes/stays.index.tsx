@@ -26,7 +26,7 @@ const ASSET_FILTERS: { label: string; value: AssetType | null }[] = [
 function DiscoverScreen() {
   const features = useFeatures();
   const { member } = useMember();
-  const { brand, brandId } = useBrand();
+  const { brand, brandId, tenantId } = useBrand();
   const website = useHotelWebsite();
   const { data: tenant } = useBrandTenant();
   const [province, setProvince] = useState<string | null>(null);
@@ -42,12 +42,17 @@ function DiscoverScreen() {
 
   const { data: provinces } = useQuery({
     queryKey: ["pms", "provinces", brandId],
-    queryFn: () => pms.listProvinces({ brand: brandId }),
+    enabled: !!tenantId,
+    queryFn: () => pms.listProvinces({ tenantId: tenantId ?? undefined }),
   });
   const { data: properties, isLoading } = useQuery({
     queryKey: ["pms", "properties", brandId, province],
+    enabled: !!tenantId,
     queryFn: () =>
-      pms.listProperties({ brand: brandId, ...(province ? { provinceId: province } : {}) }),
+      pms.listProperties({
+        tenantId: tenantId ?? undefined,
+        ...(province ? { provinceId: province } : {}),
+      }),
   });
 
   return (

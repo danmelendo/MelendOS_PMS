@@ -85,8 +85,12 @@ export interface PmsConnector {
   readonly pmsName: string;
 
   // ── Discovery ──
-  listProvinces(filter?: { brand?: PropertyBrand }): Promise<PmsProvince[]>;
-  listProperties(filter?: { provinceId?: string; brand?: PropertyBrand }): Promise<PmsProperty[]>;
+  listProvinces(filter?: { brand?: PropertyBrand; tenantId?: string }): Promise<PmsProvince[]>;
+  listProperties(filter?: {
+    provinceId?: string;
+    brand?: PropertyBrand;
+    tenantId?: string;
+  }): Promise<PmsProperty[]>;
   getProperty(id: string): Promise<PmsProperty | null>;
   listRooms(propertyId: string): Promise<PmsRoom[]>;
 

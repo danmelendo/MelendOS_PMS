@@ -13,17 +13,22 @@ export const Route = createFileRoute("/web/hotels")({
 
 // Hotels of the active brand (a tenant may run one hotel or a small chain).
 function WebHotels() {
-  const { brandId } = useBrand();
+  const { brandId, tenantId } = useBrand();
   const [province, setProvince] = useState<string | null>(null);
 
   const { data: provinces } = useQuery({
     queryKey: ["pms", "provinces", brandId],
-    queryFn: () => pms.listProvinces({ brand: brandId }),
+    enabled: !!tenantId,
+    queryFn: () => pms.listProvinces({ tenantId: tenantId ?? undefined }),
   });
   const { data: hotels, isLoading } = useQuery({
     queryKey: ["pms", "properties-web", brandId, province],
+    enabled: !!tenantId,
     queryFn: () =>
-      pms.listProperties({ brand: brandId, ...(province ? { provinceId: province } : {}) }),
+      pms.listProperties({
+        tenantId: tenantId ?? undefined,
+        ...(province ? { provinceId: province } : {}),
+      }),
   });
 
   return (

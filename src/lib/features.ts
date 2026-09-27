@@ -13,22 +13,16 @@ import { useBrand } from "@/lib/brand";
 
 /** The hotel (tenant) behind the brand shown on the web and the guest app. */
 export function useBrandTenant() {
-  const { brandId } = useBrand();
+  const { tenantId } = useBrand();
   return useQuery({
-    queryKey: ["brand-tenant", brandId],
+    queryKey: ["brand-tenant", tenantId],
+    enabled: !!tenantId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data: property } = await supabase
-        .from("properties")
-        .select("tenant_id")
-        .eq("brand", brandId)
-        .limit(1)
-        .maybeSingle();
-      if (!property) return null;
       const { data } = await supabase
         .from("tenants")
         .select("id, slug, name, plan, settings")
-        .eq("id", property.tenant_id)
+        .eq("id", tenantId!)
         .maybeSingle();
       return data as {
         id: string;

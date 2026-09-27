@@ -2634,4 +2634,104 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(installation.installation_number).toBeTruthy();
     });
   });
+  describe("hotel web and domains", () => {
+    it("lets management edit its web through save_hotel_web only, never its plan", async () => {
+      await client.query("savepoint setup");
+      const direct = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "update public.tenants set plan = 'group', settings = settings || '{\"packages\": [\"ai\"]}'::jsonb where id = $1",
+              [ids.lumen],
+            )
+          ).rowCount,
+      );
+      const byReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.save_hotel_web($1, $2)", [
+          ids.lumen,
+          { brand: { tagline: "x" } },
+        ]),
+      );
+      const saved = await asIdentity(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query("select public.save_hotel_web($1, $2) as r", [
+              ids.lumen,
+              {
+                domain: "https://Reservas.HotelLumen-Prueba.es/web",
+                website_url: "https://www.hotellumen-prueba.es",
+                brand: {
+                  tagline: "Nuevo lema",
+                  accent: "#123456",
+                  logo_url: "https://example.com/logo.png",
+                  gallery: ["https://example.com/1.jpg"],
+                },
+              },
+            ])
+          ).rows[0].r,
+      );
+      const stored = (
+        await client.query(
+          "select domain, brand, settings->>'website_url' as site, plan from public.tenants where id = $1",
+          [ids.lumen],
+        )
+      ).rows[0];
+      const bad = async (data: unknown) =>
+        attempt("authenticated", users.lumenAdmin, () =>
+          client.query("select public.save_hotel_web($1, $2)", [ids.lumen, data]),
+        );
+      const taken = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.save_hotel_web($1, $2)", [
+          ids.albora,
+          { domain: "reservas.hotellumen-prueba.es" },
+        ]),
+      );
+      const otherHotel = await attempt("authenticated", users.alboraAdmin, () =>
+        client.query("select public.save_hotel_web($1, $2)", [
+          ids.lumen,
+          { brand: { tagline: "x" } },
+        ]),
+      );
+      const checks = {
+        color: await bad({ brand: { accent: "blue" } }),
+        unknown: await bad({ brand: { plan: "group" } }),
+        image: await bad({ brand: { logo_url: "javascript:alert(1)" } }),
+        domain: await bad({ domain: "no es un dominio" }),
+        site: await bad({ website_url: "ftp://x" }),
+      };
+      const anonRead = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select domain from public.tenants where id = $1", [ids.lumen]))
+            .rows[0]?.domain,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(direct).toEqual({ ok: false, error: expect.stringMatching(/permission denied/) });
+      expect(byReception.ok).toBe(false);
+      expect(saved).toMatchObject({
+        domain: "reservas.hotellumen-prueba.es",
+        website_url: "https://www.hotellumen-prueba.es",
+      });
+      expect(stored.plan).not.toBe("group");
+      expect(stored.site).toBe("https://www.hotellumen-prueba.es");
+      expect(stored.brand).toMatchObject({
+        tagline: "Nuevo lema",
+        accent: "#123456",
+        logo_url: "https://example.com/logo.png",
+        gallery: ["https://example.com/1.jpg"],
+      });
+      expect(stored.brand.heroAccent).toBeUndefined(); // derived again from the new colour
+      expect(taken.ok).toBe(false);
+      if (!taken.ok) expect(taken.error).toMatch(/otro hotel/);
+      expect(otherHotel.ok).toBe(false);
+      for (const [k, r] of Object.entries(checks)) expect([k, r.ok]).toEqual([k, false]);
+      expect(anonRead).toEqual({ ok: true, value: "reservas.hotellumen-prueba.es" });
+    });
+  });
 });

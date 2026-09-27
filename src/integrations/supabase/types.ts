@@ -3532,6 +3532,10 @@ export type Database = {
         }
         Returns: string
       }
+      purge_simulated_invoices: {
+        Args: { p_reservation: string }
+        Returns: number
+      }
       record_desk_payment: {
         Args: { p_amount: number; p_method: string; p_reservation_id: string }
         Returns: undefined
@@ -3583,6 +3587,10 @@ export type Database = {
       save_guest_identity: {
         Args: { p_customer_id: string; p_data: Json }
         Returns: undefined
+      }
+      save_hotel_web: {
+        Args: { p_data: Json; p_tenant: string }
+        Returns: Json
       }
       save_ses_credentials: {
         Args: {

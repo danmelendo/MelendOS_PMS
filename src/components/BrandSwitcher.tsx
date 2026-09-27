@@ -1,12 +1,10 @@
-import { BRANDS, useBrand, type BrandId } from "@/lib/brand";
+import { useBrand } from "@/lib/brand";
 
-// Segmented toggle that swaps the active hotel brand (urban ↔ coast).
-// Re-skins the whole surface live via the `--brand` CSS variable. The demo device
-// for "one tech base, two brands"; a real build would resolve brand from the
-// domain/tenant, not a visible switch.
+// Demo switcher between the hotels. On a hotel's own domain (or its platform
+// subdomain) the hotel is fixed by the host name and this renders nothing.
 export function BrandSwitcher({ className = "" }: { className?: string }) {
-  const { brandId, setBrand } = useBrand();
-  const ids = Object.keys(BRANDS) as BrandId[];
+  const { brandId, setBrand, hotels, locked } = useBrand();
+  if (locked || hotels.length < 2) return null;
 
   return (
     <div
@@ -14,20 +12,20 @@ export function BrandSwitcher({ className = "" }: { className?: string }) {
       role="group"
       aria-label="Cambiar de hotel"
     >
-      {ids.map((id) => {
-        const active = id === brandId;
+      {hotels.map((h) => {
+        const active = h.id === brandId;
         return (
           <button
-            key={id}
+            key={h.id}
             type="button"
-            onClick={() => setBrand(id)}
+            onClick={() => setBrand(h.id)}
             aria-pressed={active}
             className={`rounded-full px-2 py-1 text-xs sm:px-3 font-semibold transition-colors ${
               active ? "text-white" : "text-neutral-500 hover:text-neutral-800"
             }`}
-            style={active ? { backgroundColor: BRANDS[id].accent } : undefined}
+            style={active ? { backgroundColor: h.accent } : undefined}
           >
-            {BRANDS[id].short}
+            {h.short}
           </button>
         );
       })}
