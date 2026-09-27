@@ -63,16 +63,20 @@ auth.users where email = '…';`
 - **Email for every new lead** (function `leads`, via [Resend](https://resend.com)). Secrets on
   the sales project:
 
-  | Secret               | Value                                                                    |
-  | -------------------- | ------------------------------------------------------------------------ |
-  | `LEADS_NOTIFY_EMAIL` | recipients, comma separated (set: `danielgomez@melendo.app`)             |
-  | `RESEND_API_KEY`     | Resend API key                                                           |
-  | `LEADS_FROM_EMAIL`   | sender once the domain is verified, e.g. `Melend/OS <leads@melendo.app>` |
-  | `SITE_URL`           | public URL of the site, for the "Abrir en el panel" link                 |
+  | Secret                | Value                                                                            |
+  | --------------------- | -------------------------------------------------------------------------------- |
+  | `LEADS_NOTIFY_EMAIL`  | recipients, comma separated (set: `danielgomez@melendo.app`)                     |
+  | `RESEND_API_KEY`      | Resend API key                                                                   |
+  | `LEADS_FROM_EMAIL`    | sender of the internal email (set: `Melend/OS Leads <leads@melendo.app>`)        |
+  | `SITE_URL`            | public URL of the site, for the "Abrir en el panel" link                         |
+  | `CUSTOMER_FROM_EMAIL` | sender of the confirmation to the lead (set: `Melend/OS <melendOS@melendo.app>`) |
 
-  Without a verified domain Resend only sends from `onboarding@resend.dev` to the address of the
-  Resend account itself, which is enough if that account is `danielgomez@melendo.app`. The email
-  content is built in `supabase/functions/_shared/lead-email.ts` (tested).
+  The lead also gets a confirmation (the demo with a calendar file, or that we got the request;
+  replies go to the first `LEADS_NOTIFY_EMAIL`). Both senders need `melendo.app` verified in
+  Resend. Until then the internal email falls back to `onboarding@resend.dev` (Resend only delivers
+  it to the Resend account's own address) and the lead gets no confirmation: the function returns
+  `confirmation: false` and the demo page words its message accordingly. Email content:
+  `supabase/functions/_shared/lead-email.ts` (tested).
 
 ## Deploy on Vercel
 
