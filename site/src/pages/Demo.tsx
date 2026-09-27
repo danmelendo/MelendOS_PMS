@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CalendarCheck, CalendarPlus, Check, Clock, Loader2, PhoneCall, Video } from "lucide-react";
 import { Layout } from "../components/Layout";
-import { BRAND, PAGES, SALES } from "../config";
+import { PAGES, SALES } from "../config";
 import { LeadError, fetchSlots, submitLead } from "../lib/api";
 import { PLAN_IDS, PLANS, type PlanId } from "../../supabase/functions/_shared/plans.ts";
 import { DEMO_MINUTES, DEMO_TIMEZONE, slotDay } from "../../supabase/functions/_shared/slots.ts";
+import { demoIcs } from "../../supabase/functions/_shared/lead-email.ts";
 
 const FIELD =
   "mt-1 block h-10 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-2 focus-visible:outline-ring";
@@ -29,29 +30,8 @@ const fullLabel = (iso: string) =>
   });
 
 /** Calendar file for the booked call, so it lands in the visitor's calendar. */
-function icsHref(slot: string) {
-  const fmt = (d: Date) =>
-    d
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}/, "");
-  const start = new Date(slot);
-  const end = new Date(start.getTime() + DEMO_MINUTES * 60_000);
-  const ics = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    `PRODID:-//${BRAND}//Demo//ES`,
-    "BEGIN:VEVENT",
-    `UID:${fmt(start)}-${Math.random().toString(36).slice(2)}@demo`,
-    `DTSTAMP:${fmt(new Date())}`,
-    `DTSTART:${fmt(start)}`,
-    `DTEND:${fmt(end)}`,
-    `SUMMARY:Demo de ${BRAND}`,
-    "DESCRIPTION:Te enviaremos el enlace de la videollamada por email.",
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
+function icsHref(slot: string, id: string) {
+  return `data:text/calendar;charset=utf-8,${encodeURIComponent(demoIcs(slot, id, DEMO_MINUTES))}`;
 }
 
 /** Plan and size passed from the pricing page (?plan=pro&rooms=40&hotels=1). */
@@ -65,7 +45,13 @@ function fromQuery(): { plan: PlanId | ""; rooms: string; hotels: string } {
   };
 }
 
-type Done = { kind: "demo" | "contact"; slot: string | null; email: string };
+type Done = {
+  id: string;
+  kind: "demo" | "contact";
+  slot: string | null;
+  email: string;
+  confirmation: boolean;
+};
 
 export function DemoPage() {
   const [slots, setSlots] = useState<string[] | null>(null);
@@ -144,7 +130,13 @@ export function DemoPage() {
         marketing_ok: form.marketing,
         website: form.website,
       });
-      setDone({ kind, slot: res.slot, email: form.email });
+      setDone({
+        id: res.id,
+        kind,
+        slot: res.slot,
+        email: form.email,
+        confirmation: res.confirmation === true,
+      });
       window.scrollTo({ top: 0 });
     } catch (err) {
       const e = err as LeadError;
@@ -173,11 +165,12 @@ export function DemoPage() {
                 Hora de Madrid · {DEMO_MINUTES} minutos
               </p>
               <p className="mt-4 text-muted-foreground">
-                Te enviaremos el enlace de la videollamada a <b>{done.email}</b>. Si necesitas
+                {done.confirmation ? "Te hemos enviado la confirmación a " : "Te escribiremos a "}
+                <b>{done.email}</b> con el enlace de la videollamada antes de la cita. Si necesitas
                 cambiar la hora, responde a ese email.
               </p>
               <a
-                href={icsHref(done.slot)}
+                href={icsHref(done.slot, done.id)}
                 download="demo.ics"
                 className="mt-6 inline-flex items-center gap-2 rounded-md border bg-card px-4 py-2.5 text-sm font-semibold hover:bg-accent"
               >

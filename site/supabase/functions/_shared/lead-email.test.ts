@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leadEmail, leadWhen, type LeadForEmail } from "./lead-email.ts";
+import { customerEmail, leadEmail, leadWhen, type LeadForEmail } from "./lead-email.ts";
 
 const lead: LeadForEmail = {
   id: "0f8b6c1e-0000-4000-8000-000000000001",
@@ -46,5 +46,30 @@ describe("leadEmail", () => {
     expect(m.html).toContain("Laura &lt;script&gt;");
     expect(m.html).toContain("SES.HOSPEDAJES<br>y la web");
     expect(m.html).not.toContain("Abrir en el panel");
+  });
+});
+
+describe("customerEmail", () => {
+  it("confirms the demo with its time and a calendar file", () => {
+    const m = customerEmail(lead, "https://melendo.app");
+    expect(m.subject).toBe("Tu demo de Melend/OS: lunes, 28 de septiembre, 10:00");
+    expect(m.html).toContain("Hola, Laura:");
+    expect(m.html).toContain("<b>lunes, 28 de septiembre, 10:00</b>");
+    expect(m.html).toContain("https://melendo.app/precios/");
+    expect(m.text).not.toContain("<b>");
+    expect(m.ics).toContain("DTSTART:20260928T080000Z");
+    expect(m.ics).toContain("DTEND:20260928T083000Z");
+    expect(m.ics).toContain(`UID:${lead.id}@melendo.app`);
+  });
+
+  it("acknowledges a request without a slot, with no calendar file", () => {
+    const m = customerEmail({ ...lead, kind: "contact", slot_start: null });
+    expect(m.subject).toBe("Hemos recibido tu solicitud · Melend/OS");
+    expect(m.ics).toBeNull();
+    expect(m.html).not.toContain("precios");
+  });
+
+  it("escapes the name", () => {
+    expect(customerEmail(lead).html).not.toContain("<script>");
   });
 });
