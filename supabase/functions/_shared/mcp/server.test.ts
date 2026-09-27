@@ -50,7 +50,9 @@ describe("MCP server", () => {
       "search_availability",
       "get_unit_details",
       "quote_price",
+      "list_extras",
       "get_booking",
+      "recover_booking",
     ]);
     for (const t of tools) {
       expect(t.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
@@ -63,7 +65,7 @@ describe("MCP server", () => {
   it("adds the tools that create something for a write token", async () => {
     const { client } = await connect(["read", "write"]);
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(7);
+    expect(tools).toHaveLength(9);
     const write = tools.filter((t) => !t.annotations?.readOnlyHint).map((t) => t.name);
     expect(write).toEqual(["create_booking_draft", "create_payment_link", "cancel_booking"]);
   });

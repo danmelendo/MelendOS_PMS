@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, CreditCard, ExternalLink, MessageCircle, SendHorizonal, X } from "lucide-react";
+import {
+  Bot,
+  CreditCard,
+  ExternalLink,
+  MessageCircle,
+  Minus,
+  Plus,
+  SendHorizonal,
+  Users,
+  X,
+} from "lucide-react";
+import { DateRangePicker } from "@/components/DateRangePicker";
+import { eur } from "@/lib/stays";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/lib/brand";
 import { useBrandTenant, useFeatures } from "@/lib/features";
@@ -7,12 +19,226 @@ import { Formatted } from "@/components/FormattedText";
 
 // The booking agent on the public website. The server keeps the conversation
 // (agent-chat function); the browser only remembers its id for the session.
-// Links (booking, payment) arrive as buttons built from what the tools did.
+// Links (booking, payment), room cards and extras arrive as attachments built
+// from what the tools did; their buttons just send the guest's next message.
 
-interface Attachment {
-  kind: "manage" | "payment";
+interface RoomCard {
+  room_id: string;
+  room: string;
+  hotel: string;
+  type: string | null;
+  capacity: number;
+  price_total: number;
+  price_per_night: number;
+  image_url: string | null;
+}
+type Attachment =
+  | { kind: "manage" | "payment"; label: string; url: string }
+  | {
+      kind: "rooms";
+      search: { check_in: string; check_out: string; guests: number };
+      rooms: RoomCard[];
+    }
+  | { kind: "extras"; extras: { extra_id: string; name: string; price: number }[] };
+
+const nightsOf = (a: string, b: string) =>
+  Math.round((Date.parse(a + "T12:00:00Z") - Date.parse(b + "T12:00:00Z")) / -86_400_000);
+const people = (n: number) => n + (n === 1 ? " persona" : " personas");
+
+function Stepper({
+  value,
+  min,
+  max,
+  onChange,
+  label,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
   label: string;
-  url: string;
+}) {
+  return (
+    <div className="flex items-center gap-1" aria-label={label}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
+        className="flex h-7 w-7 items-center justify-center border border-neutral-200 bg-white disabled:opacity-40"
+        aria-label={"Menos " + label}
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <span className="w-6 text-center text-sm tabular-nums">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
+        className="flex h-7 w-7 items-center justify-center border border-neutral-200 bg-white disabled:opacity-40"
+        aria-label={"Más " + label}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+/** Rooms found, as cards, with the search the guest can adjust. */
+function RoomCards({
+  att,
+  tenantId,
+  onSend,
+  disabled,
+}: {
+  att: Extract<Attachment, { kind: "rooms" }>;
+  tenantId?: string;
+  onSend: (text: string) => void;
+  disabled: boolean;
+}) {
+  const [dates, setDates] = useState({
+    checkIn: att.search.check_in,
+    checkOut: att.search.check_out,
+  });
+  const [guests, setGuests] = useState(att.search.guests);
+  const changed =
+    dates.checkIn !== att.search.check_in ||
+    dates.checkOut !== att.search.check_out ||
+    guests !== att.search.guests;
+  const nights = nightsOf(att.search.check_in, att.search.check_out);
+  return (
+    <div className="space-y-2">
+      <div className="space-y-2 bg-white p-2 ring-1 ring-neutral-100">
+        <DateRangePicker
+          checkIn={dates.checkIn}
+          checkOut={dates.checkOut}
+          onChange={setDates}
+          pricing={tenantId ? { tenantId, guests } : undefined}
+        />
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-xs text-neutral-600">
+            <Users className="h-3.5 w-3.5" /> Personas
+          </span>
+          <Stepper value={guests} min={1} max={8} onChange={setGuests} label="personas" />
+          <button
+            type="button"
+            disabled={!changed || disabled}
+            onClick={() =>
+              onSend(
+                "Busca disponibilidad del " +
+                  dates.checkIn +
+                  " al " +
+                  dates.checkOut +
+                  " para " +
+                  people(guests) +
+                  ".",
+              )
+            }
+            className="bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Buscar
+          </button>
+        </div>
+      </div>
+      {att.rooms.length ? (
+        <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+          {att.rooms.map((r) => (
+            <div
+              key={r.room_id}
+              className="w-44 shrink-0 snap-start bg-white shadow-sm ring-1 ring-neutral-100"
+            >
+              {r.image_url ? (
+                <img src={r.image_url} alt="" className="h-24 w-full object-cover" loading="lazy" />
+              ) : (
+                <div className="h-24 bg-neutral-100" />
+              )}
+              <div className="space-y-1 p-2">
+                <p className="truncate text-sm font-semibold">
+                  {r.type ?? "Habitación"} · {r.room}
+                </p>
+                <p className="text-[11px] text-neutral-500">
+                  Hasta {r.capacity} personas · {nights} {nights === 1 ? "noche" : "noches"}
+                </p>
+                <p className="text-sm font-semibold text-[var(--brand)]">
+                  {eur(r.price_total)}{" "}
+                  <span className="text-[11px] font-normal text-neutral-500">
+                    ({eur(r.price_per_night)}/noche)
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() =>
+                    onSend(
+                      "Elijo la habitación " +
+                        r.room +
+                        (r.type ? " (" + r.type + ")" : "") +
+                        " del " +
+                        att.search.check_in +
+                        " al " +
+                        att.search.check_out +
+                        " para " +
+                        people(att.search.guests) +
+                        ".",
+                    )
+                  }
+                  className="w-full bg-[var(--brand)] py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                >
+                  Elegir
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Extras the guest can add, with quantities. */
+function ExtrasPicker({
+  att,
+  onSend,
+  disabled,
+}: {
+  att: Extract<Attachment, { kind: "extras" }>;
+  onSend: (text: string) => void;
+  disabled: boolean;
+}) {
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const picked = att.extras.filter((e) => (qty[e.extra_id] ?? 0) > 0);
+  return (
+    <div className="space-y-2 bg-white p-2 ring-1 ring-neutral-100">
+      {att.extras.map((e) => (
+        <div key={e.extra_id} className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm">{e.name}</p>
+            <p className="text-[11px] text-neutral-500">{eur(e.price)}</p>
+          </div>
+          <Stepper
+            value={qty[e.extra_id] ?? 0}
+            min={0}
+            max={20}
+            onChange={(v) => setQty((q) => ({ ...q, [e.extra_id]: v }))}
+            label={e.name}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        disabled={!picked.length || disabled}
+        onClick={() =>
+          onSend(
+            "Quiero añadir estos extras: " +
+              picked.map((e) => e.name + " ×" + qty[e.extra_id]).join(", ") +
+              ".",
+          )
+        }
+        className="w-full bg-[var(--brand)] py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+      >
+        Añadir a mi reserva
+      </button>
+    </div>
+  );
 }
 interface Line {
   role: "user" | "assistant";
@@ -60,10 +286,10 @@ export function AgentChat() {
   // Part of the AI package: hotels without it do not show it.
   if (!features.ai_agent) return null;
 
-  const send = async () => {
-    const message = text.trim();
+  const send = async (typed?: string) => {
+    const message = (typed ?? text).trim();
     if (!message || busy) return;
-    setText("");
+    if (typed === undefined) setText("");
     setLines((l) => [...l, { role: "user", text: message }]);
     setBusy(true);
     try {
@@ -144,28 +370,40 @@ export function AgentChat() {
                   </div>
                 </div>
               ) : (
-                <div key={i} className="max-w-[88%] space-y-2">
+                <div key={i} className="max-w-[92%] space-y-2">
                   <div className="bg-white px-3 py-2 text-neutral-800 shadow-sm ring-1 ring-neutral-100">
                     <Formatted text={l.text} />
                   </div>
-                  {l.attachments?.map((a) => (
-                    <a
-                      key={a.url}
-                      href={a.url}
-                      className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold ${
-                        a.kind === "payment"
-                          ? "bg-[var(--brand)] text-white"
-                          : "border border-[var(--brand)] bg-white text-[var(--brand)]"
-                      }`}
-                    >
-                      {a.kind === "payment" ? (
-                        <CreditCard className="h-4 w-4" />
-                      ) : (
-                        <ExternalLink className="h-4 w-4" />
-                      )}
-                      {a.label}
-                    </a>
-                  ))}
+                  {l.attachments?.map((a) =>
+                    a.kind === "rooms" ? (
+                      <RoomCards
+                        key="rooms"
+                        att={a}
+                        tenantId={tenant?.id}
+                        onSend={send}
+                        disabled={busy}
+                      />
+                    ) : a.kind === "extras" ? (
+                      <ExtrasPicker key="extras" att={a} onSend={send} disabled={busy} />
+                    ) : (
+                      <a
+                        key={a.url}
+                        href={a.url}
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold ${
+                          a.kind === "payment"
+                            ? "bg-[var(--brand)] text-white"
+                            : "border border-[var(--brand)] bg-white text-[var(--brand)]"
+                        }`}
+                      >
+                        {a.kind === "payment" ? (
+                          <CreditCard className="h-4 w-4" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4" />
+                        )}
+                        {a.label}
+                      </a>
+                    ),
+                  )}
                 </div>
               ),
             )}
@@ -187,7 +425,7 @@ export function AgentChat() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              send();
+              void send();
             }}
             className="flex items-end gap-2 border-t border-neutral-200 bg-white p-3"
           >

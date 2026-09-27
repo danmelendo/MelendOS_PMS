@@ -13,6 +13,7 @@ import {
   runAgentTurn,
   toolSpecs,
   cancellationGuard,
+  recoveryGuard,
 } from "./loop.ts";
 
 const ctx: ToolContext = {
@@ -140,8 +141,10 @@ describe("runAgentTurn", () => {
     expect(r.outcome).toBe("payment_link");
     expect(r.reservationId).toBe("c0ffee00-1111-2222-3333-444455556666");
     expect(r.attachments.map((a) => a.kind)).toEqual(["manage", "payment"]);
-    expect(r.attachments[1].url).toMatch(/^https:\/\/hotel\.example\/web\/checkout\//);
-    expect(r.attachments[1].label).toBe("Pagar la reserva (200,00 €)");
+    expect(r.attachments[1]).toMatchObject({ kind: "payment" });
+    const pay = r.attachments[1] as { url: string; label: string };
+    expect(pay.url).toMatch(/^https:\/\/hotel\.example\/web\/checkout\//);
+    expect(pay.label).toBe("Pagar la reserva (200,00 €)");
   });
 
   it("returns tool errors to the model instead of failing", async () => {
@@ -182,7 +185,7 @@ describe("runAgentTurn", () => {
 
   it("publishes the tools without JSON Schema noise", () => {
     const specs = toolSpecs();
-    expect(specs).toHaveLength(7);
+    expect(specs).toHaveLength(9);
     expect(specs[0].function.parameters).not.toHaveProperty("$schema");
     expect(specs[0].function.parameters.type).toBe("object");
   });
@@ -220,7 +223,9 @@ describe("links with the booking token", () => {
     expect(toolMsg.content).not.toMatch(/\?t=/);
     expect(r.reply).toBe("Hecho. Gestiona tu reserva o entra en");
     // Paying the deposit is offered even if the model forgets the payment link.
-    expect(r.attachments.find((a) => a.kind === "payment")?.url).toMatch(/\/web\/checkout\//);
+    expect(
+      (r.attachments.find((a) => a.kind === "payment") as { url?: string } | undefined)?.url,
+    ).toMatch(/\/web\/checkout\//);
   });
 
   it("cleanReply drops every URL the model writes, invented ones included", () => {
@@ -429,5 +434,88 @@ describe("cancellation confirmed by the guest", () => {
       cancellationGuard("cancel_booking", { ...args, confirm: true }, [terms("B2000000")]),
     ).toBeNull();
     expect(cancellationGuard("get_booking", { ...args, confirm: true }, [])).toBeNull();
+  });
+});
+
+describe("rich chat", () => {
+  it("turns a search into room cards with photos the model never sees", async () => {
+    const { llm, calls } = scripted([
+      {
+        toolCalls: [
+          call("search_availability", {
+            check_in: "2026-10-01",
+            check_out: "2026-10-03",
+            guests: 2,
+          }),
+        ],
+      },
+      { content: "Tienes tres opciones debajo." },
+      { toolCalls: [call("list_extras", {})] },
+      { content: "Estos son los extras." },
+    ]);
+    const r = await runAgentTurn({
+      llm,
+      store: fakeStore().store,
+      ctx,
+      system: "sys",
+      history: [],
+      userMessage: "Habitación para 2 del 1 al 3 de octubre",
+    });
+    const cards = r.attachments.find((a) => a.kind === "rooms") as {
+      search: object;
+      rooms: { room: string; image_url: string | null; price_total: number }[];
+    };
+    expect(cards.search).toEqual({ check_in: "2026-10-01", check_out: "2026-10-03", guests: 2 });
+    expect(cards.rooms.map((x) => x.room)).toEqual(["102", "101", "201"]);
+    expect(cards.rooms[0]).toMatchObject({
+      image_url: "/imagenes/rooms/test.svg",
+      price_total: 160,
+    });
+    const toolMessage = calls[1].find((m) => m.role === "tool");
+    expect(String(toolMessage?.content)).not.toContain("image_url");
+
+    const extras = await runAgentTurn({
+      llm: scripted([{ toolCalls: [call("list_extras", {})] }, { content: "Mira los extras." }])
+        .llm,
+      store: fakeStore().store,
+      ctx,
+      system: "sys",
+      history: [],
+      userMessage: "¿Qué extras tenéis?",
+    });
+    expect(extras.attachments).toEqual([
+      {
+        kind: "extras",
+        extras: [
+          { extra_id: "x-breakfast", name: "Desayuno buffet", price: 18 },
+          { extra_id: "x-parking", name: "Parking", price: 22 },
+        ],
+      },
+    ]);
+  });
+
+  it("limits the attempts to recover a lost reference", () => {
+    const attempt = {
+      role: "tool" as const,
+      name: "recover_booking",
+      tool_call_id: "r",
+      content: "{}",
+    };
+    expect(recoveryGuard("recover_booking", [attempt, attempt])).toBeNull();
+    expect(recoveryGuard("recover_booking", [attempt, attempt, attempt])).toMatchObject({
+      error: { code: "too_many_attempts" },
+    });
+    expect(recoveryGuard("get_booking", [attempt, attempt, attempt])).toBeNull();
+  });
+});
+
+describe("extras are not invented", () => {
+  it("sends the model to list_extras when it prices extras on its own", () => {
+    const none = () => false;
+    expect(falseClaim("Tenemos:\n- Desayuno: 12,50 € por persona", none)).toMatch(/list_extras/);
+    expect(
+      falseClaim("¿Quieres añadir desayuno o parking?\nLa 104 cuesta 255,00 €.", none),
+    ).toBeNull();
+    expect(falseClaim("- Desayuno buffet: 18,00 €", (t) => t === "list_extras")).toBeNull();
   });
 });

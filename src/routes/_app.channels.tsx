@@ -53,6 +53,7 @@ const when = (iso: string | null) =>
 const codeOf = (name: string) =>
   name
     .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
     .replace(/[^A-Za-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .toUpperCase();

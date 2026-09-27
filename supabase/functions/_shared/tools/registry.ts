@@ -48,6 +48,8 @@ export interface CatalogRoom {
   rate_group_name: string | null;
   status: string;
   active: boolean;
+  /** Photo of the room (shown as a card in the chat, not given to the model). */
+  image_url?: string | null;
 }
 
 export interface BookingLookup {
@@ -70,11 +72,19 @@ export interface BookingLookup {
   property_name: string;
   /** Email of the booking's guest (customer or member), for identity checks. */
   guest_email: string | null;
+  /** Name of the booking's guest, to recover a lost reference. */
+  guest_name?: string | null;
 }
 
 export interface ToolStore extends BookingStore {
   listRooms(tenantId: string): Promise<CatalogRoom[]>;
   findBookingByReference(tenantId: string, reference: string): Promise<BookingLookup | null>;
+  /** Bookings of the hotel made with that email (case-insensitive). */
+  findBookingsByEmail(tenantId: string, email: string): Promise<BookingLookup[]>;
+  /** Extras the hotel sells with a stay. */
+  listExtras(
+    tenantId: string,
+  ): Promise<{ id: string; name: string; category: string; price: number }[]>;
   getBookingById(tenantId: string, id: string): Promise<BookingLookup | null>;
   createCancellationRequest(
     tenantId: string,
@@ -242,6 +252,7 @@ const searchAvailability = defineTool({
         price_total: b.total,
         price_per_night: perNight,
         dynamic_pricing: b.dynamicReason,
+        image_url: r.image_url ?? null,
       });
     }
     results.sort((a, b) => a.price_total - b.price_total);
@@ -429,6 +440,65 @@ const getBooking = defineTool({
   },
 });
 
+const listExtras = defineTool({
+  name: "list_extras",
+  description:
+    "Extras the guest can add to a stay (breakfast, parking, spa, late checkout…) with their price. Use their extra_id in quote_price and create_booking_draft.",
+  readOnly: true,
+  input: z.object({}),
+  async run(store, _input, ctx) {
+    const extras = await store.listExtras(ctx.tenantId);
+    return {
+      currency: "EUR",
+      extras: extras.map((e) => ({
+        extra_id: e.id,
+        name: e.name,
+        category: e.category,
+        price: e.price,
+      })),
+    };
+  },
+});
+
+/** "Gómez-Ruiz" → "gomez ruiz", to compare names typed by guests. */
+const plain = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[^a-zA-Z0-9 ]+/g, " ")
+    .toLowerCase()
+    .replace(/ +/g, " ")
+    .trim();
+
+const recoverBooking = defineTool({
+  name: "recover_booking",
+  description:
+    "Find the reference of a booking the guest has lost, after verifying who they are: the email of the booking, their surname and the arrival date. Answers only when exactly one booking matches all three.",
+  readOnly: true,
+  input: z.object({
+    email,
+    last_name: z.string().trim().min(2).max(80).describe("Guest's surname"),
+    check_in: ymd.describe("Arrival date as the guest states it (yyyy-MM-dd)"),
+  }),
+  async run(store, input, ctx) {
+    const { timezone } = await store.getTenantSettings(ctx.tenantId);
+    const surname = plain(input.last_name);
+    const matches = (await store.findBookingsByEmail(ctx.tenantId, input.email)).filter(
+      (b) =>
+        ["pending", "confirmed", "in_progress"].includes(b.status) &&
+        ymdInZone(b.start_at, timezone) === input.check_in &&
+        plain(b.guest_name ?? "")
+          .split(" ")
+          .includes(surname.split(" ").at(-1) ?? surname),
+    );
+    // Nothing, or more than one: the same answer, so nothing can be probed.
+    if (matches.length !== 1) {
+      throw new ToolError("not_found", "No booking matches those details");
+    }
+    return publicBooking(matches[0]);
+  },
+});
+
 const cancelBooking = defineTool({
   name: "cancel_booking",
   description:
@@ -517,7 +587,9 @@ export const TOOLS = [
   quotePrice,
   createDraft,
   createPaymentLink,
+  listExtras,
   getBooking,
+  recoverBooking,
   cancelBooking,
 ] as const;
 

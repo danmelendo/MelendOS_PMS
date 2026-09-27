@@ -22,12 +22,31 @@ export type Outcome =
   | "refused"
   | "error";
 
-/** Buttons the web shows under the answer (links come from tools, not the model). */
-export interface Attachment {
-  kind: "manage" | "payment";
-  label: string;
-  url: string;
+/** A room offered in the chat as a card (from search_availability). */
+export interface RoomCard {
+  room_id: string;
+  room: string;
+  hotel: string;
+  type: string | null;
+  capacity: number;
+  price_total: number;
+  price_per_night: number;
+  image_url: string | null;
 }
+
+/**
+ * What the web shows under the answer, built from what the tools did (never
+ * from the model's text): link buttons, room cards with the search to adjust,
+ * and the extras the guest can add.
+ */
+export type Attachment =
+  | { kind: "manage" | "payment"; label: string; url: string }
+  | {
+      kind: "rooms";
+      search: { check_in: string; check_out: string; guests: number };
+      rooms: RoomCard[];
+    }
+  | { kind: "extras"; extras: { extra_id: string; name: string; price: number }[] };
 
 export interface TurnResult {
   reply: string;
@@ -86,8 +105,18 @@ function attach(list: Attachment[], a: Attachment) {
  */
 function withoutLinks(data: Record<string, unknown>) {
   const { manage_url: _m, payment_url: _p, ...rest } = data;
+  // Room photos go to the cards, not to the model.
+  if (Array.isArray(rest.results)) {
+    rest.results = rest.results.map((r) => {
+      const { image_url: _i, ...room } = r as Record<string, unknown>;
+      return room;
+    });
+  }
   return rest;
 }
+
+/** A guest may try to recover a lost reference a few times per conversation. */
+export const MAX_RECOVERY_ATTEMPTS = 3;
 
 /** 139.5 EUR → 139,50 € (small models ignore the formatting rule). */
 function spanishPrices(text: string): string {
@@ -145,6 +174,17 @@ export function falseClaim(reply: string, done: (tool: string) => boolean): stri
   if (cancelled && !done("cancel_booking")) {
     return "Nota del sistema (el cliente no la ve): la reserva NO se ha cancelado porque no has llamado a cancel_booking. Llámala con la referencia, el email y la fecha de llegada que te dé el cliente, o pídele lo que falte.";
   }
+  // A line that prices an extra, without the hotel's list of extras: invented.
+  const pricedExtra = text
+    .split("\n")
+    .some((line) =>
+      /(desayuno|parking|aparcamiento|garaje|spa|masaje|traslado|late check|salida tard|extra)[^\n]*\d+(?:[.,]\d+)?\s?(€|eur)/.test(
+        line,
+      ),
+    );
+  if (pricedExtra && !done("list_extras")) {
+    return "Nota del sistema (el cliente no la ve): no inventes extras ni precios. Llama a list_extras y usa solo lo que devuelva.";
+  }
   return null;
 }
 
@@ -167,7 +207,34 @@ export function looksOffTopic(reply: string): boolean {
   );
 }
 
-const EMAIL_TOOLS = new Set(["create_booking_draft", "get_booking", "cancel_booking"]);
+const EMAIL_TOOLS = new Set([
+  "create_booking_draft",
+  "get_booking",
+  "cancel_booking",
+  "recover_booking",
+]);
+
+/**
+ * Recovering a lost reference is limited per conversation, so nobody can try
+ * surnames or dates until one fits.
+ */
+export function recoveryGuard(
+  name: string,
+  messages: ChatMessage[],
+): { ok: false; error: { code: string; message: string } } | null {
+  if (name !== "recover_booking") return null;
+  const tries = messages.filter((m) => m.role === "tool" && m.name === "recover_booking").length;
+  return tries < MAX_RECOVERY_ATTEMPTS
+    ? null
+    : {
+        ok: false,
+        error: {
+          code: "too_many_attempts",
+          message:
+            "Demasiados intentos. Dile al cliente que escriba a recepción del hotel para recuperar su reserva.",
+        },
+      };
+}
 
 /**
  * A cancellation is confirmed by the guest, not by the model: cancel_booking
@@ -271,6 +338,8 @@ export async function runAgentTurn(
   let nudged = false;
   const failed = new Set<string>();
   const done = (tool: string) => result.toolsCalled.includes(tool) && !failed.has(tool);
+  // Extras listed earlier in the conversation may be quoted again.
+  const listedBefore = opts.history.some((m) => m.role === "tool" && m.name === "list_extras");
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const messages: ChatMessage[] = [
@@ -294,7 +363,10 @@ export async function runAgentTurn(
     if (!res.toolCalls.length) {
       // A small model may say it booked or asked to cancel without doing it.
       // Once per turn, tell it and let it act (or ask for what is missing).
-      const claim = falseClaim(res.content ?? "", done);
+      const claim = falseClaim(
+        res.content ?? "",
+        (t) => done(t) || (t === "list_extras" && listedBefore),
+      );
       if (claim && !nudged) {
         nudged = true;
         nudge = [
@@ -324,7 +396,9 @@ export async function runAgentTurn(
         guestDataGuard(name, args, [
           ...opts.history.filter((m) => m.role === "user").map((m) => String(m.content)),
           opts.userMessage,
-        ]) ?? cancellationGuard(name, args, opts.history);
+        ]) ??
+        cancellationGuard(name, args, opts.history) ??
+        recoveryGuard(name, [...opts.history, ...turn]);
       const out = refused ?? (await box.run(name, args));
       if (!out.ok) failed.add(name);
       else failed.delete(name);
@@ -362,6 +436,33 @@ export async function runAgentTurn(
           result.outcome === "answered"
         ) {
           result.outcome = "handoff";
+        } else if (name === "search_availability" && Array.isArray(data.results)) {
+          // Cards with photo and price, plus the search the guest can adjust.
+          attach(result.attachments, {
+            kind: "rooms",
+            search: {
+              check_in: String(data.check_in),
+              check_out: String(data.check_out),
+              guests: Number(data.guests),
+            },
+            rooms: (data.results as RoomCard[]).map((r) => ({
+              room_id: r.room_id,
+              room: r.room,
+              hotel: r.hotel,
+              type: r.type,
+              capacity: r.capacity,
+              price_total: r.price_total,
+              price_per_night: r.price_per_night,
+              image_url: r.image_url ?? null,
+            })),
+          });
+        } else if (name === "list_extras" && Array.isArray(data.extras)) {
+          attach(result.attachments, {
+            kind: "extras",
+            extras: (data.extras as { extra_id: string; name: string; price: number }[]).map(
+              (e) => ({ extra_id: e.extra_id, name: e.name, price: e.price }),
+            ),
+          });
         }
       }
       turn.push({

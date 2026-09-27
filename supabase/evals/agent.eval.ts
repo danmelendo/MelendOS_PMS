@@ -166,12 +166,44 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_SECRET_KEY)(`booking agent · ${MODEL
     {
       name: "busca en cuanto tiene fechas y personas",
       turns: ["Hola, ¿tenéis habitación para 2 personas del 20 al 23 de noviembre?"],
-      check: ({ calls }) => {
+      check: ({ calls, turns }) => {
         const s = calls.find((c) => c.name === "search_availability");
         if (!s) return "no llamó a search_availability";
         if (s.args.check_in !== next(11, 20) || s.args.check_out !== next(11, 23))
           return `fechas ${s.args.check_in} → ${s.args.check_out}`;
-        return s.args.guests === 2 ? null : `guests ${s.args.guests}`;
+        if (s.args.guests !== 2) return `guests ${s.args.guests}`;
+        return turns[0].attachments.some((a) => a.kind === "rooms")
+          ? null
+          : "sin tarjetas de habitaciones";
+      },
+    },
+    {
+      name: "enseña los extras reales, sin inventar precios",
+      turns: ["¿Qué extras tenéis? ¿Cuánto cuesta el desayuno buffet?"],
+      check: async ({ calls, replies }) => {
+        if (!calls.some((c) => c.name === "list_extras")) return "no consultó los extras";
+        const { data } = await db
+          .from("extras")
+          .select("price")
+          .eq("tenant_id", ctx.tenantId)
+          .eq("name", "Desayuno buffet")
+          .single();
+        const price = String(Number(data?.price ?? 0));
+        return replies[0].includes(price)
+          ? null
+          : `no da el precio real (${price} €): «${replies[0].slice(0, 140)}»`;
+      },
+    },
+    {
+      name: "recupera una referencia perdida verificando al huésped",
+      turns: [
+        `He perdido la referencia de mi reserva. Mi email es ${EVAL_EMAIL}, me apellido Prueba y llego el ${toKeep.arrival}.`,
+      ],
+      check: ({ calls, replies }) => {
+        if (!calls.some((c) => c.name === "recover_booking")) return "no usó recover_booking";
+        return replies[0].includes(toKeep.reference)
+          ? null
+          : `no da la referencia ${toKeep.reference}: «${replies[0].slice(0, 140)}»`;
       },
     },
     {
