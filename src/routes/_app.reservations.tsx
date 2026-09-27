@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Fragment, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,18 +65,61 @@ function ReservationsPage() {
     setCancelNote("");
   };
 
+  // Search in the database, over every booking: by reference (also partial,
+  // e.g. what a guest reads out on the phone), name, email or phone.
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const { data: reservations } = useQuery({
-    queryKey: ["reservations", "list"],
+    queryKey: ["reservations", "list", query],
+    placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .select(
-          "*, rooms(id,name,building), customers(id,name,phone), channels(name), reservation_extras(qty,is_gift,extras(name,category))",
-        )
-        .order("start_at", { ascending: false })
-        .limit(200);
+      const cols =
+        "*, rooms(id,name,building), customers(id,name,phone,email), channels(name), reservation_extras(qty,is_gift,extras(name,category))";
+      if (!query) {
+        const { data, error } = await supabase
+          .from("reservations")
+          .select(cols)
+          .order("start_at", { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        return data;
+      }
+      const like = `%${query.replace(/[%_,()]/g, "")}%`;
+      const [byRef, byGuest, byRoom] = await Promise.all([
+        supabase
+          .from("reservations")
+          .select(cols)
+          .ilike("reference", `${query.replace(/[^0-9a-f]/gi, "").toUpperCase()}%`)
+          .limit(50),
+        supabase
+          .from("reservations")
+          .select(cols.replace("customers(", "customers!inner("))
+          .or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`, {
+            referencedTable: "customers",
+          })
+          .order("start_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("reservations")
+          .select(cols.replace("rooms(", "rooms!inner("))
+          .ilike("rooms.name", like)
+          .order("start_at", { ascending: false })
+          .limit(100),
+      ]);
+      const error = byRef.error ?? byGuest.error ?? byRoom.error;
       if (error) throw error;
-      return data;
+      const seen = new Map<string, NonNullable<typeof byRef.data>[number]>();
+      for (const r of [
+        ...(/[0-9a-f]{3,}/i.test(query) ? (byRef.data ?? []) : []),
+        ...((byGuest.data ?? []) as typeof byRef.data & object),
+        ...((byRoom.data ?? []) as typeof byRef.data & object),
+      ]) {
+        seen.set(r.id, r);
+      }
+      return [...seen.values()].sort((a, b) => b.start_at.localeCompare(a.start_at));
     },
   });
 
@@ -113,14 +156,6 @@ function ReservationsPage() {
   const filtered = reservations?.filter((r) => {
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
     if (buildingFilter !== "all" && buildingKey(r.rooms?.building) !== buildingFilter) return false;
-    if (search) {
-      const s = search.toLowerCase();
-      return (
-        r.customers?.name?.toLowerCase().includes(s) ||
-        r.customers?.phone?.includes(s) ||
-        r.rooms?.name.toLowerCase().includes(s)
-      );
-    }
     return true;
   });
 
@@ -142,7 +177,7 @@ function ReservationsPage() {
 
       <div className="flex gap-2 flex-wrap">
         <Input
-          placeholder="Buscar por nombre, teléfono o habitación"
+          placeholder="Buscar por referencia, nombre, email, teléfono o habitación"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -181,7 +216,7 @@ function ReservationsPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr className="text-left">
-                  <th className="p-2 font-medium">Fecha</th>
+                  <th className="p-2 font-medium">Referencia · fecha</th>
                   <th className="p-2 font-medium">Habitación</th>
                   <th className="p-2 font-medium">Cliente</th>
                   <th className="p-2 font-medium">Origen</th>
@@ -207,6 +242,9 @@ function ReservationsPage() {
                         }}
                       >
                         <td className="p-2">
+                          <div className="font-mono text-xs font-semibold tracking-wide">
+                            {r.reference}
+                          </div>
                           <div>{s.toLocaleDateString("es-ES")}</div>
                           <div className="text-xs text-muted-foreground font-mono">
                             {s.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}–
