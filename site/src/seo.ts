@@ -81,6 +81,13 @@ export const SEO: PageSeo[] = [
     noindex: true,
   },
   {
+    file: "admin/index.html",
+    path: "/admin/",
+    title: "Panel de leads · Melend/OS",
+    description: "Acceso del equipo de ventas.",
+    noindex: true,
+  },
+  {
     file: "404.html",
     path: "/404",
     title: "Página no encontrada · Melend/OS",
@@ -185,5 +192,5 @@ export function sitemap(base: string, lastmod: string) {
 }
 
 export function robots(base: string) {
-  return `User-agent: *\nAllow: /\nDisallow: /404\n\nSitemap: ${base}/sitemap.xml\n`;
+  return `User-agent: *\nAllow: /\nDisallow: /404\nDisallow: /admin/\n\nSitemap: ${base}/sitemap.xml\n`;
 }

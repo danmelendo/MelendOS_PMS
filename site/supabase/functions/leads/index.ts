@@ -7,11 +7,13 @@
 //
 // Only free times leave this function, never who booked the others. Abuse
 // limits: a honeypot field (`website`), 3 leads per email and 5 per IP a day,
-// one live call per slot (unique index). If SALES_WEBHOOK_URL is set, each lead
-// is posted there (Slack, Discord, a CRM…); a failed notification never fails
-// the lead.
+// one live call per slot (unique index). Each new lead is emailed to
+// LEADS_NOTIFY_EMAIL through Resend (RESEND_API_KEY, sender LEADS_FROM_EMAIL,
+// panel link from SITE_URL) and, if SALES_WEBHOOK_URL is set, posted there
+// (Slack, Discord, a CRM…). A failed notification never fails the lead.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { demoSlots, DEMO_TIMEZONE } from "../_shared/slots.ts";
+import { leadEmail } from "../_shared/lead-email.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": Deno.env.get("SITE_ORIGIN") ?? "*",
@@ -138,6 +140,28 @@ Deno.serve(async (req) => {
       // Unique slot index: someone booked the same time a moment ago.
       if (error.code === "23505") return json({ error: TAKEN_MSG }, 409);
       throw error;
+    }
+
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    const notifyTo = Deno.env.get("LEADS_NOTIFY_EMAIL");
+    if (resendKey && notifyTo) {
+      const mail = leadEmail({ id: data.id, ...lead }, Deno.env.get("SITE_URL"));
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: Deno.env.get("LEADS_FROM_EMAIL") ?? "Melend/OS <onboarding@resend.dev>",
+          to: notifyTo.split(",").map((e) => e.trim()),
+          reply_to: email,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+        }),
+      })
+        .then(async (r) => {
+          if (!r.ok) console.error(`lead email failed: ${r.status} ${await r.text()}`);
+        })
+        .catch((e) => console.error(`lead email failed: ${(e as Error).message}`));
     }
 
     const hook = Deno.env.get("SALES_WEBHOOK_URL");

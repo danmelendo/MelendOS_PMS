@@ -18,6 +18,7 @@ const PAGES = {
   "precios/index.html": ["/src/pages/Pricing.tsx", "PricingPage"],
   "demo/index.html": ["/src/pages/Demo.tsx", "DemoPage"],
   "privacidad/index.html": ["/src/pages/Privacy.tsx", "PrivacyPage"],
+  "admin/index.html": ["/src/pages/Admin.tsx", "AdminPage"],
   "404.html": ["/src/pages/NotFound.tsx", "NotFoundPage"],
 };
 
