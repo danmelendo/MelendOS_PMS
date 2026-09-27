@@ -50,7 +50,7 @@ export interface LeadInput {
 }
 
 export async function submitLead(lead: LeadInput) {
-  const res = await call<{ id: string; slot: string | null }>({
+  const res = await call<{ id: string; slot: string | null; confirmation?: boolean }>({
     action: "submit",
     ...lead,
     ...attribution(),

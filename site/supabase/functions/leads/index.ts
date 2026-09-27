@@ -3,17 +3,39 @@
 // { action: "submit", kind: "demo" | "contact", slot?, name, email, company,
 //   phone?, hotels?, rooms?, plan?, message?, privacy_ok, marketing_ok?,
 //   utm_source?, utm_medium?, utm_campaign?, referrer?, page?, website? }
-//                      → { id, slot }
+//                      → { id, slot, confirmation }
 //
 // Only free times leave this function, never who booked the others. Abuse
 // limits: a honeypot field (`website`), 3 leads per email and 5 per IP a day,
-// one live call per slot (unique index). Each new lead is emailed to
-// LEADS_NOTIFY_EMAIL through Resend (RESEND_API_KEY, sender LEADS_FROM_EMAIL,
-// panel link from SITE_URL) and, if SALES_WEBHOOK_URL is set, posted there
-// (Slack, Discord, a CRM…). A failed notification never fails the lead.
+// one live call per slot (unique index). Emails through Resend (RESEND_API_KEY):
+// each new lead to LEADS_NOTIFY_EMAIL from LEADS_FROM_EMAIL (panel link from
+// SITE_URL), and a confirmation to the lead from CUSTOMER_FROM_EMAIL (the demo
+// with a calendar file, or that we got the request; replies go to sales). If
+// SALES_WEBHOOK_URL is set, the lead is also posted there. A failed
+// notification never fails the lead.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { demoSlots, DEMO_TIMEZONE } from "../_shared/slots.ts";
-import { leadEmail } from "../_shared/lead-email.ts";
+import { customerEmail, leadEmail } from "../_shared/lead-email.ts";
+
+const FALLBACK_FROM = "Melend/OS <onboarding@resend.dev>";
+
+const base64 = (text: string) => btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+
+/** Sends one email through Resend; returns the HTTP status (0 on network error). */
+async function sendEmail(key: string, body: Record<string, unknown>) {
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) console.error(`email to ${body.to} failed: ${r.status} ${await r.text()}`);
+    return r.status;
+  } catch (e) {
+    console.error(`email to ${body.to} failed: ${(e as Error).message}`);
+    return 0;
+  }
+}
 
 const cors = {
   "Access-Control-Allow-Origin": Deno.env.get("SITE_ORIGIN") ?? "*",
@@ -142,26 +164,55 @@ Deno.serve(async (req) => {
       throw error;
     }
 
+    // Whether the lead got its confirmation email (the page says so only then).
+    let confirmation = false;
     const resendKey = Deno.env.get("RESEND_API_KEY");
-    const notifyTo = Deno.env.get("LEADS_NOTIFY_EMAIL");
-    if (resendKey && notifyTo) {
-      const mail = leadEmail({ id: data.id, ...lead }, Deno.env.get("SITE_URL"));
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: Deno.env.get("LEADS_FROM_EMAIL") ?? "Melend/OS <onboarding@resend.dev>",
-          to: notifyTo.split(",").map((e) => e.trim()),
+    if (resendKey) {
+      const stored = { id: data.id, ...lead };
+      const siteUrl = Deno.env.get("SITE_URL");
+      const notifyTo = Deno.env
+        .get("LEADS_NOTIFY_EMAIL")
+        ?.split(",")
+        .map((e) => e.trim());
+      const customerFrom = Deno.env.get("CUSTOMER_FROM_EMAIL");
+      const jobs: Promise<unknown>[] = [];
+      if (notifyTo?.length) {
+        const mail = leadEmail(stored, siteUrl);
+        const payload = {
+          to: notifyTo,
           reply_to: email,
           subject: mail.subject,
           html: mail.html,
           text: mail.text,
-        }),
-      })
-        .then(async (r) => {
-          if (!r.ok) console.error(`lead email failed: ${r.status} ${await r.text()}`);
-        })
-        .catch((e) => console.error(`lead email failed: ${(e as Error).message}`));
+        };
+        const from = Deno.env.get("LEADS_FROM_EMAIL") ?? FALLBACK_FROM;
+        // If the own domain is not verified (yet), Resend refuses it: sales
+        // still gets the lead from Resend's test sender.
+        jobs.push(
+          sendEmail(resendKey, { from, ...payload }).then((status) =>
+            status === 403 && from !== FALLBACK_FROM
+              ? sendEmail(resendKey, { from: FALLBACK_FROM, ...payload })
+              : status,
+          ),
+        );
+      }
+      if (customerFrom) {
+        const mail = customerEmail(stored, siteUrl);
+        jobs.push(
+          sendEmail(resendKey, {
+            from: customerFrom,
+            to: [email],
+            reply_to: notifyTo?.[0],
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+            attachments: mail.ics
+              ? [{ filename: "demo-melendos.ics", content: base64(mail.ics) }]
+              : undefined,
+          }).then((status) => (confirmation = status === 200)),
+        );
+      }
+      await Promise.allSettled(jobs);
     }
 
     const hook = Deno.env.get("SALES_WEBHOOK_URL");
@@ -183,7 +234,7 @@ Deno.serve(async (req) => {
       }).catch((e) => console.error(`sales webhook failed: ${(e as Error).message}`));
     }
 
-    return json({ id: data.id, slot: data.slot_start });
+    return json({ id: data.id, slot: data.slot_start, confirmation });
   } catch (e) {
     console.error(`leads failed: ${(e as Error).message}`);
     return json({ error: "No se pudo enviar. Inténtalo de nuevo en un momento." }, 500);
