@@ -2168,6 +2168,162 @@ export type Database = {
           },
         ]
       }
+      ses_communications: {
+        Row: {
+          attempts: number
+          batch: string | null
+          batch_order: number | null
+          created_at: string
+          due_at: string
+          error: string | null
+          id: string
+          kind: string
+          operation: string
+          reservation_id: string
+          resolved_at: string | null
+          sent_at: string | null
+          ses_code: string | null
+          status: string
+          target_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          batch?: string | null
+          batch_order?: number | null
+          created_at?: string
+          due_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          operation?: string
+          reservation_id: string
+          resolved_at?: string | null
+          sent_at?: string | null
+          ses_code?: string | null
+          status?: string
+          target_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          batch?: string | null
+          batch_order?: number | null
+          created_at?: string
+          due_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          operation?: string
+          reservation_id?: string
+          resolved_at?: string | null
+          sent_at?: string | null
+          ses_code?: string | null
+          status?: string
+          target_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ses_communications_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "ses_communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ses_communications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ses_communications_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      ses_establishments: {
+        Row: {
+          code: string
+          property_id: string
+          tenant_id: string
+        }
+        Insert: {
+          code: string
+          property_id: string
+          tenant_id: string
+        }
+        Update: {
+          code?: string
+          property_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ses_establishments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ses_establishments_tenant_id_property_id_fkey"
+            columns: ["tenant_id", "property_id"]
+            isOneToOne: true
+            referencedRelation: "properties"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      ses_settings: {
+        Row: {
+          app_name: string
+          enabled: boolean
+          environment: string
+          has_credentials: boolean
+          landlord_code: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          app_name?: string
+          enabled?: boolean
+          environment?: string
+          has_credentials?: boolean
+          landlord_code?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          app_name?: string
+          enabled?: boolean
+          environment?: string
+          has_credentials?: boolean
+          landlord_code?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ses_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       signatures: {
         Row: {
           created_at: string
@@ -2441,6 +2597,108 @@ export type Database = {
           },
         ]
       }
+      stay_travellers: {
+        Row: {
+          address: string | null
+          address_extra: string | null
+          birth_date: string | null
+          country: string | null
+          created_at: string
+          document_number: string | null
+          document_support: string | null
+          document_type: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_holder: boolean
+          kinship: string | null
+          last_name1: string | null
+          last_name2: string | null
+          municipality_code: string | null
+          municipality_name: string | null
+          nationality: string | null
+          phone: string | null
+          phone2: string | null
+          postal_code: string | null
+          reservation_id: string
+          sex: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          address_extra?: string | null
+          birth_date?: string | null
+          country?: string | null
+          created_at?: string
+          document_number?: string | null
+          document_support?: string | null
+          document_type?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_holder?: boolean
+          kinship?: string | null
+          last_name1?: string | null
+          last_name2?: string | null
+          municipality_code?: string | null
+          municipality_name?: string | null
+          nationality?: string | null
+          phone?: string | null
+          phone2?: string | null
+          postal_code?: string | null
+          reservation_id: string
+          sex?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          address_extra?: string | null
+          birth_date?: string | null
+          country?: string | null
+          created_at?: string
+          document_number?: string | null
+          document_support?: string | null
+          document_type?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_holder?: boolean
+          kinship?: string | null
+          last_name1?: string | null
+          last_name2?: string | null
+          municipality_code?: string | null
+          municipality_name?: string | null
+          nationality?: string | null
+          phone?: string | null
+          phone2?: string | null
+          postal_code?: string | null
+          reservation_id?: string
+          sex?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_travellers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_travellers_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -2652,6 +2910,7 @@ export type Database = {
       }
       delete_channel: { Args: { p_channel: string }; Returns: undefined }
       delete_customer: { Args: { p_customer_id: string }; Returns: string }
+      delete_stay_traveller: { Args: { p_id: string }; Returns: undefined }
       extend_cleaning_and_shift: {
         Args: { p_cleaning_minutes: number; p_reservation_id: string }
         Returns: number
@@ -2830,6 +3089,22 @@ export type Database = {
       is_tenant_staff: { Args: { p_tenant: string }; Returns: boolean }
       lake_tenants: { Args: never; Returns: string[] }
       list_mcp_tokens: { Args: { p_tenant: string }; Returns: Json }
+      list_stay_travellers: {
+        Args: { p_reservation: string }
+        Returns: {
+          document_hint: string
+          document_type: string
+          first_name: string
+          id: string
+          is_holder: boolean
+          is_minor: boolean
+          kinship: string
+          last_name1: string
+          last_name2: string
+          missing: string[]
+          nationality: string
+        }[]
+      }
       mcp_token_auth: { Args: { p_token_hash: string }; Returns: Json }
       module_package: { Args: { p_feature: string }; Returns: string }
       order_service: {
@@ -2882,6 +3157,23 @@ export type Database = {
         Args: { p_customer_id: string; p_data: Json }
         Returns: undefined
       }
+      save_ses_credentials: {
+        Args: {
+          p_ca_cert?: string
+          p_password: string
+          p_tenant: string
+          p_user: string
+        }
+        Returns: undefined
+      }
+      save_ses_settings: {
+        Args: { p_data: Json; p_tenant: string }
+        Returns: undefined
+      }
+      save_stay_traveller: {
+        Args: { p_data: Json; p_id?: string; p_reservation: string }
+        Returns: string
+      }
       seconds_since_sign_in: { Args: never; Returns: number }
       send_stay_message: {
         Args: {
@@ -2891,6 +3183,16 @@ export type Database = {
           p_token: string
         }
         Returns: string
+      }
+      ses_credentials: { Args: { p_tenant: string }; Returns: Json }
+      ses_dispatch_tick: { Args: never; Returns: undefined }
+      ses_retry: { Args: { p_id: string }; Returns: undefined }
+      ses_traveller_missing: {
+        Args: {
+          p_check_in: string
+          t: Database["public"]["Tables"]["stay_travellers"]["Row"]
+        }
+        Returns: string[]
       }
       sign_guest_registration: {
         Args: {

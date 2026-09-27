@@ -28,6 +28,7 @@ import { Route as StaysInvoicesRouteImport } from './routes/stays.invoices'
 import { Route as StaysIncidentsRouteImport } from './routes/stays.incidents'
 import { Route as StaysExperiencesRouteImport } from './routes/stays.experiences'
 import { Route as StaysAccountRouteImport } from './routes/stays.account'
+import { Route as AppTravellersRouteImport } from './routes/_app.travellers'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppReviewsRouteImport } from './routes/_app.reviews'
@@ -154,6 +155,11 @@ const StaysAccountRoute = StaysAccountRouteImport.update({
   id: '/account',
   path: '/account',
   getParentRoute: () => StaysRoute,
+} as any)
+const AppTravellersRoute = AppTravellersRouteImport.update({
+  id: '/travellers',
+  path: '/travellers',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppTodayRoute = AppTodayRouteImport.update({
   id: '/today',
@@ -338,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/reviews': typeof AppReviewsRoute
   '/rooms': typeof AppRoomsRoute
   '/today': typeof AppTodayRoute
+  '/travellers': typeof AppTravellersRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
   '/stays/incidents': typeof StaysIncidentsRoute
@@ -388,6 +395,7 @@ export interface FileRoutesByTo {
   '/reviews': typeof AppReviewsRoute
   '/rooms': typeof AppRoomsRoute
   '/today': typeof AppTodayRoute
+  '/travellers': typeof AppTravellersRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
   '/stays/incidents': typeof StaysIncidentsRoute
@@ -442,6 +450,7 @@ export interface FileRoutesById {
   '/_app/reviews': typeof AppReviewsRoute
   '/_app/rooms': typeof AppRoomsRoute
   '/_app/today': typeof AppTodayRoute
+  '/_app/travellers': typeof AppTravellersRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
   '/stays/incidents': typeof StaysIncidentsRoute
@@ -496,6 +505,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/rooms'
     | '/today'
+    | '/travellers'
     | '/stays/account'
     | '/stays/experiences'
     | '/stays/incidents'
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/rooms'
     | '/today'
+    | '/travellers'
     | '/stays/account'
     | '/stays/experiences'
     | '/stays/incidents'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/_app/reviews'
     | '/_app/rooms'
     | '/_app/today'
+    | '/_app/travellers'
     | '/stays/account'
     | '/stays/experiences'
     | '/stays/incidents'
@@ -774,6 +786,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/stays/account'
       preLoaderRoute: typeof StaysAccountRouteImport
       parentRoute: typeof StaysRoute
+    }
+    '/_app/travellers': {
+      id: '/_app/travellers'
+      path: '/travellers'
+      fullPath: '/travellers'
+      preLoaderRoute: typeof AppTravellersRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/today': {
       id: '/_app/today'
@@ -1018,6 +1037,7 @@ interface AppRouteChildren {
   AppReviewsRoute: typeof AppReviewsRoute
   AppRoomsRoute: typeof AppRoomsRoute
   AppTodayRoute: typeof AppTodayRoute
+  AppTravellersRoute: typeof AppTravellersRoute
   AppAdminManualRoute: typeof AppAdminManualRoute
 }
 
@@ -1037,6 +1057,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReviewsRoute: AppReviewsRoute,
   AppRoomsRoute: AppRoomsRoute,
   AppTodayRoute: AppTodayRoute,
+  AppTravellersRoute: AppTravellersRoute,
   AppAdminManualRoute: AppAdminManualRoute,
 }
 

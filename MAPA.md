@@ -38,7 +38,7 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 | Desplegar una función a la demo                        | `npx supabase functions deploy <fn> --project-ref isqompyvktijdasgophh --use-api`                 |
 | Regenerar tipos de la base                             | `npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts` |
 | Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                      |
-| E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels}.mjs`                     |
+| E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses}.mjs`                 |
 | Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                 |
 | LLM local (Ollama)                                     | `node --env-file=.env scripts/llm-gateway.mjs` + túnel cloudflared (ver CLAUDE.md)                |
 
@@ -49,7 +49,8 @@ Flujo: rama desde `main` → PR → CI en verde → squash merge (permisos ya co
 ```
 src/                                Frontend (TanStack Start/Router, React 19, Tailwind v4, shadcn, TanStack Query)
   routes/_app.*.tsx                 Panel: today, calendar, reservations, customers, messages, reports, reviews,
-                                    rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos)
+                                    rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos),
+                                    travellers (registro de viajeros SES.HOSPEDAJES)
   routes/web.*.tsx                  Web pública: hoteles, habitación, reservar, checkout, mi-reserva, chat, firma
   routes/stays.*.tsx                App del huésped: descubrir, reservar, viajes, club, cuenta, chat
   components/                       UI compartida (AppSidebar, CopilotWidget, AgentChat, CustomerDrawer,
@@ -99,6 +100,7 @@ site/                               Web comercial de Melend/OS (landing, hostale
 | Agente de reservas (web)                      | `agent-chat` + `_shared/agent` + `tools/registry.ts`; cancela con `cancel_booking` en dos pasos                                                  |
 | Copiloto (panel)                              | `admin-copilot` + `_shared/copilot`; widget `CopilotWidget`                                                                                      |
 | Servidor MCP                                  | `mcp` + `_shared/mcp`; tokens `mcp_tokens`; `docs/mcp.md`                                                                                        |
+| Registro de viajeros (SES.HOSPEDAJES)         | `@domain/ses.ts` + `_shared/ses` (XML, ZIP, SOAP) + `ses-dispatch`; tablas `ses_*`, `stay_travellers`; `docs/ses-hospedajes.md`                  |
 | OTAs y touroperadores                         | `channel-webhook`, `channels-dispatch`, `_shared/channels`, tablas `channels*`; `docs/channels.md`                                               |
 | Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                               |
 | Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                               |
