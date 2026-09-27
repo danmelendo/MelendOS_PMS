@@ -28,7 +28,9 @@ describe("tool registry", () => {
       "quote_price",
       "create_booking_draft",
       "create_payment_link",
+      "list_extras",
       "get_booking",
+      "recover_booking",
       "cancel_booking",
     ]);
     for (const s of schemas) expect(s.input_schema.type).toBe("object");
@@ -372,5 +374,54 @@ describe("get_booking and cancel_booking", () => {
 describe("referenceOf", () => {
   it("matches the generated column in the database", () => {
     expect(referenceOf("3f9a21c0-aaaa-bbbb-cccc-000000000000")).toBe("3F9A21C0");
+  });
+});
+
+describe("list_extras and recover_booking", () => {
+  it("lists the hotel's extras with the ids the booking tools take", async () => {
+    const { store } = fakeStore();
+    const data = ok(await runTool("list_extras", {}, store, ctx));
+    expect(data.extras[0]).toEqual({
+      extra_id: "x-breakfast",
+      name: "Desayuno buffet",
+      category: "breakfast",
+      price: 18,
+    });
+  });
+
+  it("recovers a lost reference only when email, surname and arrival date match one booking", async () => {
+    const { store } = fakeStore();
+    // Two bookings of Laura arrive the same day: ambiguous, so nothing.
+    const both = await runTool(
+      "recover_booking",
+      { email: "laura@example.com", last_name: "Gómez", check_in: "2026-10-01" },
+      store,
+      ctx,
+    );
+    expect(both).toMatchObject({ ok: false, error: { code: "not_found" } });
+
+    const b = await store.getBookingById("t1", "b1000000-0000-0000-0000-000000000000");
+    Object.assign(b!, { start_at: "2026-11-01T14:00:00Z", end_at: "2026-11-03T11:00:00Z" });
+    const found = ok(
+      await runTool(
+        "recover_booking",
+        { email: "LAURA@example.com", last_name: "gomez", check_in: "2026-11-01" },
+        store,
+        ctx,
+      ),
+    );
+    expect(found).toMatchObject({ reference: "B1000000", hotel: "Hotel Uno" });
+    const wrong = async (input: object) =>
+      runTool(
+        "recover_booking",
+        { email: "laura@example.com", last_name: "Gómez", check_in: "2026-11-01", ...input },
+        store,
+        ctx,
+      );
+    expect(await wrong({ last_name: "Pérez" })).toMatchObject({ error: { code: "not_found" } });
+    expect(await wrong({ check_in: "2026-11-02" })).toMatchObject({ error: { code: "not_found" } });
+    expect(await wrong({ email: "otra@example.com" })).toMatchObject({
+      error: { code: "not_found" },
+    });
   });
 });

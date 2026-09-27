@@ -89,7 +89,7 @@ try {
 
   const reader = await mcp(read.token);
   const readTools = (await reader.listTools()).tools.map((t) => t.name);
-  check("read token lists 4 read-only tools", readTools.length === 4, readTools.join(", "));
+  check("read token lists 6 read-only tools", readTools.length === 6, readTools.join(", "));
 
   const search = await reader.callTool({
     name: "search_availability",
@@ -117,7 +117,7 @@ try {
   await reader.close();
 
   const writer = await mcp(write.token);
-  check("write token lists 7 tools", (await writer.listTools()).tools.length === 7);
+  check("write token lists 9 tools", (await writer.listTools()).tools.length === 9);
   const booked = await writer.callTool({
     name: "create_booking_draft",
     arguments: {

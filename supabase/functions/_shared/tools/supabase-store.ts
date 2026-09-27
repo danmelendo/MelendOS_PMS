@@ -122,13 +122,16 @@ export function supabaseBookingStore(db: SupabaseClient): BookingStore {
 }
 
 const BOOKING_COLUMNS =
-  "id, tenant_id, reference, status, deposit_paid, is_prebooking, hold_expires_at, start_at, end_at, people, total, deposit_amount, payment_mode, free_cancellation_until, late_cancellation_fee, rooms(name), properties(name), customers(email), members(email)";
+  "id, tenant_id, reference, status, deposit_paid, is_prebooking, hold_expires_at, start_at, end_at, people, total, deposit_amount, payment_mode, free_cancellation_until, late_cancellation_fee, rooms(name), properties(name), customers(email, name), members(email, name)";
 
-type BookingRow = Omit<BookingLookup, "room_name" | "property_name" | "guest_email"> & {
+type BookingRow = Omit<
+  BookingLookup,
+  "room_name" | "property_name" | "guest_email" | "guest_name"
+> & {
   rooms: { name: string } | null;
   properties: { name: string } | null;
-  customers: { email: string | null } | null;
-  members: { email: string } | null;
+  customers: { email: string | null; name: string | null } | null;
+  members: { email: string; name: string } | null;
 };
 
 const toLookup = ({ rooms, properties, customers, members, ...r }: BookingRow): BookingLookup => ({
@@ -138,6 +141,7 @@ const toLookup = ({ rooms, properties, customers, members, ...r }: BookingRow): 
   room_name: rooms?.name ?? "",
   property_name: properties?.name ?? "",
   guest_email: members?.email ?? customers?.email ?? null,
+  guest_name: members?.name ?? customers?.name ?? null,
 });
 
 /** ToolStore for the agent and MCP tools. Same rule: tenant on every query. */
@@ -149,7 +153,7 @@ export function supabaseToolStore(db: SupabaseClient): ToolStore {
         await db
           .from("rooms")
           .select(
-            "id, tenant_id, property_id, name, asset_type, capacity, features, rate_group_id, status, active, properties(name), rate_groups(name)",
+            "id, tenant_id, property_id, name, asset_type, capacity, features, rate_group_id, status, active, image_url, properties(name), rate_groups(name)",
           )
           .eq("tenant_id", tenantId)
           .order("sort_order"),
@@ -164,6 +168,40 @@ export function supabaseToolStore(db: SupabaseClient): ToolStore {
         property_name: properties?.name ?? "",
         rate_group_name: rate_groups?.name ?? null,
       }));
+    },
+    async findBookingsByEmail(tenantId, email) {
+      const mail = email.trim().toLowerCase();
+      const [byCustomer, byMember] = await Promise.all([
+        db
+          .from("reservations")
+          .select(BOOKING_COLUMNS.replace("customers(", "customers!inner("))
+          .eq("tenant_id", tenantId)
+          .ilike("customers.email", mail.replace(/[%_]/g, ""))
+          .limit(20),
+        db
+          .from("reservations")
+          .select(BOOKING_COLUMNS.replace("members(", "members!inner("))
+          .eq("tenant_id", tenantId)
+          .ilike("members.email", mail.replace(/[%_]/g, ""))
+          .limit(20),
+      ]);
+      const rows = [
+        ...(must(byCustomer) ?? []),
+        ...(must(byMember) ?? []),
+      ] as unknown as BookingRow[];
+      return rows.map(toLookup);
+    },
+    async listExtras(tenantId) {
+      return (
+        must(
+          await db
+            .from("extras")
+            .select("id, name, category, price")
+            .eq("tenant_id", tenantId)
+            .eq("active", true)
+            .order("category"),
+        ) as { id: string; name: string; category: string; price: number }[]
+      ).map((e) => ({ ...e, price: Number(e.price) }));
     },
     async findBookingByReference(tenantId, reference) {
       const rows = must(

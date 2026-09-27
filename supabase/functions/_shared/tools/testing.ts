@@ -17,6 +17,7 @@ export const room = (over: Partial<CatalogRoom>): CatalogRoom => ({
   rate_group_name: "Doble",
   status: "available",
   active: true,
+  image_url: "/imagenes/rooms/test.svg",
   ...over,
 });
 
@@ -67,8 +68,14 @@ export const booking = (over: Partial<BookingLookup>): BookingLookup => ({
   room_name: "101",
   property_name: "Hotel Uno",
   guest_email: "laura@example.com",
+  guest_name: "Laura Gómez Ruiz",
   ...over,
 });
+
+export const EXTRAS = [
+  { id: "x-breakfast", name: "Desayuno buffet", category: "breakfast", price: 18 },
+  { id: "x-parking", name: "Parking", category: "parking", price: 22 },
+];
 
 export function fakeStore(
   opts: { busy?: { room_id: string; start_at: string; end_at: string }[] } = {},
@@ -153,6 +160,13 @@ export function fakeStore(
     async insertExtras() {},
     async listRooms(tenantId) {
       return ROOMS.filter((r) => r.tenant_id === tenantId);
+    },
+    async findBookingsByEmail(tenantId, email) {
+      const mail = email.trim().toLowerCase();
+      return bookings.filter((b) => b.tenant_id === tenantId && b.guest_email === mail);
+    },
+    async listExtras() {
+      return EXTRAS;
     },
     async findBookingByReference(tenantId, reference) {
       return bookings.find((b) => b.tenant_id === tenantId && b.reference === reference) ?? null;

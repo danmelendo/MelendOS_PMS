@@ -26,6 +26,8 @@ const TITLES: Record<string, string> = {
   create_booking_draft: "Create a booking",
   create_payment_link: "Payment link",
   get_booking: "Look up a booking",
+  list_extras: "Extras",
+  recover_booking: "Recover a booking reference",
   cancel_booking: "Cancel a booking",
 };
 
