@@ -96,9 +96,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <img src="/brand/isologo.png" alt="" className="h-8 w-8 shrink-0" />
-          <div className="flex flex-col leading-tight">
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <img
+            src="/brand/isologo.png"
+            alt="Melend/OS"
+            className="h-8 w-8 min-w-8 shrink-0 object-contain"
+          />
+          <div className="flex min-w-0 flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-semibold tracking-tight">Melend/OS</span>
             <span className="text-xs text-sidebar-foreground/60">
               {isGroup && !canOperate
@@ -237,7 +241,7 @@ export function AppSidebar() {
             </select>
           </label>
         )}
-        <div className="px-2 pb-1 flex items-center gap-2">
+        <div className="px-2 pb-1 flex items-center gap-2 group-data-[collapsible=icon]:hidden">
           <span
             className="text-xs text-sidebar-foreground/60 truncate flex-1"
             title={user?.email ?? ""}
@@ -256,14 +260,16 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           size="sm"
-          className="justify-start"
+          className="justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
           onClick={async () => {
             await signOut();
             navigate({ to: "/login" });
           }}
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Cerrar sesión
+          <LogOut className="mr-2 h-4 w-4 shrink-0 group-data-[collapsible=icon]:mr-0" />
+          <span className="group-data-[collapsible=icon]:hidden">Cerrar sesión</span>
         </Button>
       </SidebarFooter>
     </Sidebar>
