@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { CalendarCheck, Check, Minus, ShieldCheck, Sparkles } from "lucide-react";
 import { Layout } from "../components/Layout";
 import { PAGES } from "../config";
+import { PRICING_FAQ as FAQ } from "../content/faq";
 import {
   ADDON_IDS,
   ADDONS,
@@ -41,37 +42,6 @@ const eur = (n: number, decimals = 0) =>
 const pct = (n: number) => `${n.toLocaleString("es-ES")} %`;
 const clampInt = (v: string, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number(v) || min)));
-
-const FAQ = [
-  {
-    q: "¿Qué cuenta como habitación?",
-    a: "Cada habitación que se puede reservar y está activa. Las que das de baja por obras o temporada no cuentan ese mes.",
-  },
-  {
-    q: "¿Cobráis comisión por reserva?",
-    a: "No. Ni en la web, ni en la app, ni en el asistente. Solo pagas la cuota; la pasarela de pago cobra sus propias tarifas, que contratas tú.",
-  },
-  {
-    q: "¿Qué pasa si me quiero ir?",
-    a: "Con pago mensual no hay permanencia: te das de baja desde el mes siguiente y te llevas todos tus datos en formatos abiertos. El pago anual se abona por adelantado y no se devuelve.",
-  },
-  {
-    q: "¿Necesito un SLA?",
-    a: "Todos los planes tienen soporte por chat y email en horario laboral. Si tu hotel no puede esperar a que respondamos, contrata el nivel de urgencia que necesites; puedes subirlo o bajarlo cada mes.",
-  },
-  {
-    q: "¿Y si no cumplís el SLA contratado?",
-    a: "Te descontamos automáticamente de la siguiente factura el porcentaje que corresponda. Publicamos la disponibilidad de cada mes.",
-  },
-  {
-    q: "¿Qué modelo de IA usa el asistente?",
-    a: "El que mejor encaje con tu hotel y tu presupuesto; el sistema no depende de un proveedor. Tus datos no se usan para entrenar modelos de terceros.",
-  },
-  {
-    q: "¿Puedo cambiar de plan?",
-    a: "Sí, cuando quieras. Subir es inmediato y se prorratea; bajar se aplica desde el mes siguiente.",
-  },
-];
 
 export function PricingPage() {
   const [rooms, setRooms] = useState(30);
@@ -192,7 +162,7 @@ export function PricingPage() {
 
       {/* Plans */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {PLAN_IDS.map((id) => {
             const plan = PLANS[id];
             const q = priceOf(id);
@@ -535,7 +505,10 @@ function PackageRows({ pkg }: { pkg: PackageId }) {
   return (
     <>
       <tr className="border-b bg-secondary/40">
-        <td colSpan={4} className="px-4 py-2 text-xs font-semibold tracking-wide uppercase">
+        <td
+          colSpan={PLAN_IDS.length + 1}
+          className="px-4 py-2 text-xs font-semibold tracking-wide uppercase"
+        >
           {PACKAGES[pkg].name}
         </td>
       </tr>

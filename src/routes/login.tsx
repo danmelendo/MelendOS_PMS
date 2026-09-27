@@ -43,7 +43,7 @@ function LoginPage() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Hotel className="h-6 w-6" />
           </div>
-          <CardTitle>Demo Stays · Recepción</CardTitle>
+          <CardTitle>Melend/OS · Recepción</CardTitle>
           <CardDescription>Accede al panel interno</CardDescription>
         </CardHeader>
         <CardContent>

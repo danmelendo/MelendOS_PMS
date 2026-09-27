@@ -18,7 +18,7 @@ create table public.leads (
   company       text not null check (char_length(btrim(company)) between 2 and 160),
   hotels        integer not null default 1 check (hotels between 1 and 500),
   rooms         integer check (rooms between 1 and 20000),
-  plan          text check (plan in ('starter', 'pro', 'group')),
+  plan          text check (plan in ('hostal', 'starter', 'pro', 'group')),
   message       text check (char_length(message) <= 2000),
   -- GDPR: the visitor accepted the privacy notice (and whether they want news).
   privacy_ok    boolean not null check (privacy_ok),

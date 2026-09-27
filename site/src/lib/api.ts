@@ -49,13 +49,19 @@ export interface LeadInput {
   website?: string;
 }
 
-export const submitLead = (lead: LeadInput) =>
-  call<{ id: string; slot: string | null }>({
+export async function submitLead(lead: LeadInput) {
+  const res = await call<{ id: string; slot: string | null }>({
     action: "submit",
     ...lead,
     ...attribution(),
     page: location.pathname,
   });
+  // Conversion event for analytics/ads tags (e.g. Google Tag Manager), if any is
+  // installed. No personal data goes into it.
+  const w = window as unknown as { dataLayer?: Record<string, unknown>[] };
+  w.dataLayer?.push({ event: "generate_lead", lead_kind: lead.kind, plan: lead.plan ?? "" });
+  return res;
+}
 
 // Campaign attribution: kept from the first page the visitor lands on, so a
 // lead from an ad is credited to it even after browsing to the demo page.

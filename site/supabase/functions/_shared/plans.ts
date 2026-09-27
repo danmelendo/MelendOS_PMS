@@ -5,13 +5,43 @@
 // The plan ids and packages mirror the product's catalogue
 // (supabase/functions/_shared/domain/features.ts in the app: PLAN_PACKAGES and
 // MODULES). This site does not import the product: if a module or a plan
-// changes there, update PACKAGES and PLAN_PACKAGES here.
+// changes there, update PACKAGES and PLAN_PACKAGES here. "hostal" is sold as
+// the product plan "starter" with tenants.settings.packages = [] (base only).
 //
 // Prices in euros, VAT excluded, per bookable room and month, with a monthly
 // minimum per plan.
 
 export const PACKAGE_IDS = ["stay", "ai", "chain", "data", "distribution"] as const;
 export type PackageId = (typeof PACKAGE_IDS)[number];
+
+/**
+ * Legal obligations of a Spanish accommodation and where the product stands.
+ * "building" means announced but not available yet: the site must say so.
+ */
+export const COMPLIANCE: {
+  name: string;
+  status: "available" | "building";
+  detail: string;
+}[] = [
+  {
+    name: "Registro de viajeros",
+    status: "available",
+    detail:
+      "Datos del documento, nacionalidad, domicilio y firma del huésped, con acceso restringido a dirección.",
+  },
+  {
+    name: "Comunicación a SES.HOSPEDAJES",
+    status: "building",
+    detail:
+      "Envío automático de viajeros y reservas al Ministerio del Interior, obligatorio desde el 2 de diciembre de 2024.",
+  },
+  {
+    name: "Facturación VeriFactu",
+    status: "building",
+    detail:
+      "Facturas con registro encadenado y código QR para la Agencia Tributaria, obligatorio desde 2027 (enero para sociedades, julio para autónomos).",
+  },
+];
 
 export const BASE_INCLUDES = [
   "Gestión de reservas y habitaciones (PMS)",
@@ -51,12 +81,13 @@ export const PACKAGES: Record<PackageId, { name: string; description: string; mo
 
 /** Packages each plan includes (same as the product's PLAN_PACKAGES). */
 export const PLAN_PACKAGES: Record<PlanId, PackageId[]> = {
+  hostal: [],
   starter: ["stay"],
   pro: ["stay", "ai", "chain", "data", "distribution"],
   group: ["stay", "ai", "chain", "data", "distribution"],
 };
 
-export const PLAN_IDS = ["starter", "pro", "group"] as const;
+export const PLAN_IDS = ["hostal", "starter", "pro", "group"] as const;
 export type PlanId = (typeof PLAN_IDS)[number];
 
 export interface Plan {
@@ -77,6 +108,22 @@ export interface Plan {
 }
 
 export const PLANS: Record<PlanId, Plan> = {
+  hostal: {
+    name: "Hostal",
+    tagline:
+      "Para hostales y pensiones: lo imprescindible para gestionar, vender directo y cumplir.",
+    perRoom: 3,
+    minimum: 39,
+    onboarding: 99,
+    onboardingFreeAnnual: true,
+    onboardingNote: "Alta en una videollamada e importación de habitaciones desde Excel o CSV.",
+    minHotels: 1,
+    highlights: [
+      "Calendario, reservas y habitaciones",
+      "Web de reserva directa sin comisiones",
+      "Registro de viajeros y pagos online o en recepción",
+    ],
+  },
   starter: {
     name: "Esencial",
     tagline: "Para hostales y hoteles pequeños que quieren dejar el Excel y vender directo.",
@@ -339,6 +386,8 @@ export function listPrice(
  */
 export function suggestPlan(rooms: number, hotels: number, addons: AddonId[]): PlanId {
   if (hotels >= PLANS.group.minHotels) return "group";
+  // Small places without extra packages: the essentials are enough.
+  if (!addons.length && rooms <= 20) return "hostal";
   const starter = quote({ plan: "starter", rooms, addons });
   const pro = quote({ plan: "pro", rooms });
   return pro.monthly <= starter.monthly ? "pro" : "starter";
@@ -379,6 +428,8 @@ export const COSTS = {
 
 /** Monthly cost of serving one contract: support hours and variable infrastructure/AI. */
 export const SERVE_COST: Record<PlanId, { hours: number; variable: number }> = {
+  // Fewer modules, fewer questions.
+  hostal: { hours: 0.5, variable: 2 },
   starter: { hours: 1, variable: 3 },
   // ~1.000 AI conversations at ~0,01 € plus storage and functions.
   pro: { hours: 1.5, variable: 15 },
@@ -398,8 +449,9 @@ export const TARGET_MARGIN = 0.2;
 
 /** Expected customer mix: share of contracts and typical size of each plan. No SLA assumed (upside). */
 export const TYPICAL_MIX: Record<PlanId, { share: number; rooms: number; hotels: number }> = {
-  starter: { share: 0.4, rooms: 20, hotels: 1 },
-  pro: { share: 0.5, rooms: 35, hotels: 1 },
+  hostal: { share: 0.25, rooms: 10, hotels: 1 },
+  starter: { share: 0.25, rooms: 20, hotels: 1 },
+  pro: { share: 0.4, rooms: 35, hotels: 1 },
   group: { share: 0.1, rooms: 120, hotels: 2 },
 };
 

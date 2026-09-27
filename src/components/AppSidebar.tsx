@@ -93,7 +93,7 @@ export function AppSidebar() {
             <Hotel className="h-4 w-4" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-tight">Demo Stays</span>
+            <span className="text-sm font-semibold tracking-tight">Melend/OS</span>
             <span className="text-xs text-sidebar-foreground/60">
               {isGroup && !canOperate
                 ? "Dirección de grupo"

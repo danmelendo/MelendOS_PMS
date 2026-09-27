@@ -25,7 +25,7 @@ const json = (data: unknown, status = 200) =>
   });
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const PLANS = ["starter", "pro", "group"];
+const PLANS = ["hostal", "starter", "pro", "group"];
 const DAY_MS = 86_400_000;
 const TAKEN_MSG = "Esa hora ya no está libre. Elige otra, por favor.";
 

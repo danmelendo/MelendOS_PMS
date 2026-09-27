@@ -48,7 +48,7 @@ const COLUMNS =
   "id, property_id, title, summary, description, category, starts_at, location, capacity, attending, properties(name)";
 
 export class SupabaseCmsClient implements CmsClient {
-  readonly cmsName = "Demo Stays CMS";
+  readonly cmsName = "Melend/OS CMS";
 
   async listEvents(filter?: { hotelId?: string; upcomingOnly?: boolean }): Promise<HotelEvent[]> {
     let q = supabase.from("experiences").select(COLUMNS).eq("active", true).order("starts_at");

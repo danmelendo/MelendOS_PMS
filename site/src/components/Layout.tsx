@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { CalendarCheck, Hotel } from "lucide-react";
 import { BRAND, PAGES, SALES } from "../config";
 
-type Page = "home" | "pricing" | "demo" | "privacy";
+type Page = "home" | "hostels" | "compliance" | "pricing" | "demo" | "privacy" | "notfound";
 
 export function Logo({ onNavy = false }: { onNavy?: boolean }) {
   return (
@@ -26,8 +26,9 @@ export function Logo({ onNavy = false }: { onNavy?: boolean }) {
 // `wide`: only from tablets up (on phones the logo already goes home).
 const NAV: { page: Page; href: string; label: string; wide?: boolean }[] = [
   { page: "home", href: PAGES.home, label: "Producto", wide: true },
+  { page: "hostels", href: PAGES.hostels, label: "Hostales", wide: true },
+  { page: "compliance", href: PAGES.compliance, label: "Normativa", wide: true },
   { page: "pricing", href: PAGES.pricing, label: "Precios" },
-  { page: "home", href: `${PAGES.home}#modulos`, label: "Módulos", wide: true },
 ];
 
 export function Layout({ page, children }: { page: Page; children: ReactNode }) {
@@ -43,12 +44,12 @@ export function Layout({ page, children }: { page: Page; children: ReactNode }) 
               <a
                 key={n.label}
                 href={n.href}
-                aria-current={n.page === page && !n.href.includes("#") ? "page" : undefined}
+                aria-current={n.page === page ? "page" : undefined}
                 className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3 ${
-                  n.page === page && !n.href.includes("#")
+                  n.page === page
                     ? "bg-secondary text-secondary-foreground"
                     : "text-muted-foreground hover:text-foreground"
-                } ${n.wide ? "hidden sm:inline-flex" : ""}`}
+                } ${n.wide ? "hidden md:inline-flex" : ""}`}
               >
                 {n.label}
               </a>
@@ -72,8 +73,8 @@ export function Layout({ page, children }: { page: Page; children: ReactNode }) 
           <div className="space-y-3">
             <Logo onNavy />
             <p className="max-w-sm text-sm text-navy-foreground/70">
-              Software de gestión para hoteles por noches: PMS, reserva directa, estancia del
-              huésped e inteligencia artificial. Precios sin IVA.
+              Software de gestión para hostales y hoteles independientes: PMS, reserva directa,
+              normativa, atención al huésped e inteligencia artificial. Precios sin IVA.
             </p>
           </div>
           <div className="space-y-2 text-sm">
@@ -83,6 +84,15 @@ export function Layout({ page, children }: { page: Page; children: ReactNode }) 
             </a>
             <a href={PAGES.pricing} className="block text-navy-foreground/70 hover:text-navy-gold">
               Precios y SLA
+            </a>
+            <a href={PAGES.hostels} className="block text-navy-foreground/70 hover:text-navy-gold">
+              Para hostales
+            </a>
+            <a
+              href={PAGES.compliance}
+              className="block text-navy-foreground/70 hover:text-navy-gold"
+            >
+              SES.HOSPEDAJES y VeriFactu
             </a>
             <a href={PAGES.demo} className="block text-navy-foreground/70 hover:text-navy-gold">
               Agendar una demo

@@ -63,7 +63,7 @@ function LoyaltyScreen() {
   return (
     <div className="px-5 pt-6">
       <h1 className="mb-4 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-        <Sparkles className="h-6 w-6 text-[var(--brand)]" /> Demo Stays Club
+        <Sparkles className="h-6 w-6 text-[var(--brand)]" /> Club de fidelización
       </h1>
 
       {/* Membership card */}

@@ -5,7 +5,7 @@ import {
   CalendarCheck,
   Check,
   DatabaseZap,
-  FileDown,
+  Scale,
   Handshake,
   MessageSquareText,
   MonitorPlay,
@@ -13,6 +13,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { ComplianceList } from "../components/Compliance";
 import {
   AgentMock,
   CopilotMock,
@@ -107,18 +108,18 @@ const TRUST: { icon: ComponentType<{ className?: string }>; title: string; text:
   },
   {
     icon: Undo2,
-    title: "Sin permanencia",
-    text: "Pago mensual y baja cuando quieras. Sin contratos de años ni penalizaciones.",
+    title: "Sin ataduras",
+    text: "Pago mensual sin permanencia y tus datos exportables cuando quieras. Irte es tan fácil como llegar.",
+  },
+  {
+    icon: Scale,
+    title: "Normativa al día",
+    text: "Registro de viajeros incluido; SES.HOSPEDAJES y VeriFactu en camino, sin coste aparte.",
   },
   {
     icon: ShieldCheck,
     title: "SLA a tu medida",
     text: `Elige la urgencia que necesitas, hasta guardia 24/7 y un ${SLA_TIERS[SLA_IDS[SLA_IDS.length - 1]].uptime.toLocaleString("es-ES")} % de disponibilidad, con compensación si no la cumplimos.`,
-  },
-  {
-    icon: FileDown,
-    title: "Tus datos son tuyos",
-    text: "Exportación completa cuando quieras. Irte es tan fácil como llegar.",
   },
 ];
 
@@ -152,15 +153,15 @@ export function HomePage() {
           <div className="space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-navy-border px-3 py-1 text-xs text-navy-foreground/80">
               <span className="h-1.5 w-1.5 rounded-full bg-navy-gold" />
-              PMS con inteligencia artificial para hoteles por noches
+              PMS para hostales y hoteles independientes
             </span>
             <h1 className="text-3xl font-semibold tracking-tight text-balance text-navy-strong sm:text-5xl sm:leading-[1.08]">
-              Gestiona el hotel, vende directo y atiende al huésped{" "}
-              <span className="text-navy-gold">desde un solo sitio.</span>
+              Tu hotel al día, sin depender de un <span className="text-navy-gold">gran PMS.</span>
             </h1>
             <p className="max-w-xl text-base text-navy-foreground/75 sm:text-lg">
-              PMS, web de reservas, app del huésped y asistentes de IA que trabajan con tus datos.
-              Desde {PLANS.starter.perRoom} € por habitación al mes, sin comisiones ni permanencia.
+              Reservas, web sin comisiones, registro de viajeros y asistentes de IA en un solo
+              programa. Desde {PLANS.hostal.minimum} € al mes, con precio publicado y sin
+              permanencia.
             </p>
             <div className="flex flex-wrap gap-3">
               <a
@@ -177,7 +178,7 @@ export function HomePage() {
               </a>
             </div>
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-navy-foreground/70">
-              {["0 % de comisión", "Sin permanencia", "Alta en días, no en meses"].map((t) => (
+              {["0 % de comisión", "Sin permanencia", "Tus datos, siempre tuyos"].map((t) => (
                 <li key={t} className="flex items-center gap-1.5">
                   <Check className="h-4 w-4 text-navy-gold" aria-hidden="true" /> {t}
                 </li>
@@ -202,6 +203,31 @@ export function HomePage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Compliance: the reason many hotels change system now */}
+      <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div className="max-w-2xl space-y-3">
+            <p className="text-sm font-semibold text-gold-foreground">Normativa</p>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Ponte al día con SES.HOSPEDAJES y VeriFactu
+            </h2>
+            <p className="text-muted-foreground">
+              Incluido en todos los planes, sin coste aparte. Te decimos qué ya funciona y qué
+              estamos construyendo.
+            </p>
+          </div>
+          <a
+            href={PAGES.compliance}
+            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-info-foreground hover:underline"
+          >
+            Qué exige cada obligación <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </div>
+        <div className="mt-8">
+          <ComplianceList />
         </div>
       </section>
 

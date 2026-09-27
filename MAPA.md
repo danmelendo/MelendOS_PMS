@@ -80,8 +80,9 @@ supabase/
 lake/                               Exportación diaria a Parquet (Python + DuckDB); contrato con Mercedes en README
 scripts/                            E2E, simulador, seed-auth, sql-apply/dry-run, gateway LLM
 docs/                               mcp.md (conectar asistentes), channels.md (contrato de canales)
-site/                               Web comercial (landing, precios y SLA, agendar demo). Proyecto aparte: su
-                                    package.json, su CI y su Supabase de ventas (leads). No importa la app.
+site/                               Web comercial de Melend/OS (landing, hostales, normativa, precios y SLA,
+                                    agendar demo), prerenderizada para SEO; Vercel con raíz site/. Proyecto
+                                    aparte: su package.json, su CI y su Supabase de ventas (leads).
 ```
 
 ## Dónde está cada cosa

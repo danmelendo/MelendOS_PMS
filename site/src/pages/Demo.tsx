@@ -28,8 +28,6 @@ const fullLabel = (iso: string) =>
     minute: "2-digit",
   });
 
-const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
 /** Calendar file for the booked call, so it lands in the visitor's calendar. */
 function icsHref(slot: string) {
   const fmt = (d: Date) =>
@@ -56,8 +54,9 @@ function icsHref(slot: string) {
   return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
 }
 
-function initial() {
-  const q = new URLSearchParams(location.search);
+/** Plan and size passed from the pricing page (?plan=pro&rooms=40&hotels=1). */
+function fromQuery(): { plan: PlanId | ""; rooms: string; hotels: string } {
+  const q = new URLSearchParams(window.location.search);
   const plan = q.get("plan");
   return {
     plan: (PLAN_IDS as readonly string[]).includes(plan ?? "") ? (plan as PlanId) : "",
@@ -83,8 +82,17 @@ export function DemoPage() {
     website: "",
     privacy: false,
     marketing: false,
-    ...initial(),
+    plan: "" as PlanId | "",
+    rooms: "",
+    hotels: "1",
   }));
+  // Browser-only values are read after mounting, so the prerendered HTML and
+  // the first render in the browser match.
+  const [localZone, setLocalZone] = useState(DEMO_TIMEZONE);
+  useEffect(() => {
+    setLocalZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    setForm((f) => ({ ...f, ...fromQuery() }));
+  }, []);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);

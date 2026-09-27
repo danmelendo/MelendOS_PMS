@@ -16,6 +16,8 @@ export default tseslint.config(
       "lake/out",
       // The sales website is its own project with its own lint and checks.
       "site",
+      // Local business documents, not in git.
+      "negocio",
     ],
   },
   {

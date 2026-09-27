@@ -1,4 +1,4 @@
-# Demo Stays · Motor de reservas y PMS para hoteles
+# Melend/OS · Motor de reservas y PMS para hoteles
 
 > Plataforma de reservas para hoteles tradicionales (estancias por noches): web pública con
 > reserva y pago, app del huésped y panel de gestión (PMS) para recepción y administración.

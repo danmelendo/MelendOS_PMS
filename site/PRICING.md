@@ -3,7 +3,10 @@
 Propuesta del 26/09/2026. Las cifras están en `supabase/functions/_shared/plans.ts` (una sola
 fuente para la página de precios, la calculadora y la tabla del SLA). Precios en euros, sin IVA.
 Revisada el mismo día con Dan: SLA como servicio aparte, pago anual al 5 %, sin devolución de
-cuotas y fundadores al 10 % con pago anual.
+cuotas y fundadores al 10 % con pago anual. Revisada el 27/09/2026 (Dan: «opción atractiva para
+hostales y hoteles independientes que no quieren estar vinculados a grandes PMS y quieran
+actualizar su sistema para cumplir con la normativa vigente»): nuevo plan **Hostal** de entrada y
+la normativa (registro de viajeros, SES.HOSPEDAJES, VeriFactu) incluida en todos los planes.
 
 ## Principio
 
@@ -21,6 +24,7 @@ Sin reputación en el sector, el riesgo percibido pesa más que el precio. La pr
 
 | Plan            | €/hab./mes | Mínimo/mes | Implantación                     | Incluye                                     |
 | --------------- | ---------- | ---------- | -------------------------------- | ------------------------------------------- |
+| **Hostal**      | 3          | 39         | 99 € (gratis con el pago anual)  | Base (PMS, web, registro, pagos)            |
 | **Esencial**    | 4          | 69         | 149 € (gratis con el pago anual) | Base + Estancia                             |
 | **Profesional** | 9          | 149        | 490 €                            | Todo (IA, Datos, Distribución, Cadena)      |
 | **Grupo**       | 8          | 490        | Desde 1.490 €                    | Todo, desde 2 hoteles, con gestor de cuenta |
@@ -49,7 +53,7 @@ activa. Si cambia allí, hay que actualizar `plans.ts` aquí (el sitio no import
 
 | Hotel                       | Nosotros                  | Competencia aproximada                              |
 | --------------------------- | ------------------------- | --------------------------------------------------- |
-| Hostal de 12 habitaciones   | Esencial: 69 €/mes        | Little Hotelier ~100 € + 1 % por reserva            |
+| Hostal de 12 habitaciones   | Hostal: 39 €/mes          | Little Hotelier ~30-100 $ + 1 % por reserva         |
 | Boutique de 25 habitaciones | Esencial 100 €, Pro 225 € | Cloudbeds ~330-420 €/mes (sin chatbot)              |
 | Independiente de 40 hab.    | Profesional: 360 €/mes    | Cloudbeds ~450 € + chatbot (HiJiffy 159 €) = ~600 € |
 | Grupo, 2 hoteles, 120 hab.  | Grupo: 960 €/mes          | Mews ~1.100-1.700 €/mes (9-14 €/hab.) más módulos   |
@@ -95,19 +99,26 @@ un cambio de precios lo rompe.
 | **Total**                                                                 | **10.100** |
 
 Hora interna ≈ 35 € (equipo / ~260 h productivas al mes). Coste de atender cada contrato al mes:
-Esencial 1 h de soporte + 3 € variables; Profesional 1,5 h + 15 € (IA incluida); Grupo 4 h + 40 €
+Hostal 0,5 h + 2 €; Esencial 1 h de soporte + 3 € variables; Profesional 1,5 h + 15 € (IA incluida); Grupo 4 h + 40 €
 (gestor de cuenta). El mínimo de cada plan cubre ese coste con al menos un 50 % de margen.
 
-**Con la mezcla esperada** (40 % Esencial de 20 hab., 50 % Profesional de 35 hab., 10 % Grupo de
-2 hoteles y 120 hab.; ingreso medio ≈ 285 €/mes por contrato; **sin contar ningún SLA**):
+**Con la mezcla esperada** (25 % Hostal de 10 hab., 25 % Esencial de 20 hab., 40 % Profesional
+de 35 hab., 10 % Grupo de 2 hoteles y 120 hab.; ingreso medio ≈ 252 €/mes por contrato; **sin
+contar ningún SLA**):
 
-- **Punto muerto: 38 hoteles** (≈ 10.850 € al mes).
-- **20 % de margen: 47 hoteles** (≈ 13.400 € al mes), con ~73 h de soporte al mes: cabe en la
+- **Punto muerto: 42 hoteles** (≈ 10.600 € al mes).
+- **20 % de margen: 54 hoteles** (≈ 13.600 € al mes), con ~74 h de soporte al mes: cabe en la
   mitad del tiempo de dos personas (150 h). El resto va a producto y ventas.
 - Los SLA son ingreso extra sobre esto: si un tercio de los Profesional contrata Urgente, son
-  ~700 € más al mes con 47 hoteles.
-- Si casi todos fueran hostales pequeños (70 % Esencial), harían falta ~58 para el punto muerto y
-  ~74 para el margen: el negocio depende de vender Profesional.
+  ~640 € más al mes con 54 hoteles.
+- Si 6 de cada 10 clientes fueran hostales, harían falta ~79 para el punto muerto y ~100 para el
+  margen: el plan Hostal es la puerta de entrada, pero el negocio depende de que parte de esos
+  clientes suba a Esencial o Profesional.
+- Antes del plan Hostal (sin él en la mezcla) el punto muerto estaba en 38 hoteles: el plan de
+  entrada baja el ingreso medio a cambio de abrir el 43 % del mercado, que son hostales.
+- El plan de negocio en PDF (`negocio/`, fuera de git) usa otro supuesto de costes: dos autónomos
+  que reparten el beneficio, en vez de dos sueldos de 42.000 €. Allí 28 hoteles dan 2.000 € netos
+  al mes a cada uno.
 - Con los precios anteriores (4/7/6 €, mínimos 49/119/390) el punto muerto estaba en 49 hoteles
   y el soporte de Esencial no se pagaba.
 

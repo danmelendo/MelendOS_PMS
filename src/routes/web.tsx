@@ -26,7 +26,7 @@ export const Route = createFileRoute("/web")({
   component: WebLayout,
   head: () => ({
     meta: [
-      { title: "Demo Stays · Reserva directa" },
+      { title: "Reserva directa · Melend/OS" },
       {
         name: "description",
         content:
@@ -119,7 +119,7 @@ function WebLayout() {
       <footer className="mt-16 border-t border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-neutral-500 sm:flex-row">
           <p>
-            © {new Date().getFullYear()} {brand.name} · Demo sobre Demo Stays PMS
+            © {new Date().getFullYear()} {brand.name} · Demo de Melend/OS
           </p>
           <div className="flex items-center gap-4">
             <a href="/stays" className="hover:text-neutral-900">

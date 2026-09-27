@@ -20,6 +20,9 @@ import {
 
 describe("quote", () => {
   it("charges per room with a monthly minimum", () => {
+    expect(quote({ plan: "hostal", rooms: 8 }).monthly).toBe(39);
+    expect(quote({ plan: "hostal", rooms: 18 }).monthly).toBe(54);
+    expect(quote({ plan: "hostal", rooms: 8 }).packages).toEqual([]);
     expect(quote({ plan: "starter", rooms: 20 }).monthly).toBe(80);
     expect(quote({ plan: "starter", rooms: 5 }).monthly).toBe(PLANS.starter.minimum);
     expect(quote({ plan: "pro", rooms: 40 }).monthly).toBe(360);
@@ -68,7 +71,8 @@ describe("quote", () => {
 
 describe("suggestPlan", () => {
   it("moves to Profesional when Esencial plus add-ons costs more", () => {
-    expect(suggestPlan(20, 1, [])).toBe("starter");
+    expect(suggestPlan(12, 1, [])).toBe("hostal");
+    expect(suggestPlan(30, 1, [])).toBe("starter");
     expect(suggestPlan(20, 1, ["ai", "data", "distribution"])).toBe("pro");
     expect(suggestPlan(20, 3, [])).toBe("group");
   });
@@ -135,8 +139,8 @@ describe("unit economics (two people full time)", () => {
 
   it("breaks even and reaches the target margin with a reachable number of hotels", () => {
     const e = unitEconomics();
-    expect(e.breakEven).toBe(38);
-    expect(e.target).toBe(47);
+    expect(e.breakEven).toBe(42);
+    expect(e.target).toBe(54);
     expect(e.supportHours).toBeLessThanOrEqual(COSTS.supportCapacity);
   });
 });
