@@ -37,16 +37,26 @@ async function sendEmail(key: string, body: Record<string, unknown>) {
   }
 }
 
-const cors = {
-  "Access-Control-Allow-Origin": Deno.env.get("SITE_ORIGIN") ?? "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
+// SITE_ORIGIN: comma-separated origins allowed to call from a browser (the site
+// and, if wanted, previews); unset = any origin.
+const ORIGINS = (Deno.env.get("SITE_ORIGIN") ?? "")
+  .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+function corsFor(req: Request) {
+  const origin = req.headers.get("origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": !ORIGINS.length
+      ? "*"
+      : ORIGINS.includes(origin)
+        ? origin
+        : ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+}
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const PLANS = ["hostal", "starter", "pro", "group"];
@@ -66,6 +76,12 @@ async function sha256(value: string) {
 }
 
 Deno.serve(async (req) => {
+  const cors = corsFor(req);
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
