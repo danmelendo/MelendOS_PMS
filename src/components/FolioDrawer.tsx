@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { eur } from "@/lib/data";
 import { SERVICE_CATEGORIES, useFolioActions, useStaffFolio, type StayService } from "@/lib/folio";
+import { useRoles } from "@/lib/roles";
+import { StayInvoices } from "@/components/StayInvoices";
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
@@ -49,6 +51,7 @@ export function FolioDrawer({
 
 function FolioBody({ reservationId }: { reservationId: string }) {
   const { data: folio } = useStaffFolio(reservationId);
+  const { canOperate } = useRoles();
   const actions = useFolioActions(reservationId, folio?.reservation.tenant_id);
   const { data: services } = useQuery({
     queryKey: ["stay-services", "tenant", folio?.reservation.tenant_id],
@@ -428,6 +431,12 @@ function FolioBody({ reservationId }: { reservationId: string }) {
               <Check className="h-4 w-4" /> Cuenta saldada.
             </p>
           )}
+
+          <StayInvoices
+            reservationId={reservationId}
+            tenantId={folio.reservation.tenant_id}
+            canOperate={canOperate}
+          />
         </div>
       )}
     </>

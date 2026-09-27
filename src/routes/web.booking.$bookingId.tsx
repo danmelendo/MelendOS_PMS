@@ -1,6 +1,7 @@
 import { BookingCancellation } from "@/components/BookingCancellation";
 import { paymentLabel } from "@/lib/stays";
 import { StayFolio } from "@/components/StayFolio";
+import { GuestInvoices } from "@/components/GuestInvoices";
 import { MessagesSquare } from "lucide-react";
 import { chatOpen } from "@/lib/chat";
 import { GuestReview } from "@/components/Reviews";
@@ -150,6 +151,8 @@ function WebBookingDetail() {
           checkOut={booking.checkOut}
         />
       )}
+
+      <GuestInvoices reservationId={booking.id} token={guestToken(booking.id)} />
 
       {features.chat && chatOpen(booking.status, booking.checkOut) && (
         <Link

@@ -38,7 +38,7 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 | Desplegar una función a la demo                        | `npx supabase functions deploy <fn> --project-ref isqompyvktijdasgophh --use-api`                 |
 | Regenerar tipos de la base                             | `npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts` |
 | Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                      |
-| E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses}.mjs`                 |
+| E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses,verifactu}.mjs`       |
 | Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                 |
 | LLM local (Ollama)                                     | `node --env-file=.env scripts/llm-gateway.mjs` + túnel cloudflared (ver CLAUDE.md)                |
 
@@ -50,7 +50,7 @@ Flujo: rama desde `main` → PR → CI en verde → squash merge (permisos ya co
 src/                                Frontend (TanStack Start/Router, React 19, Tailwind v4, shadcn, TanStack Query)
   routes/_app.*.tsx                 Panel: today, calendar, reservations, customers, messages, reports, reviews,
                                     rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos),
-                                    travellers (registro de viajeros SES.HOSPEDAJES)
+                                    travellers (registro de viajeros SES.HOSPEDAJES), invoices (VERI*FACTU)
   routes/web.*.tsx                  Web pública: hoteles, habitación, reservar, checkout, mi-reserva, chat, firma
   routes/stays.*.tsx                App del huésped: descubrir, reservar, viajes, club, cuenta, chat
   components/                       UI compartida (AppSidebar, CopilotWidget, AgentChat, CustomerDrawer,
@@ -88,25 +88,26 @@ site/                               Web comercial de Melend/OS (landing, hostale
 
 ## Dónde está cada cosa
 
-| Tema                                          | Dónde                                                                                                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Multi-tenant y roles                          | `tenant_members` (`admin`, `reception`, `group`), `is_tenant_member`, `has_tenant_role` (admin incluye group), trigger `forbid_group_operations` |
-| Precio de una estancia                        | `@domain/pricing.ts` (`priceStay`) ← `tools/bookings.ts` (`quoteStay`, `createBookingDraft`)                                                     |
-| Pagos y cancelación                           | `@domain/policies.ts`, SQL `cancel_booking_as_guest`, `payments-*`; pago online o en el hotel, sin señal                                         |
-| Motivos de cancelación                        | `@domain/cancellations.ts` + `reservations.cancellation_category/note`                                                                           |
-| Módulos y paquetes por hotel                  | `@domain/features.ts` + SQL `tenant_feature()`; panel «Plan y módulos»                                                                           |
-| Estancia: chat, cuenta, ampliaciones, reseñas | `stay_messages`, `folio_charges`, `stay_extensions`, `reviews` (migraciones 202609261\*)                                                         |
-| Clientes y datos sensibles                    | `customer_directory()`, `guest_identities` (+ `get/save_guest_identity`, reautenticación ≤10 min), `delete_customer()`                           |
-| Agente de reservas (web)                      | `agent-chat` + `_shared/agent` + `tools/registry.ts`; cancela con `cancel_booking` en dos pasos                                                  |
-| Copiloto (panel)                              | `admin-copilot` + `_shared/copilot`; widget `CopilotWidget`                                                                                      |
-| Servidor MCP                                  | `mcp` + `_shared/mcp`; tokens `mcp_tokens`; `docs/mcp.md`                                                                                        |
-| Registro de viajeros (SES.HOSPEDAJES)         | `@domain/ses.ts` + `_shared/ses` (XML, ZIP, SOAP) + `ses-dispatch`; tablas `ses_*`, `stay_travellers`; `docs/ses-hospedajes.md`                  |
-| OTAs y touroperadores                         | `channel-webhook`, `channels-dispatch`, `_shared/channels`, tablas `channels*`; `docs/channels.md`                                               |
-| Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                               |
-| Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                               |
-| Acceso demo                                   | `_shared/demo/accounts.ts`, función `demo-login`, `VITE_DEMO_ACCESS`                                                                             |
-| Precios, SLA y leads (web comercial)          | `site/supabase/functions/_shared/plans.ts`, `site/PRICING.md`, función `leads` (Supabase de ventas)                                              |
-| Data lake                                     | `lake/export.py` (lista blanca de columnas), `lake_tenants()`                                                                                    |
+| Tema                                          | Dónde                                                                                                                                                                             |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Multi-tenant y roles                          | `tenant_members` (`admin`, `reception`, `group`), `is_tenant_member`, `has_tenant_role` (admin incluye group), trigger `forbid_group_operations`                                  |
+| Precio de una estancia                        | `@domain/pricing.ts` (`priceStay`) ← `tools/bookings.ts` (`quoteStay`, `createBookingDraft`)                                                                                      |
+| Pagos y cancelación                           | `@domain/policies.ts`, SQL `cancel_booking_as_guest`, `payments-*`; pago online o en el hotel, sin señal                                                                          |
+| Motivos de cancelación                        | `@domain/cancellations.ts` + `reservations.cancellation_category/note`                                                                                                            |
+| Módulos y paquetes por hotel                  | `@domain/features.ts` + SQL `tenant_feature()`; panel «Plan y módulos»                                                                                                            |
+| Estancia: chat, cuenta, ampliaciones, reseñas | `stay_messages`, `folio_charges`, `stay_extensions`, `reviews` (migraciones 202609261\*)                                                                                          |
+| Clientes y datos sensibles                    | `customer_directory()`, `guest_identities` (+ `get/save_guest_identity`, reautenticación ≤10 min), `delete_customer()`                                                            |
+| Agente de reservas (web)                      | `agent-chat` + `_shared/agent` + `tools/registry.ts`; cancela con `cancel_booking` en dos pasos                                                                                   |
+| Copiloto (panel)                              | `admin-copilot` + `_shared/copilot`; widget `CopilotWidget`                                                                                                                       |
+| Servidor MCP                                  | `mcp` + `_shared/mcp`; tokens `mcp_tokens`; `docs/mcp.md`                                                                                                                         |
+| Registro de viajeros (SES.HOSPEDAJES)         | `@domain/ses.ts` + `_shared/ses` (XML, ZIP, SOAP) + `ses-dispatch`; tablas `ses_*`, `stay_travellers`; `docs/ses-hospedajes.md`                                                   |
+| Facturación VERI\*FACTU                       | `@domain/invoicing.ts` (IVA), `_shared/verifactu` (huella, XML, envío) + `verifactu-dispatch`; tablas `tax_invoices`, `verifactu_records`, `fiscal_settings`; `docs/verifactu.md` |
+| OTAs y touroperadores                         | `channel-webhook`, `channels-dispatch`, `_shared/channels`, tablas `channels*`; `docs/channels.md`                                                                                |
+| Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                                                                |
+| Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                                                                |
+| Acceso demo                                   | `_shared/demo/accounts.ts`, función `demo-login`, `VITE_DEMO_ACCESS`                                                                                                              |
+| Precios, SLA y leads (web comercial)          | `site/supabase/functions/_shared/plans.ts`, `site/PRICING.md`, función `leads` (Supabase de ventas)                                                                               |
+| Data lake                                     | `lake/export.py` (lista blanca de columnas), `lake_tenants()`                                                                                                                     |
 
 ## Convenciones
 
