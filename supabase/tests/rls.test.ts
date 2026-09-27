@@ -2635,6 +2635,26 @@ describe.skipIf(!DB_URL)("RLS", () => {
     });
   });
   describe("hotel web and domains", () => {
+    it("lets each hotel's management upload photos only to its own folder", async () => {
+      const upload = (who: "anon" | "authenticated", user: string | undefined, folder: string) =>
+        attempt(who, user, () =>
+          client.query(
+            "insert into storage.objects (bucket_id, name, owner) values ('hotel-media', $1, $2)",
+            [`${folder}/cover-test.webp`, user ?? null],
+          ),
+        );
+      const own = await upload("authenticated", users.lumenAdmin, ids.lumen);
+      const other = await upload("authenticated", users.lumenAdmin, ids.albora);
+      const reception = await upload("authenticated", users.lumenReception, ids.lumen);
+      const anon = await upload("anon", undefined, ids.lumen);
+      const noFolder = await upload("authenticated", users.lumenAdmin, "misc");
+      expect(own.ok).toBe(true);
+      expect(other.ok).toBe(false);
+      expect(reception.ok).toBe(false);
+      expect(anon.ok).toBe(false);
+      expect(noFolder.ok).toBe(false);
+    });
+
     it("lets management edit its web through save_hotel_web only, never its plan", async () => {
       await client.query("savepoint setup");
       const direct = await attempt(

@@ -14,6 +14,15 @@ En los casos 1 y 2 el hotel queda fijado: no hay selector y solo se ven sus esta
 
 La identidad del hotel (nombre, color, textos, logo, foto de portada y galería) está en `tenants.brand`, y su web principal en `settings.website_url`, a donde lleva «Volver a la web». Ya no está fija en el código.
 
+## La web de plantilla
+
+Incluida en todos los planes. Es la misma `/web` para todos los hoteles, rellenada con sus datos:
+
+- **Del PMS**: establecimientos, habitaciones, precios, disponibilidad, experiencias (si el hotel tiene el módulo) y reseñas.
+- **De «Tu web»** (Admin → Web y dominio): logo, foto de portada, título y subtítulo, «Sobre nosotros», galería (hasta 24 fotos), color, teléfono, email, dirección con «Cómo llegar» y redes sociales.
+
+Las fotos se reducen en el navegador (lado mayor de 2.000 px, WebP) y se guardan en el bucket público `hotel-media`, en la carpeta del hotel. Solo su dirección puede subir, cambiar o borrar ahí (políticas de Storage con `hotel_media_tenant()`). En el dominio de un hotel no se ven los enlaces de la demo («Panel de gestión», «App del huésped»). Diseño a medida no: si hace falta, es un servicio aparte.
+
 ## Quién la cambia
 
 - Solo dirección, desde el panel en **Admin → Web y dominio**, con `save_hotel_web()`. La función valida el formato (color `#RRGGBB`, URLs http(s), longitudes y dominio) y comprueba que el dominio no lo use otro hotel. Cada cambio queda en `audit_log`.

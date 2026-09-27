@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { useBrand } from "@/lib/brand";
+import { useFeatures } from "@/lib/features";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { AgentChat } from "@/components/AgentChat";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
@@ -44,7 +45,10 @@ const NAV = [
 
 function WebLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { brand, ready } = useBrand();
+  const { brand, ready, locked } = useBrand();
+  const features = useFeatures();
+  // Experiences only for hotels with that module.
+  const nav = NAV.filter((item) => item.to !== "/web/events" || features.experiences);
 
   // Until the hotel is known (domain lookup), nothing of another hotel shows.
   if (!ready) return <div className="min-h-screen bg-white" />;
@@ -56,16 +60,20 @@ function WebLayout() {
         <div className="mx-auto max-w-6xl px-4 sm:px-5">
           <div className="flex h-14 items-center gap-2 sm:h-16 sm:gap-4">
             <Link to="/web" className="flex min-w-0 items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--brand)] text-white">
-                <Hotel className="h-4 w-4" />
-              </span>
+              {brand.logoUrl ? (
+                <img src={brand.logoUrl} alt="" className="h-9 max-w-28 shrink-0 object-contain" />
+              ) : (
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--brand)] text-white">
+                  <Hotel className="h-4 w-4" />
+                </span>
+              )}
               <span className="truncate text-base font-semibold tracking-tight sm:text-lg">
                 {brand.name}
               </span>
             </Link>
             {/* Inline nav from desktop up; phones + tablets use the row below */}
             <nav className="no-scrollbar ml-2 hidden min-w-0 items-center gap-1 overflow-x-auto lg:flex">
-              {NAV.map((item) => {
+              {nav.map((item) => {
                 const active = item.exact ? path === item.to : path.startsWith(item.to);
                 return (
                   <Link
@@ -94,7 +102,7 @@ function WebLayout() {
           </div>
           {/* Scrollable nav row on phones + tablets */}
           <nav className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active = item.exact ? path === item.to : path.startsWith(item.to);
               return (
                 <Link
@@ -119,17 +127,65 @@ function WebLayout() {
       <AgentChat />
 
       <footer className="mt-16 border-t border-neutral-200 bg-white print:hidden">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-neutral-500 sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} {brand.name} · Demo de Melend/OS
-          </p>
-          <div className="flex items-center gap-4">
-            <a href="/stays" className="hover:text-neutral-900">
-              App del huésped
-            </a>
-            <a href="/today" className="hover:text-neutral-900">
-              Panel de gestión
-            </a>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-neutral-500 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="font-medium text-neutral-800">{brand.name}</p>
+            {brand.address && <p>{brand.address}</p>}
+            <p className="flex flex-wrap gap-x-3">
+              {brand.phone && (
+                <a href={`tel:${brand.phone.replace(/s/g, "")}`} className="hover:text-neutral-900">
+                  {brand.phone}
+                </a>
+              )}
+              {brand.email && (
+                <a href={`mailto:${brand.email}`} className="hover:text-neutral-900">
+                  {brand.email}
+                </a>
+              )}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <div className="flex flex-wrap items-center gap-4">
+              {brand.instagram && (
+                <a
+                  href={brand.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-neutral-900"
+                >
+                  Instagram
+                </a>
+              )}
+              {brand.facebook && (
+                <a
+                  href={brand.facebook}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-neutral-900"
+                >
+                  Facebook
+                </a>
+              )}
+              {brand.websiteUrl && (
+                <a href={brand.websiteUrl} className="hover:text-neutral-900">
+                  Web del hotel
+                </a>
+              )}
+              {/* Demo navigation, only outside a hotel's own domain. */}
+              {!locked && (
+                <>
+                  <a href="/stays" className="hover:text-neutral-900">
+                    App del huésped
+                  </a>
+                  <a href="/today" className="hover:text-neutral-900">
+                    Panel de gestión
+                  </a>
+                </>
+              )}
+            </div>
+            <p className="text-xs">
+              © {new Date().getFullYear()} {brand.name} · Reservas con Melend/OS
+            </p>
           </div>
         </div>
       </footer>
