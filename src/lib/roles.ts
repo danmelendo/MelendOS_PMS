@@ -31,6 +31,8 @@ export function useRoles() {
     isGroup: roles.includes("group"),
     // …but does not run the hotels: bookings, check-ins, bills, messages.
     canOperate: roles.includes("admin") || roles.includes("reception"),
+    // Guests' messages are answered by reception only (management reads them).
+    canMessage: roles.includes("reception"),
     isStaff: memberships.length > 0,
     loading: q.isLoading,
   };

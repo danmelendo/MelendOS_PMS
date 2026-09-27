@@ -18,7 +18,6 @@ import {
   CalendarDays,
   ClipboardList,
   DoorOpen,
-  Hotel,
   LogOut,
   PackagePlus,
   Tag,
@@ -80,14 +79,16 @@ const adminItems: NavItem[] = [
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  useInboxLive();
-  const unread = useUnreadCount();
+  const { isAdmin, isGroup, canOperate, canMessage } = useRoles();
+  useInboxLive(canMessage);
+  const unread = useUnreadCount(canMessage);
   const { data: sesAttention = 0 } = useSesAttention();
   const { signOut, user } = useAuth();
-  const { isAdmin, isGroup, canOperate } = useRoles();
   const has = useAnyHotelHas();
   const visible = (i: NavItem) =>
-    (!i.feature || has(i.feature)) && (canOperate || i.to !== "/admin/manual");
+    (!i.feature || has(i.feature)) &&
+    (canOperate || i.to !== "/admin/manual") &&
+    (canMessage || i.to !== "/messages");
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -95,9 +96,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-            <Hotel className="h-4 w-4" />
-          </div>
+          <img src="/brand/isologo.png" alt="" className="h-8 w-8 shrink-0" />
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold tracking-tight">Melend/OS</span>
             <span className="text-xs text-sidebar-foreground/60">

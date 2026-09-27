@@ -1029,6 +1029,13 @@ describe.skipIf(!DB_URL)("RLS", () => {
         );
       const asGuest = await insert("guest", users.lumenReception);
       const asOther = await insert("staff", users.lumenAdmin);
+      // Management reads the conversations but does not answer guests.
+      const byManagement = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query(
+          "insert into public.stay_messages (tenant_id, reservation_id, sender, body, staff_id) values ($1, $2, 'staff', 'Hola', $3)",
+          [ids.lumen, id, users.lumenAdmin],
+        ),
+      );
       const edit = await attempt("authenticated", users.lumenReception, () =>
         client.query(
           "update public.stay_messages set body = 'cambiado' where reservation_id = $1",
@@ -1056,6 +1063,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
 
       expect(asGuest.ok).toBe(false);
       expect(asOther.ok).toBe(false);
+      expect(byManagement.ok).toBe(false);
       expect(edit.ok).toBe(false);
       expect(thread.map((m: { sender: string }) => m.sender)).toEqual(["guest", "staff"]);
       expect(thread.every((m: { read_at: string | null }) => m.read_at)).toBe(true);

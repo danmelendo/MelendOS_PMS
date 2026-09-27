@@ -60,6 +60,8 @@ activa. Si cambia allí, hay que actualizar `plans.ts` aquí (el sitio no import
 
 ## SLA: servicio aparte, según la urgencia
 
+**No se ofrece con el plan Hostal** (Dan, 27/09/2026): muchos alojamientos pequeños con compromisos de urgencia desbordarían a un equipo de dos personas. El Hostal se queda con el soporte incluido; quien necesite SLA pasa a Esencial o superior (`slaAvailable` en `plans.ts`).
+
 Se cobra como un porcentaje de la cuota (plan + paquetes) con un mínimo: un hotel más grande
 pierde más cuando el sistema cae, y lo paga en proporción. Se puede cambiar cada mes.
 

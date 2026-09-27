@@ -7,7 +7,7 @@ import { MemberProvider, useMember } from "@/lib/member-session";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { GuestSignIn } from "@/components/GuestSignIn";
-import { useFeatures } from "@/lib/features";
+import { useFeatures, useHotelWebsite } from "@/lib/features";
 import { pms } from "@/integrations/pms";
 import { registerServiceWorker, showNotification } from "@/lib/notifications";
 
@@ -105,6 +105,7 @@ function StaysLayout() {
 function StaysShell() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { brand } = useBrand();
+  const website = useHotelWebsite();
   const { needsSignIn, memberId } = useMember();
   const features = useFeatures();
   // The club tab only for hotels with a loyalty club (chains, large hotels).
@@ -121,9 +122,9 @@ function StaysShell() {
         <div className="relative mx-auto flex min-h-[100svh] w-full max-w-md flex-col bg-[#f4f6f9] shadow-xl">
           {/* Brand bar: same app, one brand per hotel */}
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-neutral-200/70 bg-white/90 px-4 py-2 backdrop-blur">
-            {/* Always a way back to the hotel website */}
-            <Link
-              to="/web"
+            {/* Always a way back to the hotel website (its own site, or the demo web) */}
+            <a
+              href={website.href}
               className="-ml-1 flex min-w-0 items-center gap-1.5 py-1 pr-2"
               aria-label={`Volver a la web de ${brand.name}`}
             >
@@ -132,7 +133,7 @@ function StaysShell() {
                 <Hotel className="h-3.5 w-3.5" />
               </span>
               <span className="truncate text-sm font-semibold tracking-tight">{brand.name}</span>
-            </Link>
+            </a>
             <BrandSwitcher />
           </header>
 

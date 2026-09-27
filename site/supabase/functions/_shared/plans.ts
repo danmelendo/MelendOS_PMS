@@ -104,6 +104,11 @@ export interface Plan {
   onboardingNote: string;
   /** Hotels the plan is meant for; group needs at least two. */
   minHotels: number;
+  /**
+   * Whether an SLA can be added. Not for hostels (Dan, 27/09/2026): many small
+   * places with urgent commitments would overflow a two-person support team.
+   */
+  slaAvailable: boolean;
   highlights: string[];
 }
 
@@ -118,6 +123,7 @@ export const PLANS: Record<PlanId, Plan> = {
     onboardingFreeAnnual: true,
     onboardingNote: "Alta en una videollamada e importación de habitaciones desde Excel o CSV.",
     minHotels: 1,
+    slaAvailable: false,
     highlights: [
       "Calendario, reservas y habitaciones",
       "Web de reserva directa sin comisiones",
@@ -133,6 +139,7 @@ export const PLANS: Record<PlanId, Plan> = {
     onboardingFreeAnnual: true,
     onboardingNote: "Alta guiada e importación de habitaciones y reservas desde Excel o CSV.",
     minHotels: 1,
+    slaAvailable: true,
     highlights: [
       "PMS, web de reserva directa y app del huésped",
       "Chat con recepción, cuenta de la estancia y reseñas",
@@ -149,6 +156,7 @@ export const PLANS: Record<PlanId, Plan> = {
     onboardingNote:
       "Migración de datos desde tu sistema actual, configuración de tarifas y canales y 2 h de formación.",
     minHotels: 1,
+    slaAvailable: true,
     highlights: [
       "Todo lo de Esencial",
       "Asistente de reservas IA, copiloto de gestión y MCP",
@@ -165,6 +173,7 @@ export const PLANS: Record<PlanId, Plan> = {
     onboardingNote:
       "Proyecto de implantación por hotel, integraciones a medida y formación por equipos.",
     minHotels: 2,
+    slaAvailable: true,
     highlights: [
       "Todo lo de Profesional, en todos los hoteles del grupo",
       "Rol de dirección de grupo y club compartido entre hoteles",
@@ -332,6 +341,7 @@ export function quote({
   if (sla) {
     const t = SLA_TIERS[sla];
     if (!t) throw new Error(`Unknown SLA: ${sla}`);
+    if (!p.slaAvailable) throw new Error(`${p.name} has no SLA`);
     const subscription = lines.reduce((s, l) => s + l.amount, 0);
     lines.push({
       label: `SLA ${t.name}`,
@@ -365,8 +375,9 @@ export interface PriceOptions {
  */
 export function listPrice(
   plan: PlanId,
-  { sla = null, annual = false, founder = false }: PriceOptions = {},
+  { sla: wanted = null, annual = false, founder = false }: PriceOptions = {},
 ) {
+  const sla = PLANS[plan].slaAvailable ? wanted : null;
   const factor =
     (1 + (sla ? SLA_TIERS[sla].share : 0)) *
     (1 - (annual ? (founder ? FOUNDERS.annualDiscount : ANNUAL_DISCOUNT) : 0));

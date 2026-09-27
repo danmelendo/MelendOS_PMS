@@ -105,6 +105,12 @@ describe("SLA (separate service, priced by urgency)", () => {
     );
   });
 
+  it("is not offered with the Hostal plan", () => {
+    expect(() => quote({ plan: "hostal", rooms: 10, sla: "priority" })).toThrow(/no SLA/);
+    // Its card keeps the plain price when someone picks an SLA for the other plans.
+    expect(listPrice("hostal", { sla: "urgent" })).toMatchObject({ perRoom: 3, minimum: 39 });
+  });
+
   it("credits a share of the month below the commitment, and nothing without SLA", () => {
     expect(slaCredit(null, 90)).toBe(0);
     expect(slaCredit("always", 99.95)).toBe(0);

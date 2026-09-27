@@ -1,0 +1,35 @@
+name: Keep Supabase projects awake
+
+# Free Supabase projects pause after a week without activity. Every 3 days
+# this makes one small database query through the API of each project: the
+# demo (preproduction) and the sales one (leads). Can also be run by hand.
+on:
+  schedule:
+    - cron: "17 6 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Demo project
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/rest/v1/tenants?select=id&limit=1" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "demo: $code"
+          test "$code" = "200"
+      - name: Sales project
+        env:
+          URL: ${{ secrets.SALES_SUPABASE_URL }}
+          KEY: ${{ secrets.SALES_SUPABASE_KEY }}
+        run: |
+          # The public "free demo slots" query of the leads function (reads the database).
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/functions/v1/leads" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+            -H "Origin: https://os.melendo.app" -d '{"action":"slots"}')
+          echo "sales: $code"
+          test "$code" = "200"
