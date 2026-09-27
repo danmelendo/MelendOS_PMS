@@ -14,6 +14,10 @@ export default tseslint.config(
       "src/integrations/supabase/types.ts",
       "**/.venv",
       "lake/out",
+      // The sales website is its own project with its own lint and checks.
+      "site",
+      // Local business documents, not in git.
+      "negocio",
     ],
   },
   {

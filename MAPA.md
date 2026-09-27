@@ -39,6 +39,7 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 | Regenerar tipos de la base                             | `npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts` |
 | Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                      |
 | E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels}.mjs`                     |
+| Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                 |
 | LLM local (Ollama)                                     | `node --env-file=.env scripts/llm-gateway.mjs` + túnel cloudflared (ver CLAUDE.md)                |
 
 Flujo: rama desde `main` → PR → CI en verde → squash merge (permisos ya concedidos).
@@ -79,6 +80,9 @@ supabase/
 lake/                               Exportación diaria a Parquet (Python + DuckDB); contrato con Mercedes en README
 scripts/                            E2E, simulador, seed-auth, sql-apply/dry-run, gateway LLM
 docs/                               mcp.md (conectar asistentes), channels.md (contrato de canales)
+site/                               Web comercial de Melend/OS (landing, hostales, normativa, precios y SLA,
+                                    agendar demo), prerenderizada para SEO; Vercel con raíz site/. Proyecto
+                                    aparte: su package.json, su CI y su Supabase de ventas (leads).
 ```
 
 ## Dónde está cada cosa
@@ -99,6 +103,7 @@ docs/                               mcp.md (conectar asistentes), channels.md (c
 | Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                               |
 | Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                               |
 | Acceso demo                                   | `_shared/demo/accounts.ts`, función `demo-login`, `VITE_DEMO_ACCESS`                                                                             |
+| Precios, SLA y leads (web comercial)          | `site/supabase/functions/_shared/plans.ts`, `site/PRICING.md`, función `leads` (Supabase de ventas)                                              |
 | Data lake                                     | `lake/export.py` (lista blanca de columnas), `lake_tenants()`                                                                                    |
 
 ## Convenciones

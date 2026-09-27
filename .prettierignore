@@ -10,3 +10,5 @@ CLAUDE.md
 src/integrations/supabase/types.ts
 .venv
 lake/out
+site
+negocio

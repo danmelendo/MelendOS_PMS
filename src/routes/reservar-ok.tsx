@@ -10,7 +10,7 @@ export const Route = createFileRoute("/reservar-ok")({
     ko: s.ko === "1" || s.ko === "true" ? true : undefined,
   }),
   head: () => ({
-    meta: [{ title: "Pago · Demo Stays" }],
+    meta: [{ title: "Pago · Melend/OS" }],
   }),
 });
 
@@ -154,7 +154,7 @@ function RedsysReturnPage() {
       </div>
 
       <p style={{ marginTop: 24, fontSize: 12, color: "#9a8e82" }}>
-        Demo Stays · Pago seguro procesado por Redsys
+        Melend/OS · Pago seguro procesado por Redsys
       </p>
     </div>
   );

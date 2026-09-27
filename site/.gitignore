@@ -1,0 +1,5 @@
+node_modules
+dist
+.env
+supabase/.temp
+supabase/.branches

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/stays")({
   component: StaysLayout,
   head: () => ({
     meta: [
-      { title: "Demo Stays · App del huésped" },
+      { title: "App del huésped · Melend/OS" },
       {
         name: "description",
         content:

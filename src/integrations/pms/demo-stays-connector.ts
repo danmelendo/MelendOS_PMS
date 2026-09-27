@@ -143,7 +143,7 @@ function occupancyBand(ratio: number): { band: OccupancyBand; surchargePct: numb
 }
 
 export class DemoStaysConnector implements PmsConnector {
-  readonly pmsName = "Demo Stays PMS";
+  readonly pmsName = "Melend/OS";
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ export class DemoStaysConnector implements PmsConnector {
       reference: r.reference ?? bookingReference(r.id),
       memberId: r.member_id,
       propertyId: r.property_id ?? (room as Row)?.property_id ?? "",
-      propertyName: (property as Row)?.name ?? "Demo Stays",
+      propertyName: (property as Row)?.name ?? "Melend/OS",
       roomId: r.room_id,
       roomName: (room as Row)?.name ? `Habitación ${(room as Row).name}` : "Habitación",
       checkIn,
@@ -666,7 +666,7 @@ export class DemoStaysConnector implements PmsConnector {
       id: r.id,
       memberId: r.member_id,
       propertyId: r.property_id,
-      propertyName: (property as Row)?.name ?? "Demo Stays",
+      propertyName: (property as Row)?.name ?? "Melend/OS",
       roomId: r.room_id,
       roomName: (room as Row)?.name ? `Habitación ${(room as Row).name}` : "Habitación",
       checkIn: r.check_in,
@@ -776,7 +776,7 @@ export class DemoStaysConnector implements PmsConnector {
     const rows = (data ?? []) as Row[];
     const { data: props } = await sb.from("properties").select("id,name");
     const nameById = new Map(((props ?? []) as Row[]).map((p) => [p.id, p.name]));
-    return rows.map((r) => this.mapSpace(r, nameById.get(r.property_id) ?? "Demo Stays"));
+    return rows.map((r) => this.mapSpace(r, nameById.get(r.property_id) ?? "Melend/OS"));
   }
 
   private async mapSpaceBooking(r: Row): Promise<SpaceBooking> {
@@ -795,7 +795,7 @@ export class DemoStaysConnector implements PmsConnector {
       spaceId: r.space_id,
       spaceName: s?.name ?? "Instalación",
       spaceKind: s?.kind ?? "spa",
-      propertyName: (prop as Row)?.name ?? "Demo Stays",
+      propertyName: (prop as Row)?.name ?? "Melend/OS",
       date: r.date,
       startHour: Number(r.start_hour),
       endHour: Number(r.end_hour),
