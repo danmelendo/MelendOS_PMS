@@ -67,3 +67,45 @@ export async function checkCname(domain: string, expected: string): Promise<DnsC
     return { ok: false, reason: `El CNAME apunta a ${found}, no a ${expected}`, found };
   return { ok: true, target: found };
 }
+
+export type HotelWebData = NonNullable<ReturnType<typeof useHotelWeb>["data"]>;
+
+/**
+ * Shrinks a photo in the browser (longest side ≤ 2000 px, WebP) so the web
+ * stays fast, and uploads it to the hotel's folder of the public hotel-media
+ * bucket. Returns its public URL.
+ */
+export async function uploadHotelImage(
+  tenantId: string,
+  kind: string,
+  file: File,
+): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Solo se pueden subir imágenes");
+  let body: Blob = file;
+  let ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  if (file.type !== "image/svg+xml") {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    body = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("No se pudo procesar la imagen"))),
+        "image/webp",
+        0.85,
+      ),
+    );
+    ext = "webp";
+  } else {
+    throw new Error("Sube el logo en PNG, JPG o WebP");
+  }
+  if (body.size > 5 * 1024 * 1024) throw new Error("La imagen pesa más de 5 MB");
+  const path = `${tenantId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("hotel-media")
+    .upload(path, body, { contentType: "image/webp", upsert: false });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("hotel-media").getPublicUrl(path).data.publicUrl;
+}

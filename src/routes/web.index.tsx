@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BedDouble, Crown, Users, Star, MapPin, ArrowRight, Sparkles } from "lucide-react";
+import { Star, MapPin, ArrowRight, Sparkles, Phone, Mail } from "lucide-react";
 import { pms } from "@/integrations/pms";
 import { cms } from "@/integrations/cms";
 import { useBrand } from "@/lib/brand";
+import { useFeatures } from "@/lib/features";
 import { HotelCoverArt } from "@/components/cover-art";
 import {
   accentGradient,
@@ -17,26 +18,9 @@ export const Route = createFileRoute("/web/")({
   component: WebHome,
 });
 
-const ROOM_KINDS = [
-  {
-    icon: BedDouble,
-    title: "Habitaciones",
-    desc: "Estándar, Superior y Deluxe, todas con wifi, aire acondicionado y amenities.",
-  },
-  {
-    icon: Crown,
-    title: "Junior Suites",
-    desc: "Más espacio, zona de estar, bañera y minibar.",
-  },
-  {
-    icon: Users,
-    title: "Familiares",
-    desc: "Hasta 4 personas, con sofá cama y cuna bajo petición.",
-  },
-];
-
 function WebHome() {
   const { brand, brandId, tenantId } = useBrand();
+  const features = useFeatures();
   const { data: hotels } = useQuery({
     queryKey: ["pms", "properties-web", brandId],
     enabled: !!tenantId,
@@ -54,11 +38,19 @@ function WebHome() {
     <div>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{ background: accentGradient(brand.heroAccent) }}
-        />
-        <div className="absolute inset-0 bg-black/20" />
+        {brand.heroImageUrl ? (
+          <img
+            src={brand.heroImageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: accentGradient(brand.heroAccent) }}
+          />
+        )}
+        <div className={`absolute inset-0 ${brand.heroImageUrl ? "bg-black/45" : "bg-black/20"}`} />
         <div className="relative mx-auto max-w-6xl px-5 py-20 text-white sm:py-28">
           <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/80">
             {brand.eyebrow}
@@ -87,21 +79,39 @@ function WebHome() {
         </div>
       </section>
 
-      {/* Room categories */}
-      <section className="mx-auto max-w-6xl px-5 py-14">
-        <h2 className="text-2xl font-bold tracking-tight">Elige tu habitación</h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {ROOM_KINDS.map((a) => (
-            <div key={a.title} className="bg-white p-6 shadow-sm ring-1 ring-neutral-100">
-              <span className="flex h-11 w-11 items-center justify-center bg-[var(--brand-soft)] text-[var(--brand)]">
-                <a.icon className="h-5 w-5" />
-              </span>
-              <h3 className="mt-4 font-semibold">{a.title}</h3>
-              <p className="mt-1 text-sm text-neutral-500">{a.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* About the hotel (template text, edited in the panel) */}
+      {brand.about && (
+        <section className="mx-auto max-w-6xl px-5 pt-14">
+          <div className="max-w-3xl">
+            <h2 className="text-2xl font-bold tracking-tight">Sobre nosotros</h2>
+            <p className="mt-3 whitespace-pre-line text-neutral-600">{brand.about}</p>
+          </div>
+        </section>
+      )}
+
+      {/* Photo gallery */}
+      {brand.gallery.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 pt-10">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {brand.gallery.map((src, i) => (
+              <a
+                key={src}
+                href={src}
+                target="_blank"
+                rel="noreferrer"
+                className={`block overflow-hidden bg-neutral-100 ${i === 0 ? "col-span-2 row-span-2" : ""}`}
+              >
+                <img
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  className="aspect-[4/3] h-full w-full object-cover transition hover:scale-[1.02]"
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* The hotel(s) of this brand */}
       <section className="mx-auto max-w-6xl px-5 py-6">
@@ -165,42 +175,84 @@ function WebHome() {
         </div>
       </section>
 
-      {/* Experiences */}
-      <section className="mx-auto max-w-6xl px-5 py-14">
-        <div className="flex items-end justify-between">
-          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Sparkles className="h-6 w-6 text-[var(--brand)]" /> Próximas experiencias
-          </h2>
-          <Link to="/web/events" className="text-sm font-medium text-[var(--brand)]">
-            Ver agenda
-          </Link>
-        </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {brandEvents.slice(0, 4).map((e) => (
-            <Link
-              key={e.id}
-              to="/web/event/$eventId"
-              params={{ eventId: e.id }}
-              className="overflow-hidden bg-white shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
-            >
-              <div className="h-20" style={{ background: accentGradient(e.accent) }} />
-              <div className="p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand)]">
-                  {EVENT_CATEGORY_LABELS[e.category]}
-                </span>
-                <h3 className="mt-1 font-semibold leading-tight">{e.title}</h3>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {new Date(e.startsAt).toLocaleDateString("es-ES", {
-                    day: "numeric",
-                    month: "short",
-                  })}{" "}
-                  · {e.location}
-                </p>
+      {/* Where we are */}
+      {(brand.address || brand.phone || brand.email) && (
+        <section className="mx-auto max-w-6xl px-5 pt-14">
+          <div className="grid gap-6 bg-white p-6 shadow-sm ring-1 ring-neutral-100 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Dónde estamos</h2>
+              {brand.address && <p className="mt-2 text-neutral-600">{brand.address}</p>}
+              <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                {brand.phone && (
+                  <a
+                    href={`tel:${brand.phone.replace(/s/g, "")}`}
+                    className="flex items-center gap-1.5 text-[var(--brand)]"
+                  >
+                    <Phone className="h-4 w-4" /> {brand.phone}
+                  </a>
+                )}
+                {brand.email && (
+                  <a
+                    href={`mailto:${brand.email}`}
+                    className="flex items-center gap-1.5 text-[var(--brand)]"
+                  >
+                    <Mail className="h-4 w-4" /> {brand.email}
+                  </a>
+                )}
               </div>
+            </div>
+            {brand.address && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(brand.address)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 border border-neutral-300 px-4 py-2 text-sm font-semibold"
+              >
+                <MapPin className="h-4 w-4" /> Cómo llegar
+              </a>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Experiences (only when the hotel has any) */}
+      {features.experiences && brandEvents.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 py-14">
+          <div className="flex items-end justify-between">
+            <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+              <Sparkles className="h-6 w-6 text-[var(--brand)]" /> Próximas experiencias
+            </h2>
+            <Link to="/web/events" className="text-sm font-medium text-[var(--brand)]">
+              Ver agenda
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {brandEvents.slice(0, 4).map((e) => (
+              <Link
+                key={e.id}
+                to="/web/event/$eventId"
+                params={{ eventId: e.id }}
+                className="overflow-hidden bg-white shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
+              >
+                <div className="h-20" style={{ background: accentGradient(e.accent) }} />
+                <div className="p-4">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand)]">
+                    {EVENT_CATEGORY_LABELS[e.category]}
+                  </span>
+                  <h3 className="mt-1 font-semibold leading-tight">{e.title}</h3>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {new Date(e.startsAt).toLocaleDateString("es-ES", {
+                      day: "numeric",
+                      month: "short",
+                    })}{" "}
+                    · {e.location}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
