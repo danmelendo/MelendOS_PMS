@@ -62,6 +62,7 @@ Secretos de GitHub del repositorio: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWO
 | `PUBLIC_WEB_URL`                                    | Enlaces al huésped cuando el hotel no tiene dominio propio                        | URL de la demo   | opcional                         |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`          | Asistente de reservas y copiloto (cualquier API compatible con OpenAI)            | Ollama por túnel | proveedor de API                 |
 | `RESEND_API_KEY`, `EMAIL_FROM`                      | Emails al huésped. Sin ellos, los emails quedan como «simulados»                  | sin definir      | obligatorio (dominio verificado) |
+| `PANEL_URL`                                         | Enlace al panel en el email de avisos a dirección (`hotel_alert_notices`)         | sin definir      | p. ej. `https://app.melendo.app` |
 | `GUEST_EMAILS_CRON_KEY`                             | Llamada programada a `guest-emails-dispatch` (lo pone `scripts/emails-setup.mjs`) | puesto           | puesto                           |
 | `CHANNELS_CRON_KEY`                                 | Envío programado de disponibilidad a los canales (`scripts/channels-setup.mjs`)   | puesto           | puesto                           |
 | `SES_CRON_KEY`                                      | Envío programado a SES.HOSPEDAJES (`scripts/ses-setup.mjs`)                       | puesto           | puesto                           |
