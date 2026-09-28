@@ -1591,8 +1591,10 @@ export type Database = {
           created_at: string
           discount_type: string
           discount_value: number
+          headline: string | null
           id: string
           max_uses: number | null
+          published: boolean
           single_use: boolean
           tenant_id: string
           times_used: number
@@ -1606,8 +1608,10 @@ export type Database = {
           created_at?: string
           discount_type: string
           discount_value: number
+          headline?: string | null
           id?: string
           max_uses?: number | null
+          published?: boolean
           single_use?: boolean
           tenant_id?: string
           times_used?: number
@@ -1621,8 +1625,10 @@ export type Database = {
           created_at?: string
           discount_type?: string
           discount_value?: number
+          headline?: string | null
           id?: string
           max_uses?: number | null
+          published?: boolean
           single_use?: boolean
           tenant_id?: string
           times_used?: number
@@ -3471,6 +3477,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      claim_promo_code: {
+        Args: { p_id: string; p_tenant: string }
+        Returns: boolean
+      }
+      hotel_offers: { Args: { p_tenant: string }; Returns: Json }
       hotel_cancellation_penalty: {
         Args: { p_tenant: string }
         Returns: string

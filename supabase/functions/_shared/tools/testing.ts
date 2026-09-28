@@ -153,6 +153,12 @@ export function fakeStore(
     async findOrCreateCustomer() {
       return "c1";
     },
+    async findPromoCode() {
+      return null;
+    },
+    async claimPromoCode() {
+      return false;
+    },
     async insertReservation(r) {
       inserted.push(r);
       return { id: "c0ffee00-1111-2222-3333-444455556666" };

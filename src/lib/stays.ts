@@ -1,4 +1,4 @@
-// Shared presentation helpers for the guest app (/stays) and the public web (/web).
+// Shared presentation helpers for the public booking web (/web) and the panel.
 import type {
   BookingStatus,
   AssetType,
@@ -9,7 +9,6 @@ import type {
   InvoiceStatus,
   OccupancyBand,
 } from "@/integrations/pms";
-import type { EventCategory } from "@/integrations/cms";
 
 export { eur } from "./data";
 
@@ -46,22 +45,6 @@ export const ASSET_TYPE_SHORT: Record<AssetType, string> = {
   room: "Habitación",
   suite: "Suite",
   family: "Familiar",
-};
-
-export const EVENT_CATEGORY_LABELS: Record<EventCategory, string> = {
-  gastronomy: "Gastronomía",
-  wellness: "Bienestar",
-  culture: "Cultura",
-  outdoor: "Aire libre",
-  family: "Familia",
-};
-
-export const EVENT_CATEGORY_CLASSES: Record<EventCategory, string> = {
-  gastronomy: "bg-amber-100 text-amber-800",
-  wellness: "bg-emerald-100 text-emerald-700",
-  culture: "bg-violet-100 text-violet-700",
-  outdoor: "bg-sky-100 text-sky-700",
-  family: "bg-rose-100 text-rose-700",
 };
 
 export const AMENITY_LABELS: Record<string, string> = {

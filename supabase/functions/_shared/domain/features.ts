@@ -1,7 +1,7 @@
 // What each hotel (tenant) has contracted. The product is sold in packages on
 // top of a base every hotel gets, so a hostel does not carry what a chain
 // needs:
-// - base (always): PMS, direct bookings on the hotel's web and guest app,
+// - base (always): PMS, direct bookings on the hotel's web (or embedded in it),
 //   guest registration, payments and cancellation policies.
 // - optional packages, each a set of modules (PACKAGES below).
 //
@@ -18,7 +18,6 @@ export const FEATURES = [
   "chat",
   "folio",
   "reviews",
-  "experiences",
   "ai_agent",
   "mcp",
   "copilot",
@@ -51,11 +50,6 @@ export const MODULES: Record<Feature, ModuleInfo> = {
   reviews: {
     name: "Reseñas",
     description: "Valoraciones de estancias verificadas, con respuesta del hotel.",
-    package: "stay",
-  },
-  experiences: {
-    name: "Experiencias",
-    description: "Agenda de actividades del hotel con inscripción de los huéspedes.",
     package: "stay",
   },
   ai_agent: {
@@ -122,7 +116,7 @@ export const PACKAGES: Record<PackageId, { name: string; description: string }> 
 
 export const BASE_INCLUDES = [
   "Gestión de reservas y habitaciones (PMS)",
-  "Web de reservas directas y app del huésped",
+  "Web de reservas directas con la plantilla del hotel o incrustada en su web",
   "Registro de viajeros",
   "Pagos online o en el hotel y políticas de cancelación",
 ];

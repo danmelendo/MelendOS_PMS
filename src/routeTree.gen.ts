@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebRouteImport } from './routes/web'
-import { Route as StaysRouteImport } from './routes/stays'
 import { Route as ReservarOkRouteImport } from './routes/reservar-ok'
 import { Route as ReservarRouteImport } from './routes/reservar'
 import { Route as LoginRouteImport } from './routes/login'
@@ -18,17 +17,8 @@ import { Route as EjemploWebRouteImport } from './routes/ejemplo-web'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WebIndexRouteImport } from './routes/web.index'
-import { Route as StaysIndexRouteImport } from './routes/stays.index'
 import { Route as WebMiReservaRouteImport } from './routes/web.mi-reserva'
 import { Route as WebHotelsRouteImport } from './routes/web.hotels'
-import { Route as WebEventsRouteImport } from './routes/web.events'
-import { Route as StaysTripsRouteImport } from './routes/stays.trips'
-import { Route as StaysSpacesRouteImport } from './routes/stays.spaces'
-import { Route as StaysLoyaltyRouteImport } from './routes/stays.loyalty'
-import { Route as StaysInvoicesRouteImport } from './routes/stays.invoices'
-import { Route as StaysIncidentsRouteImport } from './routes/stays.incidents'
-import { Route as StaysExperiencesRouteImport } from './routes/stays.experiences'
-import { Route as StaysAccountRouteImport } from './routes/stays.account'
 import { Route as InvoiceInvoiceIdRouteImport } from './routes/invoice.$invoiceId'
 import { Route as EmbedSearchRouteImport } from './routes/embed.search'
 import { Route as EmbedAssistantRouteImport } from './routes/embed.assistant'
@@ -54,29 +44,16 @@ import { Route as WebUploadBookingIdRouteImport } from './routes/web.upload.$boo
 import { Route as WebSignBookingIdRouteImport } from './routes/web.sign.$bookingId'
 import { Route as WebRoomRoomIdRouteImport } from './routes/web.room.$roomId'
 import { Route as WebHotelHotelIdRouteImport } from './routes/web.hotel.$hotelId'
-import { Route as WebEventEventIdRouteImport } from './routes/web.event.$eventId'
 import { Route as WebCheckoutBookingIdRouteImport } from './routes/web.checkout.$bookingId'
 import { Route as WebChatBookingIdRouteImport } from './routes/web.chat.$bookingId'
 import { Route as WebBookingBookingIdRouteImport } from './routes/web.booking.$bookingId'
 import { Route as WebBookRoomIdRouteImport } from './routes/web.book.$roomId'
-import { Route as StaysSignBookingIdRouteImport } from './routes/stays.sign.$bookingId'
-import { Route as StaysPropertyPropertyIdRouteImport } from './routes/stays.property.$propertyId'
-import { Route as StaysEventEventIdRouteImport } from './routes/stays.event.$eventId'
-import { Route as StaysCheckoutBookingIdRouteImport } from './routes/stays.checkout.$bookingId'
-import { Route as StaysChatBookingIdRouteImport } from './routes/stays.chat.$bookingId'
-import { Route as StaysBookingBookingIdRouteImport } from './routes/stays.booking.$bookingId'
-import { Route as StaysBookRoomIdRouteImport } from './routes/stays.book.$roomId'
 import { Route as AppAdminManualRouteImport } from './routes/_app.admin.manual'
 import { Route as WebInvoiceBookingIdInvoiceIdRouteImport } from './routes/web.invoice.$bookingId.$invoiceId'
 
 const WebRoute = WebRouteImport.update({
   id: '/web',
   path: '/web',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StaysRoute = StaysRouteImport.update({
-  id: '/stays',
-  path: '/stays',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReservarOkRoute = ReservarOkRouteImport.update({
@@ -113,11 +90,6 @@ const WebIndexRoute = WebIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WebRoute,
 } as any)
-const StaysIndexRoute = StaysIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => StaysRoute,
-} as any)
 const WebMiReservaRoute = WebMiReservaRouteImport.update({
   id: '/mi-reserva',
   path: '/mi-reserva',
@@ -127,46 +99,6 @@ const WebHotelsRoute = WebHotelsRouteImport.update({
   id: '/hotels',
   path: '/hotels',
   getParentRoute: () => WebRoute,
-} as any)
-const WebEventsRoute = WebEventsRouteImport.update({
-  id: '/events',
-  path: '/events',
-  getParentRoute: () => WebRoute,
-} as any)
-const StaysTripsRoute = StaysTripsRouteImport.update({
-  id: '/trips',
-  path: '/trips',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysSpacesRoute = StaysSpacesRouteImport.update({
-  id: '/spaces',
-  path: '/spaces',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysLoyaltyRoute = StaysLoyaltyRouteImport.update({
-  id: '/loyalty',
-  path: '/loyalty',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysInvoicesRoute = StaysInvoicesRouteImport.update({
-  id: '/invoices',
-  path: '/invoices',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysIncidentsRoute = StaysIncidentsRouteImport.update({
-  id: '/incidents',
-  path: '/incidents',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysExperiencesRoute = StaysExperiencesRouteImport.update({
-  id: '/experiences',
-  path: '/experiences',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysAccountRoute = StaysAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => StaysRoute,
 } as any)
 const InvoiceInvoiceIdRoute = InvoiceInvoiceIdRouteImport.update({
   id: '/invoice/$invoiceId',
@@ -293,11 +225,6 @@ const WebHotelHotelIdRoute = WebHotelHotelIdRouteImport.update({
   path: '/hotel/$hotelId',
   getParentRoute: () => WebRoute,
 } as any)
-const WebEventEventIdRoute = WebEventEventIdRouteImport.update({
-  id: '/event/$eventId',
-  path: '/event/$eventId',
-  getParentRoute: () => WebRoute,
-} as any)
 const WebCheckoutBookingIdRoute = WebCheckoutBookingIdRouteImport.update({
   id: '/checkout/$bookingId',
   path: '/checkout/$bookingId',
@@ -318,41 +245,6 @@ const WebBookRoomIdRoute = WebBookRoomIdRouteImport.update({
   path: '/book/$roomId',
   getParentRoute: () => WebRoute,
 } as any)
-const StaysSignBookingIdRoute = StaysSignBookingIdRouteImport.update({
-  id: '/sign/$bookingId',
-  path: '/sign/$bookingId',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysPropertyPropertyIdRoute = StaysPropertyPropertyIdRouteImport.update({
-  id: '/property/$propertyId',
-  path: '/property/$propertyId',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysEventEventIdRoute = StaysEventEventIdRouteImport.update({
-  id: '/event/$eventId',
-  path: '/event/$eventId',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysCheckoutBookingIdRoute = StaysCheckoutBookingIdRouteImport.update({
-  id: '/checkout/$bookingId',
-  path: '/checkout/$bookingId',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysChatBookingIdRoute = StaysChatBookingIdRouteImport.update({
-  id: '/chat/$bookingId',
-  path: '/chat/$bookingId',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysBookingBookingIdRoute = StaysBookingBookingIdRouteImport.update({
-  id: '/booking/$bookingId',
-  path: '/booking/$bookingId',
-  getParentRoute: () => StaysRoute,
-} as any)
-const StaysBookRoomIdRoute = StaysBookRoomIdRouteImport.update({
-  id: '/book/$roomId',
-  path: '/book/$roomId',
-  getParentRoute: () => StaysRoute,
-} as any)
 const AppAdminManualRoute = AppAdminManualRouteImport.update({
   id: '/admin/manual',
   path: '/admin/manual',
@@ -371,7 +263,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
-  '/stays': typeof StaysRouteWithChildren
   '/web': typeof WebRouteWithChildren
   '/calendar': typeof AppCalendarRoute
   '/channels': typeof AppChannelsRoute
@@ -394,31 +285,14 @@ export interface FileRoutesByFullPath {
   '/embed/assistant': typeof EmbedAssistantRoute
   '/embed/search': typeof EmbedSearchRoute
   '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
-  '/stays/account': typeof StaysAccountRoute
-  '/stays/experiences': typeof StaysExperiencesRoute
-  '/stays/incidents': typeof StaysIncidentsRoute
-  '/stays/invoices': typeof StaysInvoicesRoute
-  '/stays/loyalty': typeof StaysLoyaltyRoute
-  '/stays/spaces': typeof StaysSpacesRoute
-  '/stays/trips': typeof StaysTripsRoute
-  '/web/events': typeof WebEventsRoute
   '/web/hotels': typeof WebHotelsRoute
   '/web/mi-reserva': typeof WebMiReservaRoute
-  '/stays/': typeof StaysIndexRoute
   '/web/': typeof WebIndexRoute
   '/admin/manual': typeof AppAdminManualRoute
-  '/stays/book/$roomId': typeof StaysBookRoomIdRoute
-  '/stays/booking/$bookingId': typeof StaysBookingBookingIdRoute
-  '/stays/chat/$bookingId': typeof StaysChatBookingIdRoute
-  '/stays/checkout/$bookingId': typeof StaysCheckoutBookingIdRoute
-  '/stays/event/$eventId': typeof StaysEventEventIdRoute
-  '/stays/property/$propertyId': typeof StaysPropertyPropertyIdRoute
-  '/stays/sign/$bookingId': typeof StaysSignBookingIdRoute
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
-  '/web/event/$eventId': typeof WebEventEventIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
@@ -452,31 +326,14 @@ export interface FileRoutesByTo {
   '/embed/assistant': typeof EmbedAssistantRoute
   '/embed/search': typeof EmbedSearchRoute
   '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
-  '/stays/account': typeof StaysAccountRoute
-  '/stays/experiences': typeof StaysExperiencesRoute
-  '/stays/incidents': typeof StaysIncidentsRoute
-  '/stays/invoices': typeof StaysInvoicesRoute
-  '/stays/loyalty': typeof StaysLoyaltyRoute
-  '/stays/spaces': typeof StaysSpacesRoute
-  '/stays/trips': typeof StaysTripsRoute
-  '/web/events': typeof WebEventsRoute
   '/web/hotels': typeof WebHotelsRoute
   '/web/mi-reserva': typeof WebMiReservaRoute
-  '/stays': typeof StaysIndexRoute
   '/web': typeof WebIndexRoute
   '/admin/manual': typeof AppAdminManualRoute
-  '/stays/book/$roomId': typeof StaysBookRoomIdRoute
-  '/stays/booking/$bookingId': typeof StaysBookingBookingIdRoute
-  '/stays/chat/$bookingId': typeof StaysChatBookingIdRoute
-  '/stays/checkout/$bookingId': typeof StaysCheckoutBookingIdRoute
-  '/stays/event/$eventId': typeof StaysEventEventIdRoute
-  '/stays/property/$propertyId': typeof StaysPropertyPropertyIdRoute
-  '/stays/sign/$bookingId': typeof StaysSignBookingIdRoute
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
-  '/web/event/$eventId': typeof WebEventEventIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
@@ -491,7 +348,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
-  '/stays': typeof StaysRouteWithChildren
   '/web': typeof WebRouteWithChildren
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/channels': typeof AppChannelsRoute
@@ -514,31 +370,14 @@ export interface FileRoutesById {
   '/embed/assistant': typeof EmbedAssistantRoute
   '/embed/search': typeof EmbedSearchRoute
   '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
-  '/stays/account': typeof StaysAccountRoute
-  '/stays/experiences': typeof StaysExperiencesRoute
-  '/stays/incidents': typeof StaysIncidentsRoute
-  '/stays/invoices': typeof StaysInvoicesRoute
-  '/stays/loyalty': typeof StaysLoyaltyRoute
-  '/stays/spaces': typeof StaysSpacesRoute
-  '/stays/trips': typeof StaysTripsRoute
-  '/web/events': typeof WebEventsRoute
   '/web/hotels': typeof WebHotelsRoute
   '/web/mi-reserva': typeof WebMiReservaRoute
-  '/stays/': typeof StaysIndexRoute
   '/web/': typeof WebIndexRoute
   '/_app/admin/manual': typeof AppAdminManualRoute
-  '/stays/book/$roomId': typeof StaysBookRoomIdRoute
-  '/stays/booking/$bookingId': typeof StaysBookingBookingIdRoute
-  '/stays/chat/$bookingId': typeof StaysChatBookingIdRoute
-  '/stays/checkout/$bookingId': typeof StaysCheckoutBookingIdRoute
-  '/stays/event/$eventId': typeof StaysEventEventIdRoute
-  '/stays/property/$propertyId': typeof StaysPropertyPropertyIdRoute
-  '/stays/sign/$bookingId': typeof StaysSignBookingIdRoute
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
-  '/web/event/$eventId': typeof WebEventEventIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
@@ -553,7 +392,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reservar'
     | '/reservar-ok'
-    | '/stays'
     | '/web'
     | '/calendar'
     | '/channels'
@@ -576,31 +414,14 @@ export interface FileRouteTypes {
     | '/embed/assistant'
     | '/embed/search'
     | '/invoice/$invoiceId'
-    | '/stays/account'
-    | '/stays/experiences'
-    | '/stays/incidents'
-    | '/stays/invoices'
-    | '/stays/loyalty'
-    | '/stays/spaces'
-    | '/stays/trips'
-    | '/web/events'
     | '/web/hotels'
     | '/web/mi-reserva'
-    | '/stays/'
     | '/web/'
     | '/admin/manual'
-    | '/stays/book/$roomId'
-    | '/stays/booking/$bookingId'
-    | '/stays/chat/$bookingId'
-    | '/stays/checkout/$bookingId'
-    | '/stays/event/$eventId'
-    | '/stays/property/$propertyId'
-    | '/stays/sign/$bookingId'
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
     | '/web/checkout/$bookingId'
-    | '/web/event/$eventId'
     | '/web/hotel/$hotelId'
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
@@ -634,31 +455,14 @@ export interface FileRouteTypes {
     | '/embed/assistant'
     | '/embed/search'
     | '/invoice/$invoiceId'
-    | '/stays/account'
-    | '/stays/experiences'
-    | '/stays/incidents'
-    | '/stays/invoices'
-    | '/stays/loyalty'
-    | '/stays/spaces'
-    | '/stays/trips'
-    | '/web/events'
     | '/web/hotels'
     | '/web/mi-reserva'
-    | '/stays'
     | '/web'
     | '/admin/manual'
-    | '/stays/book/$roomId'
-    | '/stays/booking/$bookingId'
-    | '/stays/chat/$bookingId'
-    | '/stays/checkout/$bookingId'
-    | '/stays/event/$eventId'
-    | '/stays/property/$propertyId'
-    | '/stays/sign/$bookingId'
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
     | '/web/checkout/$bookingId'
-    | '/web/event/$eventId'
     | '/web/hotel/$hotelId'
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
@@ -672,7 +476,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/reservar'
     | '/reservar-ok'
-    | '/stays'
     | '/web'
     | '/_app/calendar'
     | '/_app/channels'
@@ -695,31 +498,14 @@ export interface FileRouteTypes {
     | '/embed/assistant'
     | '/embed/search'
     | '/invoice/$invoiceId'
-    | '/stays/account'
-    | '/stays/experiences'
-    | '/stays/incidents'
-    | '/stays/invoices'
-    | '/stays/loyalty'
-    | '/stays/spaces'
-    | '/stays/trips'
-    | '/web/events'
     | '/web/hotels'
     | '/web/mi-reserva'
-    | '/stays/'
     | '/web/'
     | '/_app/admin/manual'
-    | '/stays/book/$roomId'
-    | '/stays/booking/$bookingId'
-    | '/stays/chat/$bookingId'
-    | '/stays/checkout/$bookingId'
-    | '/stays/event/$eventId'
-    | '/stays/property/$propertyId'
-    | '/stays/sign/$bookingId'
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
     | '/web/checkout/$bookingId'
-    | '/web/event/$eventId'
     | '/web/hotel/$hotelId'
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
@@ -734,7 +520,6 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ReservarRoute: typeof ReservarRoute
   ReservarOkRoute: typeof ReservarOkRoute
-  StaysRoute: typeof StaysRouteWithChildren
   WebRoute: typeof WebRouteWithChildren
   EmbedAssistantRoute: typeof EmbedAssistantRoute
   EmbedSearchRoute: typeof EmbedSearchRoute
@@ -748,13 +533,6 @@ declare module '@tanstack/react-router' {
       path: '/web'
       fullPath: '/web'
       preLoaderRoute: typeof WebRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stays': {
-      id: '/stays'
-      path: '/stays'
-      fullPath: '/stays'
-      preLoaderRoute: typeof StaysRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reservar-ok': {
@@ -806,13 +584,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebIndexRouteImport
       parentRoute: typeof WebRoute
     }
-    '/stays/': {
-      id: '/stays/'
-      path: '/'
-      fullPath: '/stays/'
-      preLoaderRoute: typeof StaysIndexRouteImport
-      parentRoute: typeof StaysRoute
-    }
     '/web/mi-reserva': {
       id: '/web/mi-reserva'
       path: '/mi-reserva'
@@ -826,62 +597,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/web/hotels'
       preLoaderRoute: typeof WebHotelsRouteImport
       parentRoute: typeof WebRoute
-    }
-    '/web/events': {
-      id: '/web/events'
-      path: '/events'
-      fullPath: '/web/events'
-      preLoaderRoute: typeof WebEventsRouteImport
-      parentRoute: typeof WebRoute
-    }
-    '/stays/trips': {
-      id: '/stays/trips'
-      path: '/trips'
-      fullPath: '/stays/trips'
-      preLoaderRoute: typeof StaysTripsRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/spaces': {
-      id: '/stays/spaces'
-      path: '/spaces'
-      fullPath: '/stays/spaces'
-      preLoaderRoute: typeof StaysSpacesRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/loyalty': {
-      id: '/stays/loyalty'
-      path: '/loyalty'
-      fullPath: '/stays/loyalty'
-      preLoaderRoute: typeof StaysLoyaltyRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/invoices': {
-      id: '/stays/invoices'
-      path: '/invoices'
-      fullPath: '/stays/invoices'
-      preLoaderRoute: typeof StaysInvoicesRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/incidents': {
-      id: '/stays/incidents'
-      path: '/incidents'
-      fullPath: '/stays/incidents'
-      preLoaderRoute: typeof StaysIncidentsRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/experiences': {
-      id: '/stays/experiences'
-      path: '/experiences'
-      fullPath: '/stays/experiences'
-      preLoaderRoute: typeof StaysExperiencesRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/account': {
-      id: '/stays/account'
-      path: '/account'
-      fullPath: '/stays/account'
-      preLoaderRoute: typeof StaysAccountRouteImport
-      parentRoute: typeof StaysRoute
     }
     '/invoice/$invoiceId': {
       id: '/invoice/$invoiceId'
@@ -1058,13 +773,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebHotelHotelIdRouteImport
       parentRoute: typeof WebRoute
     }
-    '/web/event/$eventId': {
-      id: '/web/event/$eventId'
-      path: '/event/$eventId'
-      fullPath: '/web/event/$eventId'
-      preLoaderRoute: typeof WebEventEventIdRouteImport
-      parentRoute: typeof WebRoute
-    }
     '/web/checkout/$bookingId': {
       id: '/web/checkout/$bookingId'
       path: '/checkout/$bookingId'
@@ -1092,55 +800,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/web/book/$roomId'
       preLoaderRoute: typeof WebBookRoomIdRouteImport
       parentRoute: typeof WebRoute
-    }
-    '/stays/sign/$bookingId': {
-      id: '/stays/sign/$bookingId'
-      path: '/sign/$bookingId'
-      fullPath: '/stays/sign/$bookingId'
-      preLoaderRoute: typeof StaysSignBookingIdRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/property/$propertyId': {
-      id: '/stays/property/$propertyId'
-      path: '/property/$propertyId'
-      fullPath: '/stays/property/$propertyId'
-      preLoaderRoute: typeof StaysPropertyPropertyIdRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/event/$eventId': {
-      id: '/stays/event/$eventId'
-      path: '/event/$eventId'
-      fullPath: '/stays/event/$eventId'
-      preLoaderRoute: typeof StaysEventEventIdRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/checkout/$bookingId': {
-      id: '/stays/checkout/$bookingId'
-      path: '/checkout/$bookingId'
-      fullPath: '/stays/checkout/$bookingId'
-      preLoaderRoute: typeof StaysCheckoutBookingIdRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/chat/$bookingId': {
-      id: '/stays/chat/$bookingId'
-      path: '/chat/$bookingId'
-      fullPath: '/stays/chat/$bookingId'
-      preLoaderRoute: typeof StaysChatBookingIdRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/booking/$bookingId': {
-      id: '/stays/booking/$bookingId'
-      path: '/booking/$bookingId'
-      fullPath: '/stays/booking/$bookingId'
-      preLoaderRoute: typeof StaysBookingBookingIdRouteImport
-      parentRoute: typeof StaysRoute
-    }
-    '/stays/book/$roomId': {
-      id: '/stays/book/$roomId'
-      path: '/book/$roomId'
-      fullPath: '/stays/book/$roomId'
-      preLoaderRoute: typeof StaysBookRoomIdRouteImport
-      parentRoute: typeof StaysRoute
     }
     '/_app/admin/manual': {
       id: '/_app/admin/manual'
@@ -1205,46 +864,7 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface StaysRouteChildren {
-  StaysAccountRoute: typeof StaysAccountRoute
-  StaysExperiencesRoute: typeof StaysExperiencesRoute
-  StaysIncidentsRoute: typeof StaysIncidentsRoute
-  StaysInvoicesRoute: typeof StaysInvoicesRoute
-  StaysLoyaltyRoute: typeof StaysLoyaltyRoute
-  StaysSpacesRoute: typeof StaysSpacesRoute
-  StaysTripsRoute: typeof StaysTripsRoute
-  StaysIndexRoute: typeof StaysIndexRoute
-  StaysBookRoomIdRoute: typeof StaysBookRoomIdRoute
-  StaysBookingBookingIdRoute: typeof StaysBookingBookingIdRoute
-  StaysChatBookingIdRoute: typeof StaysChatBookingIdRoute
-  StaysCheckoutBookingIdRoute: typeof StaysCheckoutBookingIdRoute
-  StaysEventEventIdRoute: typeof StaysEventEventIdRoute
-  StaysPropertyPropertyIdRoute: typeof StaysPropertyPropertyIdRoute
-  StaysSignBookingIdRoute: typeof StaysSignBookingIdRoute
-}
-
-const StaysRouteChildren: StaysRouteChildren = {
-  StaysAccountRoute: StaysAccountRoute,
-  StaysExperiencesRoute: StaysExperiencesRoute,
-  StaysIncidentsRoute: StaysIncidentsRoute,
-  StaysInvoicesRoute: StaysInvoicesRoute,
-  StaysLoyaltyRoute: StaysLoyaltyRoute,
-  StaysSpacesRoute: StaysSpacesRoute,
-  StaysTripsRoute: StaysTripsRoute,
-  StaysIndexRoute: StaysIndexRoute,
-  StaysBookRoomIdRoute: StaysBookRoomIdRoute,
-  StaysBookingBookingIdRoute: StaysBookingBookingIdRoute,
-  StaysChatBookingIdRoute: StaysChatBookingIdRoute,
-  StaysCheckoutBookingIdRoute: StaysCheckoutBookingIdRoute,
-  StaysEventEventIdRoute: StaysEventEventIdRoute,
-  StaysPropertyPropertyIdRoute: StaysPropertyPropertyIdRoute,
-  StaysSignBookingIdRoute: StaysSignBookingIdRoute,
-}
-
-const StaysRouteWithChildren = StaysRoute._addFileChildren(StaysRouteChildren)
-
 interface WebRouteChildren {
-  WebEventsRoute: typeof WebEventsRoute
   WebHotelsRoute: typeof WebHotelsRoute
   WebMiReservaRoute: typeof WebMiReservaRoute
   WebIndexRoute: typeof WebIndexRoute
@@ -1252,7 +872,6 @@ interface WebRouteChildren {
   WebBookingBookingIdRoute: typeof WebBookingBookingIdRoute
   WebChatBookingIdRoute: typeof WebChatBookingIdRoute
   WebCheckoutBookingIdRoute: typeof WebCheckoutBookingIdRoute
-  WebEventEventIdRoute: typeof WebEventEventIdRoute
   WebHotelHotelIdRoute: typeof WebHotelHotelIdRoute
   WebRoomRoomIdRoute: typeof WebRoomRoomIdRoute
   WebSignBookingIdRoute: typeof WebSignBookingIdRoute
@@ -1261,7 +880,6 @@ interface WebRouteChildren {
 }
 
 const WebRouteChildren: WebRouteChildren = {
-  WebEventsRoute: WebEventsRoute,
   WebHotelsRoute: WebHotelsRoute,
   WebMiReservaRoute: WebMiReservaRoute,
   WebIndexRoute: WebIndexRoute,
@@ -1269,7 +887,6 @@ const WebRouteChildren: WebRouteChildren = {
   WebBookingBookingIdRoute: WebBookingBookingIdRoute,
   WebChatBookingIdRoute: WebChatBookingIdRoute,
   WebCheckoutBookingIdRoute: WebCheckoutBookingIdRoute,
-  WebEventEventIdRoute: WebEventEventIdRoute,
   WebHotelHotelIdRoute: WebHotelHotelIdRoute,
   WebRoomRoomIdRoute: WebRoomRoomIdRoute,
   WebSignBookingIdRoute: WebSignBookingIdRoute,
@@ -1286,7 +903,6 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ReservarRoute: ReservarRoute,
   ReservarOkRoute: ReservarOkRoute,
-  StaysRoute: StaysRouteWithChildren,
   WebRoute: WebRouteWithChildren,
   EmbedAssistantRoute: EmbedAssistantRoute,
   EmbedSearchRoute: EmbedSearchRoute,

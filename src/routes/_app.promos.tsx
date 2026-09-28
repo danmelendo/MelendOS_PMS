@@ -31,6 +31,9 @@ interface NewCode {
   valid_from: string; // yyyy-mm-dd
   valid_until: string; // yyyy-mm-dd ("" = no expiry)
   single_use: boolean;
+  /** Shown on the booking web under "Habitaciones en oferta". */
+  published: boolean;
+  headline: string;
 }
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -47,6 +50,8 @@ function PromosPage() {
     valid_from: todayISO(),
     valid_until: "",
     single_use: false,
+    published: false,
+    headline: "",
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["promo_codes"] });
@@ -72,6 +77,8 @@ function PromosPage() {
         // include the whole end day (until 23:59:59 local)
         valid_until: n.valid_until ? new Date(`${n.valid_until}T23:59:59`).toISOString() : null,
         single_use: n.single_use,
+        published: n.published,
+        headline: n.headline.trim() || null,
       });
       if (error) {
         if (error.code === "23505") throw new Error("Ya existe un código activo con ese nombre");
@@ -81,7 +88,7 @@ function PromosPage() {
     onSuccess: () => {
       invalidate();
       toast.success("Código creado");
-      setForm((f) => ({ ...f, code: "", discount_value: "" }));
+      setForm((f) => ({ ...f, code: "", discount_value: "", headline: "" }));
     },
     onError: (e: Error) => toast.error(e.message || "No se pudo crear el código"),
   });
@@ -227,6 +234,40 @@ function PromosPage() {
               </div>
             </div>
 
+            <div className="flex items-end gap-3">
+              <div className="flex items-center gap-2 h-10">
+                <Switch
+                  id="published"
+                  checked={form.published}
+                  onCheckedChange={(published) => setForm((f) => ({ ...f, published }))}
+                />
+                <Label htmlFor="published" className="cursor-pointer">
+                  Publicar en la web
+                </Label>
+              </div>
+            </div>
+
+            {form.published && (
+              <div className="space-y-1.5 lg:col-span-2">
+                <Label htmlFor="headline">
+                  Titular en la web <span className="text-muted-foreground">(opcional)</span>
+                </Label>
+                <Input
+                  id="headline"
+                  maxLength={120}
+                  placeholder="Escapada de otoño"
+                  value={form.headline}
+                  onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
+                />
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground lg:col-span-3">
+              Los códigos publicados aparecen en «Habitaciones en oferta» de tu web de reservas. Los
+              demás solo funcionan si das el código al cliente. Las rebajas por fechas se crean en
+              Tarifas con una regla de fecha en negativo.
+            </p>
+
             <div className="lg:col-span-3">
               <Button type="submit" disabled={create.isPending}>
                 {create.isPending ? "Creando…" : "Crear código"}
@@ -246,7 +287,7 @@ function PromosPage() {
             <p className="p-4 text-sm text-muted-foreground">No hay códigos activos.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] text-sm">
+              <table className="w-full min-w-[40rem] text-sm">
                 <thead className="bg-muted/30 border-y">
                   <tr>
                     <th className="p-2 text-left">Código</th>
@@ -254,13 +295,33 @@ function PromosPage() {
                     <th className="p-2 text-center">Vigencia</th>
                     <th className="p-2 text-center">Uso</th>
                     <th className="p-2 text-center">Activo</th>
+                    <th className="p-2 text-center">En la web</th>
                     <th className="p-2 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {active.map((c) => (
                     <tr key={c.id} className="border-b last:border-0">
-                      <td className="p-2 font-mono font-medium tracking-wide">{c.code}</td>
+                      <td className="p-2">
+                        <span className="font-mono font-medium tracking-wide">{c.code}</span>
+                        {c.published && (
+                          <button
+                            type="button"
+                            className="block text-left text-xs text-muted-foreground underline-offset-4 hover:underline"
+                            title="Cambiar el titular que se ve en la web"
+                            onClick={() => {
+                              const headline = prompt("Titular en la web", c.headline ?? "");
+                              if (headline !== null)
+                                patch.mutate({
+                                  id: c.id,
+                                  patch: { headline: headline.trim().slice(0, 120) || null },
+                                });
+                            }}
+                          >
+                            {c.headline || "Añadir titular"}
+                          </button>
+                        )}
+                      </td>
                       <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
                       <td className="p-2 text-center text-xs text-muted-foreground">
                         {fmtDate(c.valid_from)} →{" "}
@@ -281,6 +342,15 @@ function PromosPage() {
                           checked={c.active}
                           onCheckedChange={(active) =>
                             patch.mutate({ id: c.id, patch: { active } })
+                          }
+                        />
+                      </td>
+                      <td className="p-2 text-center">
+                        <Switch
+                          checked={c.published}
+                          aria-label="Publicar en la web"
+                          onCheckedChange={(published) =>
+                            patch.mutate({ id: c.id, patch: { published } })
                           }
                         />
                       </td>

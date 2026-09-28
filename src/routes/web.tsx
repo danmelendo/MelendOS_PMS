@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { useBrand } from "@/lib/brand";
-import { useFeatures } from "@/lib/features";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { AgentChat } from "@/components/AgentChat";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
@@ -31,7 +30,7 @@ export const Route = createFileRoute("/web")({
       {
         name: "description",
         content:
-          "Web de reserva directa del hotel: habitaciones, precios por noche, experiencias y check-in online.",
+          "Web de reserva directa del hotel: habitaciones, precios por noche, ofertas y check-in online.",
       },
     ],
   }),
@@ -40,15 +39,11 @@ export const Route = createFileRoute("/web")({
 const NAV = [
   { to: "/web", label: "Inicio", exact: true },
   { to: "/web/hotels", label: "Habitaciones", exact: false },
-  { to: "/web/events", label: "Experiencias", exact: false },
 ] as const;
 
 function WebLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { brand, ready, locked } = useBrand();
-  const features = useFeatures();
-  // Experiences only for hotels with that module.
-  const nav = NAV.filter((item) => item.to !== "/web/events" || features.experiences);
 
   // Until the hotel is known (domain lookup), nothing of another hotel shows.
   if (!ready) return <div className="min-h-screen bg-white" />;
@@ -73,7 +68,7 @@ function WebLayout() {
             </Link>
             {/* Inline nav from desktop up; phones + tablets use the row below */}
             <nav className="no-scrollbar ml-2 hidden min-w-0 items-center gap-1 overflow-x-auto lg:flex">
-              {nav.map((item) => {
+              {NAV.map((item) => {
                 const active = item.exact ? path === item.to : path.startsWith(item.to);
                 return (
                   <Link
@@ -102,7 +97,7 @@ function WebLayout() {
           </div>
           {/* Scrollable nav row on phones + tablets */}
           <nav className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
-            {nav.map((item) => {
+            {NAV.map((item) => {
               const active = item.exact ? path === item.to : path.startsWith(item.to);
               return (
                 <Link
@@ -177,9 +172,6 @@ function WebLayout() {
               {/* Demo navigation, only outside a hotel's own domain. */}
               {!locked && (
                 <>
-                  <a href="/stays" className="hover:text-neutral-900">
-                    App del huésped
-                  </a>
                   <a href="/today" className="hover:text-neutral-900">
                     Panel de gestión
                   </a>

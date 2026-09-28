@@ -7,7 +7,7 @@ Tareas pendientes de Dan: `Cambiospendientes.md` (local; márcalas `- [x]` con e
 ## Qué es
 
 PMS y motor de reservas SaaS multi-hotel (hoteles por noches): web pública de
-reservas (`/web`), app del huésped (`/stays`), panel de gestión (`/_app`) y capa
+reservas (`/web`, o incrustada en la web del hotel con `embed.js`), panel de gestión (`/_app`) y capa
 de IA (agente de reservas, copiloto, servidor MCP). Un solo código; lo que cambia
 entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 **Hotel Lumen** (Valencia, starter, sin club) y **Albora Hotel & Spa** (Altea, pro).
@@ -52,14 +52,13 @@ src/                                Frontend (TanStack Start/Router, React 19, T
                                     rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos),
                                     travellers (registro de viajeros SES.HOSPEDAJES), invoices (VERI*FACTU)
   routes/web.*.tsx                  Web pública: hoteles, habitación, reservar, checkout, mi-reserva, chat, firma
-  routes/stays.*.tsx                App del huésped: descubrir, reservar, viajes, club, cuenta, chat
+  routes/embed.*.tsx                Widget incrustable (búsqueda y asistente) que carga public/embed.js
   components/                       UI compartida (AppSidebar, CopilotWidget, AgentChat, CustomerDrawer,
                                     FolioDrawer, DateRangePicker con precios, NewReservationDialog…)
   lib/                              Hooks y datos: roles (isAdmin/isGroup/canOperate), features (módulos),
                                     reports, customers, channels, chat, folio, mcp, demo-access, stays…
   integrations/supabase/            Cliente único + types.ts generados
-  integrations/pms/                 PmsConnector (contrato app del huésped ↔ PMS) + implementación
-  integrations/cms/                 Experiencias (tabla experiences)
+  integrations/pms/                 PmsConnector (contrato web de reservas ↔ PMS) + implementación
 supabase/
   migrations/                       Esquema (tenant_id + RLS en todo), funciones SQL, triggers. Una por cambio.
   seeds/                            Datos demo aplicables con sql-apply (políticas, paquetes, servicios, identidades)
@@ -104,6 +103,7 @@ site/                               Web comercial de Melend/OS (landing, hostale
 | Facturación VERI\*FACTU                       | `@domain/invoicing.ts` (IVA), `_shared/verifactu` (huella, XML, envío) + `verifactu-dispatch`; tablas `tax_invoices`, `verifactu_records`, `fiscal_settings`; `docs/verifactu.md` |
 | OTAs y touroperadores                         | `channel-webhook`, `channels-dispatch`, `_shared/channels`, tablas `channels*`; `docs/channels.md`                                                                                |
 | Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                                                                |
+| Ofertas en la web (rebajas y códigos)         | `hotel_offers()` (reglas de fecha en negativo + `promo_codes.published`), `HotelOffers.tsx`; canje en el motor (`validate_/claim_promo_code`)                                     |
 | Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                                                                |
 | Web y dominio del hotel                       | `tenants.brand`/`domain`, `save_hotel_web()`, `src/lib/hotel-web.ts` (resolución por host), `brand.tsx`, Admin → «Web y dominio»; `docs/web-y-dominio.md`                         |
 | Acceso demo                                   | `_shared/demo/accounts.ts`, función `demo-login`, `VITE_DEMO_ACCESS`                                                                                                              |

@@ -73,7 +73,7 @@ function JournalPage() {
         <h1 className="text-2xl font-bold tracking-tight">Booking journal</h1>
         <p className="text-sm text-muted-foreground">
           Traza inmutable del ciclo de vida de cada reserva (prereserva → confirmación → firma →
-          check-in). Compartida con la app móvil vía el conector PMS.
+          check-in). Compartida con la web de reservas vía el conector PMS.
         </p>
       </div>
 

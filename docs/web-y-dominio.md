@@ -4,7 +4,7 @@ Lo que vendemos es el **motor de reservas integrado en la web del hotel**, no un
 
 ## Cómo sabe la web qué hotel mostrar
 
-La web pública (`/web`) y la app del huésped (`/stays`) resuelven el hotel por el nombre de host (`src/lib/hotel-web.ts`, `hostHotel`):
+La web pública (`/web`) y el widget (`/embed/*`) resuelven el hotel por el nombre de host (`src/lib/hotel-web.ts`, `hostHotel`):
 
 1. **Dominio propio**: `tenants.domain`, por ejemplo `reservas.suhotel.com`. El hotel crea un CNAME hacia `VITE_PLATFORM_CNAME`.
 2. **Subdominio de la plataforma**: `<slug>.<VITE_PLATFORM_DOMAIN>`, por ejemplo `hostal-sol.reservas.melendo.app`. Necesita un DNS comodín hacia el alojamiento del frontend.
@@ -18,10 +18,10 @@ La identidad del hotel (nombre, color, textos, logo, foto de portada y galería)
 
 Incluida en todos los planes. Es la misma `/web` para todos los hoteles, rellenada con sus datos:
 
-- **Del PMS**: establecimientos, habitaciones, precios, disponibilidad, experiencias (si el hotel tiene el módulo) y reseñas.
+- **Del PMS**: establecimientos, habitaciones, precios, disponibilidad, «Habitaciones en oferta» (rebajas por fechas y códigos promocionales publicados) y reseñas.
 - **De «Tu web»** (Admin → Web y dominio): logo, foto de portada, título y subtítulo, «Sobre nosotros», galería (hasta 24 fotos), color, teléfono, email, dirección con «Cómo llegar» y redes sociales.
 
-Las fotos se reducen en el navegador (lado mayor de 2.000 px, WebP) y se guardan en el bucket público `hotel-media`, en la carpeta del hotel. Solo su dirección puede subir, cambiar o borrar ahí (políticas de Storage con `hotel_media_tenant()`). En el dominio de un hotel no se ven los enlaces de la demo («Panel de gestión», «App del huésped»). Diseño a medida no: si hace falta, es un servicio aparte.
+Las fotos se reducen en el navegador (lado mayor de 2.000 px, WebP) y se guardan en el bucket público `hotel-media`, en la carpeta del hotel. Solo su dirección puede subir, cambiar o borrar ahí (políticas de Storage con `hotel_media_tenant()`). En el dominio de un hotel no se ven los enlaces de la demo («Panel de gestión»). Diseño a medida no: si hace falta, es un servicio aparte.
 
 ## El widget para la web que ya tiene el hotel
 

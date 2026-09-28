@@ -8,7 +8,13 @@
 // code runs in the Edge Functions, behind the agent and MCP tools, and in tests.
 import { z } from "zod";
 import { eachNight, isYmd, nightsBetween, zonedHourToUtc } from "../domain/dates.ts";
-import { priceStay, round2, type DynamicRule, type PriceBreakdown } from "../domain/pricing.ts";
+import {
+  priceStay,
+  promoDiscount,
+  round2,
+  type DynamicRule,
+  type PriceBreakdown,
+} from "../domain/pricing.ts";
 import {
   amountDueNow,
   cancellationTerms,
@@ -43,6 +49,8 @@ export const bookingDraftInput = z
       .array(z.object({ extra_id: z.string().min(1), qty: z.number().int().min(1).max(50) }))
       .max(20)
       .default([]),
+    /** Promo code the guest typed; checked and counted on the server. */
+    promo_code: z.string().trim().min(1).max(40).optional(),
   })
   .refine((v) => nightsBetween(v.check_in, v.check_out) >= 1, {
     message: "La salida debe ser posterior a la entrada",
@@ -86,6 +94,8 @@ export interface NewReservation {
   dynamic_surcharge: number;
   dynamic_reason: string | null;
   extras_total: number;
+  discount_amount: number;
+  promo_code_id: string | null;
   total: number;
   /** Amount to pay online now (legacy column name): the total, or 0 at the hotel. */
   deposit_amount: number;
@@ -98,6 +108,13 @@ export interface NewReservation {
   created_by_role: "public" | "member" | "agent" | "mcp";
   /** SHA-256 (hex) of the guest access token; the token itself is never stored. */
   access_token_hash: string;
+}
+
+export interface StorePromo {
+  id: string;
+  code: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
 }
 
 /** Everything the booking logic needs from storage. */
@@ -126,6 +143,10 @@ export interface BookingStore {
     tenantId: string,
     c: { name: string; email: string; phone?: string },
   ): Promise<string>;
+  /** The tenant's promo code with that code (any case) if it can be used now. */
+  findPromoCode(tenantId: string, code: string): Promise<StorePromo | null>;
+  /** Counts one use if the code is still valid, atomically; false if it no longer is. */
+  claimPromoCode(tenantId: string, promoId: string): Promise<boolean>;
   insertReservation(r: NewReservation): Promise<{ id: string }>;
   insertExtras(
     tenantId: string,
@@ -210,6 +231,7 @@ export interface QuoteRequest {
   check_out: string;
   guests: number;
   extras?: { extra_id: string; qty: number }[];
+  promo_code?: string;
 }
 
 export interface StayQuote {
@@ -224,6 +246,8 @@ export interface StayQuote {
   extras: { extraId: string; qty: number; price: number }[];
   /** False when the room is taken for those dates (price still computed). */
   available: boolean;
+  /** The promo code applied (its discount is in the breakdown). */
+  promo: StorePromo | null;
 }
 
 /**
@@ -298,7 +322,7 @@ export async function quoteStay(
       checkOut: new Date(b.end_at).toISOString().slice(0, 10),
     }));
 
-  const breakdown = priceStay({
+  const priced = priceStay({
     checkIn: req.check_in,
     checkOut: req.check_out,
     rate: {
@@ -314,6 +338,25 @@ export async function quoteStay(
       giftExtraId: g.gift_extra_id,
     })),
   });
+
+  let breakdown: PriceBreakdown = priced;
+  let promo: StorePromo | null = null;
+  if (req.promo_code) {
+    promo = await store.findPromoCode(room.tenant_id, req.promo_code);
+    if (!promo) {
+      throw new BookingError("invalid", "El código promocional no es válido o ha caducado");
+    }
+    const discount = promoDiscount(
+      { discountType: promo.discount_type, discountValue: Number(promo.discount_value) },
+      priced.base + priced.dynamicSurcharge,
+    );
+    breakdown = {
+      ...priced,
+      discount,
+      promoCode: promo.code,
+      total: round2(priced.total - discount),
+    };
+  }
 
   return {
     room,
@@ -331,6 +374,7 @@ export async function quoteStay(
     ),
     extras,
     available,
+    promo,
   };
 }
 
@@ -376,6 +420,9 @@ export async function createBookingDraft(
       ? new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString()
       : null;
   const access = await newAccessToken();
+  if (quote.promo && !(await store.claimPromoCode(room.tenant_id, quote.promo.id))) {
+    throw new BookingError("invalid", "El código promocional ya no es válido");
+  }
 
   const reservation = await store.insertReservation({
     tenant_id: room.tenant_id,
@@ -390,6 +437,8 @@ export async function createBookingDraft(
     dynamic_surcharge: breakdown.dynamicSurcharge,
     dynamic_reason: breakdown.dynamicReason,
     extras_total: breakdown.extrasTotal,
+    discount_amount: breakdown.discount ?? 0,
+    promo_code_id: quote.promo?.id ?? null,
     total: breakdown.total,
     deposit_amount: dueNow,
     payment_mode: mode,

@@ -45,7 +45,7 @@ export const COMPLIANCE: {
 
 export const BASE_INCLUDES = [
   "Gestión de reservas y habitaciones (PMS)",
-  "Web de reservas directas y app del huésped",
+  "Web de reservas directas con la plantilla del hotel o incrustada en su web",
   "Registro de viajeros",
   "Pagos online o en el hotel y políticas de cancelación",
 ];
@@ -55,7 +55,7 @@ export const PACKAGES: Record<PackageId, { name: string; description: string; mo
     stay: {
       name: "Estancia",
       description: "Para atender al huésped durante su estancia sin llamadas ni papeles.",
-      modules: ["Chat con recepción", "Cuenta de la estancia", "Reseñas", "Experiencias"],
+      modules: ["Chat con recepción", "Cuenta de la estancia", "Reseñas"],
     },
     ai: {
       name: "IA",
@@ -141,7 +141,7 @@ export const PLANS: Record<PlanId, Plan> = {
     minHotels: 1,
     slaAvailable: true,
     highlights: [
-      "PMS, web de reserva directa y app del huésped",
+      "PMS y web de reserva directa, propia o en tu web",
       "Chat con recepción, cuenta de la estancia y reseñas",
       "Pagos online o en el hotel, sin comisión por reserva",
     ],

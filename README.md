@@ -1,7 +1,8 @@
 # Melend/OS · Motor de reservas y PMS para hoteles
 
 > Plataforma de reservas para hoteles tradicionales (estancias por noches): web pública con
-> reserva y pago, app del huésped y panel de gestión (PMS) para recepción y administración.
+> reserva y pago (o incrustada en la web del hotel) y panel de gestión (PMS) para recepción y
+> administración.
 >
 > ⚠️ **Repositorio de portfolio.** Todos los datos (hoteles, habitaciones, precios, huéspedes)
 > son ficticios. No contiene claves ni datos reales.
@@ -27,7 +28,6 @@ producción. En la demo se entra eligiendo una cuenta ficticia de una lista
 | Ruta     | Qué es                                                               |
 | -------- | -------------------------------------------------------------------- |
 | `/web`   | Web pública del hotel: descubrimiento, ficha de habitación y reserva |
-| `/stays` | App del huésped: estancias, check-in online, club de fidelización    |
 | `/today` | Panel de gestión (PMS); en la demo eliges una cuenta ficticia        |
 
 ## ✨ Qué hace
@@ -44,13 +44,16 @@ producción. En la demo se entra eligiendo una cuenta ficticia de una lista
 - Extras (desayuno, parking, spa, experiencias), regalos por umbral de gasto, códigos promo,
   clientes, informes, roles (administración / recepción) y **booking journal** inmutable.
 
-**Web pública y app del huésped**
+**Web de reservas del hotel** (plantilla propia o incrustada en su web con `embed.js`)
 
 - Búsqueda de disponibilidad con calendario de precios por noche; pago online completo o en el
   hotel, con política de cancelación por hotel.
 - **Prereserva:** bloquea la habitación 30 minutos mientras se completa el pago.
+- **Habitaciones en oferta:** rebajas por fechas y códigos promocionales que el hotel publica;
+  el motor los aplica en el servidor.
+- «Mi reserva»: chat con recepción, cuenta de la estancia, facturas, reseñas y cancelación.
 - Check-in online con firma digital y subida de documentación.
-- Club de fidelización con niveles, puntos y recompensas.
+- Club de fidelización con niveles, puntos y recompensas (paquete Cadena).
 - Avisos de disponibilidad por notificación del navegador.
 - Todo consume el PMS a través de un **conector tipado** (`src/integrations/pms/`, interfaz
   `PmsConnector`): integrar otro PMS es implementar esa interfaz.
@@ -102,12 +105,11 @@ respuesta sea fiel a los datos), no la redacción.
 
 ```
 src/
-  routes/            Rutas: /web/*, /stays/*, panel /_app/*
+  routes/            Rutas: /web/*, /embed/*, panel /_app/*
   components/        UI compartida (editor de reservas, barra lateral, ...)
   integrations/
     supabase/        Cliente de datos (Supabase)
     pms/             Contrato PmsConnector + implementación sobre este backend
-    cms/             Contrato CmsClient (experiencias del hotel)
   lib/               Motor de precios, datos y helpers
 ```
 

@@ -2765,4 +2765,88 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(anonRead).toEqual({ ok: true, value: "reservas.hotellumen-prueba.es" });
     });
   });
+
+  describe("offers on the booking web", () => {
+    it("shows date sales and published codes only, with nothing private", async () => {
+      await client.query("savepoint setup");
+      const code = `T${randomUUID().slice(0, 8).toUpperCase()}`;
+      await client.query(
+        `insert into public.dynamic_rules (tenant_id, type, name, config, multiplier, active) values
+           ($1, 'date', 'Rebaja de prueba', jsonb_build_object('from', (current_date + 3)::text, 'to', (current_date + 6)::text), -15, true),
+           ($1, 'date', 'Subida de prueba', jsonb_build_object('from', (current_date + 3)::text, 'to', (current_date + 6)::text), 20, true),
+           ($1, 'date', 'Rebaja pasada', '{"from":"2020-01-01","to":"2020-01-05"}', -30, true)`,
+        [ids.lumen],
+      );
+      await client.query(
+        `insert into public.promo_codes (tenant_id, code, discount_type, discount_value, published, headline) values
+           ($1, $2, 'percent', 12, true, 'Titular de prueba'),
+           ($1, $2 || 'X', 'percent', 50, false, null)`,
+        [ids.lumen, code],
+      );
+      const seen = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.hotel_offers($1) as o", [ids.lumen])).rows[0].o,
+      );
+      const albora = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.hotel_offers($1) as o", [ids.albora])).rows[0].o,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(seen.ok).toBe(true);
+      if (!seen.ok || !albora.ok) return;
+      const names = seen.value.sales.map((s: { name: string }) => s.name);
+      expect(names).toContain("Rebaja de prueba");
+      expect(names).not.toContain("Subida de prueba");
+      expect(names).not.toContain("Rebaja pasada");
+      expect(
+        seen.value.sales.find((s: { name: string }) => s.name === "Rebaja de prueba"),
+      ).toMatchObject({ discount_pct: 15 });
+      const codes = seen.value.promos.map((p: { code: string }) => p.code);
+      expect(codes).toContain(code);
+      expect(codes).not.toContain(`${code}X`);
+      expect(Object.keys(seen.value.promos[0]).sort()).toEqual(
+        ["code", "discount_type", "discount_value", "headline", "valid_until"].sort(),
+      );
+      // Another hotel's offers are not mixed in.
+      expect(albora.value.promos.map((p: { code: string }) => p.code)).not.toContain(code);
+    });
+
+    it("counts promo code uses only from the server, and never past the limit", async () => {
+      await client.query("savepoint setup");
+      const promo = (
+        await client.query(
+          `insert into public.promo_codes (tenant_id, code, discount_type, discount_value, max_uses)
+           values ($1, $2, 'fixed', 10, 2) returning id`,
+          [ids.lumen, `T${randomUUID().slice(0, 8).toUpperCase()}`],
+        )
+      ).rows[0].id;
+      const claim = (tenant: string) =>
+        client.query("select public.claim_promo_code($1, $2) as ok", [tenant, promo]);
+      const byAnon = await attempt("anon", undefined, () => claim(ids.lumen));
+      const byStaff = await attempt("authenticated", users.lumenAdmin, () => claim(ids.lumen));
+      await client.query("set local role service_role");
+      const otherHotel = (await claim(ids.albora)).rows[0].ok;
+      const first = (await claim(ids.lumen)).rows[0].ok;
+      const second = (await claim(ids.lumen)).rows[0].ok;
+      const third = (await claim(ids.lumen)).rows[0].ok;
+      await client.query("reset role");
+      const row = (
+        await client.query(
+          "select times_used, active, archived from public.promo_codes where id = $1",
+          [promo],
+        )
+      ).rows[0];
+      await client.query("rollback to savepoint setup");
+
+      expect(byAnon.ok).toBe(false);
+      expect(byStaff.ok).toBe(false);
+      expect([otherHotel, first, second, third]).toEqual([false, true, true, false]);
+      expect(row).toEqual({ times_used: 2, active: false, archived: true });
+    });
+  });
 });

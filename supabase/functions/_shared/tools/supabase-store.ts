@@ -1,7 +1,7 @@
 // BookingStore over Supabase with the service-role client. Every query is
 // scoped by tenant explicitly because service_role bypasses RLS.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import type { BookingStore } from "./bookings.ts";
+import type { BookingStore, StorePromo } from "./bookings.ts";
 import { hotelPolicies } from "../domain/policies.ts";
 import type { BookingLookup, CatalogRoom, ToolStore } from "./registry.ts";
 import type { ExtensionStore } from "./extensions.ts";
@@ -101,6 +101,17 @@ export function supabaseBookingStore(db: SupabaseClient): BookingStore {
           p_phone: c.phone ?? null,
         }),
       ) as string;
+    },
+    async findPromoCode(tenantId, code) {
+      const rows = must(
+        await db.rpc("validate_promo_code", { p_tenant: tenantId, p_code: code }),
+      ) as StorePromo[] | null;
+      return rows?.[0] ?? null;
+    },
+    async claimPromoCode(tenantId, promoId) {
+      return must(
+        await db.rpc("claim_promo_code", { p_tenant: tenantId, p_id: promoId }),
+      ) as boolean;
     },
     async insertReservation(r) {
       const res = await db.from("reservations").insert(r).select("id").single();

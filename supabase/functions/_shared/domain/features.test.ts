@@ -10,7 +10,7 @@ const on = (f: ReturnType<typeof tenantFeatures>) =>
 describe("tenantFeatures", () => {
   it("follows the plan when the hotel has not chosen packages", () => {
     // Hostels and traditional hotels: the stay package, no club, no AI.
-    expect(on(tenantFeatures("starter", {}))).toEqual(["chat", "folio", "reviews", "experiences"]);
+    expect(on(tenantFeatures("starter", {}))).toEqual(["chat", "folio", "reviews"]);
     expect(on(tenantFeatures(undefined, undefined))).toEqual(on(tenantFeatures("starter", {})));
     // Large hotels and chains: everything, loyalty club included.
     expect(on(tenantFeatures("pro", {}))).toEqual([...FEATURES]);

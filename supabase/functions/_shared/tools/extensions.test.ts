@@ -53,6 +53,12 @@ function fakeStore(busy: { room_id: string; start_at: string; end_at: string }[]
     async findOrCreateCustomer() {
       return "c1";
     },
+    async findPromoCode() {
+      return null;
+    },
+    async claimPromoCode() {
+      return false;
+    },
     async insertReservation() {
       throw new Error("not used");
     },

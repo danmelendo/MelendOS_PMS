@@ -430,6 +430,7 @@ export class DemoStaysConnector implements PmsConnector {
         ...(input.paymentMode ? { payment_mode: input.paymentMode } : {}),
         ...(input.guest ? { customer: input.guest } : {}),
         ...(input.extras?.length ? { extras: input.extras } : {}),
+        ...(input.promoCode ? { promo_code: input.promoCode } : {}),
       },
     });
     if (error || !data) {

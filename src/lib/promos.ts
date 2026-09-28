@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { promoDiscount } from "@domain/pricing.ts";
 
 export type DiscountType = "percent" | "fixed";
 
@@ -15,6 +16,9 @@ export interface PromoCode {
   times_used: number;
   active: boolean;
   archived: boolean;
+  /** Shown on the hotel's booking web under "Habitaciones en oferta". */
+  published: boolean;
+  headline: string | null;
   created_at: string;
 }
 
@@ -48,9 +52,8 @@ export function discountEurosForRoom(
   p: Pick<PromoCode, "discount_type" | "discount_value">,
   roomSubtotal: number,
 ): number {
-  const raw =
-    p.discount_type === "percent"
-      ? (roomSubtotal * p.discount_value) / 100
-      : Math.min(p.discount_value, roomSubtotal); // fixed amount can't exceed the room price
-  return Math.round(Math.max(0, raw) * 100) / 100;
+  return promoDiscount(
+    { discountType: p.discount_type, discountValue: p.discount_value },
+    roomSubtotal,
+  );
 }
