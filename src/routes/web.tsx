@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
+import { LEGAL_PAGES, type LegalPage } from "@/lib/legal";
 import { useBrand } from "@/lib/brand";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { AgentChat } from "@/components/AgentChat";
@@ -178,6 +179,18 @@ function WebLayout() {
                 </>
               )}
             </div>
+            <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              {(Object.keys(LEGAL_PAGES) as LegalPage[]).map((p) => (
+                <Link
+                  key={p}
+                  to="/web/legal/$page"
+                  params={{ page: p }}
+                  className="hover:text-neutral-900"
+                >
+                  {LEGAL_PAGES[p]}
+                </Link>
+              ))}
+            </p>
             <p className="text-xs">
               © {new Date().getFullYear()} {brand.name} · Reservas con Melend/OS
             </p>
