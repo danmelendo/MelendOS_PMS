@@ -1,0 +1,51 @@
+{
+  "slug": "hostal-ejemplo",
+  "name": "Hostal Ejemplo",
+  "plan": "starter",
+  "packages": [],
+  "status": "trial",
+  "timezone": "Europe/Madrid",
+  "checkin_hour": 14,
+  "checkout_hour": 11,
+  "payment_modes": ["at_hotel", "prepay"],
+  "free_cancellation_hours": 24,
+  "cancellation_penalty": "first_night",
+  "brand": {
+    "accent": "#7A4B2A",
+    "tagline": "Un hostal familiar junto a la estación",
+    "email": "reservas@hostal-ejemplo.example",
+    "phone": "+34 900 000 000",
+    "address": "Calle Ejemplo 1, 28000 Madrid"
+  },
+  "admins": ["direccion@hostal-ejemplo.example"],
+  "reception": ["recepcion@hostal-ejemplo.example"],
+  "rates": [
+    { "name": "Individual", "price": 45, "weekend_price": 55 },
+    { "name": "Doble", "price": 60, "weekend_price": 72 },
+    { "name": "Triple", "price": 78 }
+  ],
+  "properties": [
+    {
+      "name": "Hostal Ejemplo",
+      "city": "Madrid",
+      "address": "Calle Ejemplo 1",
+      "province": "Comunidad de Madrid",
+      "description": "Hostal de 6 habitaciones a dos minutos de la estación.",
+      "amenities": ["wifi"],
+      "rooms": [
+        { "name": "1", "capacity": 1, "rate": "Individual", "features": ["wifi"] },
+        { "name": "2", "capacity": 2, "rate": "Doble", "features": ["wifi", "ac"] },
+        { "name": "3", "capacity": 2, "rate": "Doble", "features": ["wifi", "ac"] },
+        { "name": "4", "capacity": 2, "rate": "Doble", "features": ["wifi", "ac"] },
+        {
+          "name": "5",
+          "capacity": 3,
+          "type": "family",
+          "rate": "Triple",
+          "features": ["wifi", "ac"]
+        },
+        { "name": "6", "capacity": 1, "rate": "Individual", "features": ["wifi"] }
+      ]
+    }
+  ]
+}
