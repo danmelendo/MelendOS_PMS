@@ -9,6 +9,7 @@ import { eur, STATUS_LABELS, STATUS_COLORS, useRooms } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
 import { CancellationRequests } from "@/components/CancellationRequests";
+import { PendingRefunds } from "@/components/PendingRefunds";
 import { FolioDrawer } from "@/components/FolioDrawer";
 import {
   ReservationExtrasInfo,
@@ -208,6 +209,8 @@ function TodayPage() {
       </div>
 
       <CancellationRequests />
+
+      <PendingRefunds onOpen={openEdit} />
 
       <div className="grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <ListCard

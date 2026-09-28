@@ -3386,5 +3386,52 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(Number(after.refunded_amount)).toBe(100);
       expect(Number(after.paid_amount)).toBe(0);
     });
+
+    it("lists what is still owed after a cancellation and records refunds made elsewhere", async () => {
+      await client.query("savepoint setup");
+      const id = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, paid_amount, deposit_paid,
+             created_by_role, payment_mode, free_cancellation_until, late_cancellation_fee)
+           values ($1, $2, now() + interval '3600 days', now() + interval '3601 days', 'cancelled', 100, 100, true,
+             'public', 'prepay', now() - interval '1 day', 20)
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      await client.query(
+        `insert into public.payments (tenant_id, reservation_id, provider, provider_ref, amount, status)
+         values ($1, $2, 'stripe', $3, 100, 'succeeded')`,
+        [ids.lumen, id, `cs_${randomUUID()}`],
+      );
+      const owed = () =>
+        client.query("select * from public.pending_refunds() where reservation_id = $1", [id]);
+      const seen = await attempt(
+        "authenticated",
+        users.lumenReception,
+        async () => (await owed()).rows[0],
+      );
+      const otherHotel = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () => (await owed()).rowCount,
+      );
+      const anon = await attempt("anon", undefined, () => owed());
+      const tooMuch = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.record_external_refund($1, 150)", [id]),
+      );
+      const settled = await attempt("authenticated", users.lumenReception, async () => {
+        await client.query("select public.record_external_refund($1, 80)", [id]);
+        return (await owed()).rowCount;
+      });
+      await client.query("rollback to savepoint setup");
+
+      expect(seen.ok && Number(seen.value.suggested)).toBe(80);
+      expect(seen.ok && Number(seen.value.late_fee)).toBe(20);
+      expect(otherHotel).toEqual({ ok: true, value: 0 });
+      expect(anon.ok).toBe(false);
+      expect(tooMuch.ok).toBe(false);
+      expect(settled).toEqual({ ok: true, value: 0 });
+    });
   });
 });

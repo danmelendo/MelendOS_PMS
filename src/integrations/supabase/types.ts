@@ -3665,6 +3665,22 @@ export type Database = {
         }
         Returns: string
       }
+      pending_refunds: {
+        Args: never
+        Returns: {
+          cancelled_at: string
+          end_at: string
+          guest_name: string
+          late_fee: number
+          refundable: number
+          reservation_id: string
+          room_name: string
+          start_at: string
+          status: string
+          suggested: number
+          tenant_id: string
+        }[]
+      }
       purge_simulated_invoices: {
         Args: { p_reservation: string }
         Returns: number
@@ -3672,6 +3688,10 @@ export type Database = {
       record_desk_payment: {
         Args: { p_amount: number; p_method: string; p_reservation_id: string }
         Returns: undefined
+      }
+      record_external_refund: {
+        Args: { p_amount: number; p_reservation: string }
+        Returns: number
       }
       record_payment_refund: {
         Args: {
