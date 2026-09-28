@@ -10,7 +10,12 @@ export default defineConfig({
   // links on nested routes like /web/hotel/$id, because the asset URLs then
   // resolve under the route path and the SPA fallback returns index.html for them.
   base: "/",
-  plugins: [tailwindcss(), tsconfigPaths(), tanstackRouter(), react()],
+  plugins: [
+    tailwindcss(),
+    tsconfigPaths(),
+    tanstackRouter({ target: "react", autoCodeSplitting: true }),
+    react(),
+  ],
   // Preview from a phone or share for review through a Cloudflare quick tunnel
   // (`cloudflared tunnel --url http://localhost:5173`). Only *.trycloudflare.com
   // is accepted, not any host.
