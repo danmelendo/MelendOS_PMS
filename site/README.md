@@ -67,6 +67,18 @@ limits 3 leads per email and 5 per IP a day, and a unique index prevents double-
     `issue_client_invoice()` numbers them `MOS-<year>-0001…`; once issued an invoice cannot be
     edited, only paid or cancelled. Pending, overdue, collected and CSV export.
   - Tables in migration `20260929120000_clients.sql`.
+  - **Seguridad** (`#seguridad`): the IPs the panel opens from (`sales_allowed_ips`, migration
+    `20260929140000_admin_ip_allowlist.sql`). Two layers over one list:
+    - the page: `middleware.ts` (Vercel Routing Middleware on `/admin/*`) asks
+      `admin_ip_allowed()` and answers 403 to any other IP;
+    - the data: `is_sales_admin()`, which every policy uses, also requires the IP of the
+      request, so the API returns nothing to an admin account connecting from elsewhere.
+    - An empty list means no restriction. The first entry must include your own IP, and nobody
+      can remove the range they are connected from.
+    - The page and the database may see different addresses (IPv6 to Vercel, IPv4 to Supabase),
+      so «Añadir mis IPs» adds both, IPv6 by its /64.
+    - Locked out (new IP at home)? `node --env-file=.env scripts/admin-ips.mjs add <ip>`, or
+      `clear` to remove the restriction.
   - Not indexed (`noindex`, `robots.txt`, out of the sitemap). Sign-in with email and password;
     public sign-up is disabled on the sales project.
 - **Who can see it**: users listed in `public.sales_admins` (RLS on `leads`; migration
