@@ -3162,6 +3162,10 @@ export type Database = {
       cancel_stale_pending_reservations: { Args: never; Returns: number }
       channel_secret: { Args: { p_channel: string }; Returns: string }
       check_invoice_recipient: { Args: { p: Json }; Returns: Json }
+      claim_promo_code: {
+        Args: { p_id: string; p_tenant: string }
+        Returns: boolean
+      }
       confirm_payment: {
         Args: {
           p_amount: number
@@ -3477,11 +3481,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      claim_promo_code: {
-        Args: { p_id: string; p_tenant: string }
-        Returns: boolean
-      }
-      hotel_offers: { Args: { p_tenant: string }; Returns: Json }
       hotel_cancellation_penalty: {
         Args: { p_tenant: string }
         Returns: string
@@ -3490,6 +3489,8 @@ export type Database = {
         Args: { p_tenant: string }
         Returns: number
       }
+      hotel_media_tenant: { Args: { p_name: string }; Returns: string }
+      hotel_offers: { Args: { p_tenant: string }; Returns: Json }
       invoice_breakdown: { Args: { p_lines: Json }; Returns: Json }
       invoice_lines_for: { Args: { p_reservation: string }; Returns: Json }
       invoice_preview: { Args: { p_reservation: string }; Returns: Json }
