@@ -3475,5 +3475,51 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(otherHotel).toEqual({ ok: true, value: 0 });
       expect(anon.ok).toBe(false);
     });
+
+    it("open one notice per problem for the email to management and close it once solved", async () => {
+      await client.query("savepoint setup");
+      const id = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, payment_mode)
+           values ($1, $2, now() + interval '3710 days', now() + interval '3711 days', 'pending', 100, 'public', 'at_hotel')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      const comm = (
+        await client.query<{ id: string }>(
+          `insert into public.ses_communications (tenant_id, reservation_id, kind, status, error)
+           values ($1, $2, 'RH', 'error', 'test') returning id`,
+          [ids.lumen, id],
+        )
+      ).rows[0].id;
+      const open = () =>
+        client.query(
+          `select * from public.hotel_alert_notices
+            where tenant_id = $1 and kind = 'ses_error' and resolved_at is null`,
+          [ids.lumen],
+        );
+      await client.query("select public.hotel_alerts_scan()");
+      const first = (await open()).rowCount;
+      await client.query("select public.hotel_alerts_scan()");
+      const second = (await open()).rowCount;
+      // The live demo may have other failed reports of Lumen: once this one is
+      // solved, the notice counts one less (or closes if it was the only one).
+      const before = Number((await open()).rows[0].items);
+      await client.query("update public.ses_communications set status = 'skipped' where id = $1", [
+        comm,
+      ]);
+      await client.query("select public.hotel_alerts_scan()");
+      const after = (await open()).rows[0];
+      const recipients = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select * from public.hotel_alert_recipients($1)", [ids.lumen]),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(first).toBe(1);
+      expect(second).toBe(1);
+      expect(after ? Number(after.items) : 0).toBe(before - 1);
+      expect(recipients.ok).toBe(false);
+    });
   });
 });
