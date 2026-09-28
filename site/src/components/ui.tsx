@@ -1,23 +1,5 @@
 import type { ReactNode } from "react";
 
-/** "Melend/OS": the slash and "OS" in brass, as on the brand image. */
-export function Wordmark({
-  onNight = false,
-  className = "",
-}: {
-  onNight?: boolean;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`font-semibold tracking-[-0.02em] whitespace-nowrap ${onNight ? "text-navy-strong" : "text-foreground"} ${className}`}
-    >
-      Melend
-      <span className={onNight ? "text-brass" : "text-brass-deep"}>/OS</span>
-    </span>
-  );
-}
-
 /**
  * Section marker: a number and a name split by the brand's slash, set like a
  * line in the reception ledger ("03 / Módulos").

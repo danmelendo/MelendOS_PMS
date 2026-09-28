@@ -120,7 +120,10 @@ product mock-ups sit inside `.product-ui`, which restores the panel's real colou
   paints without JavaScript. `prefers-reduced-motion` turns them off; without JavaScript nothing
   is hidden (`html.js` gates the reveals).
 - **Icons**: Lucide (ISC), one family, stroke icons only.
-- **Images**: `isologo.png`, `melend-os.jpg` and `og.jpg` are Melend/OS brand assets (Dan).
+- **Images**: `logo.webp` / `logo-dark.webp` (header and footer; the dark one has an ivory
+  "Melend" and a lighter arch for navy backgrounds), `isologo-256.png`, `favicon.svg`,
+  `melend-os.jpg` and `og.jpg` are Melend/OS brand assets (Dan). The logo files are cut from Dan's
+  transparent PNG (kept outside git) without the English tagline.
   `hero-hotel-*.webp` (header background) is
   ["a hotel sign lit up against a dark sky"](https://unsplash.com/photos/E3Z7MmweGgc) by Ana
   Vieyra, free under the [Unsplash License](https://unsplash.com/license) (commercial use, no

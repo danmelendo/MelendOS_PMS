@@ -60,8 +60,14 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/brand/isologo.png" alt="" className="mx-auto mb-2 h-14 w-14" />
-          <CardTitle>Melend/OS · Recepción</CardTitle>
+          <img
+            src="/brand/logo.webp"
+            alt="Melend/OS"
+            width={583}
+            height={96}
+            className="mx-auto mb-3 h-10 w-auto"
+          />
+          <CardTitle>Recepción</CardTitle>
           <CardDescription>Accede al panel interno</CardDescription>
         </CardHeader>
         <CardContent>

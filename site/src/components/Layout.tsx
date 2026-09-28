@@ -1,22 +1,18 @@
 import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { BRAND, PAGES, SALES } from "../config";
-import { Wordmark } from "./ui";
-
 type Page = "home" | "hostels" | "compliance" | "pricing" | "demo" | "privacy" | "notfound";
 
+/** The brand image; on navy, "Melend" turns ivory and the arch lighter. */
 export function Logo({ onNavy = false }: { onNavy?: boolean }) {
   return (
-    <span className="flex items-center gap-2.5">
-      <img
-        src="/isologo.png"
-        alt=""
-        width={30}
-        height={30}
-        className="h-[30px] w-[30px] shrink-0"
-      />
-      <Wordmark onNight={onNavy} className="text-[1.05rem]" />
-    </span>
+    <img
+      src={onNavy ? "/logo-dark.webp" : "/logo.webp"}
+      alt={BRAND}
+      width={583}
+      height={96}
+      className="block h-7 w-auto shrink-0 sm:h-8"
+    />
   );
 }
 
