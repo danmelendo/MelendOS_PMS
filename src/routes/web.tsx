@@ -1,7 +1,9 @@
 import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { LEGAL_PAGES, type LegalPage } from "@/lib/legal";
 import { useBrand } from "@/lib/brand";
+import { LANGS, preferredLang, setActiveLang, useLang, type Lang } from "@/lib/i18n";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { AgentChat } from "@/components/AgentChat";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
@@ -45,6 +47,9 @@ const NAV = [
 function WebLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { brand, ready, locked } = useBrand();
+  // The guest's language, set before the first paint of the web.
+  useState(() => setActiveLang(preferredLang()));
+  const { t } = useLang();
 
   // Until the hotel is known (domain lookup), nothing of another hotel shows.
   if (!ready) return <div className="min-h-screen bg-white" />;
@@ -79,19 +84,20 @@ function WebLayout() {
                       active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
                     }`}
                   >
-                    {item.label}
+                    {t(item.label)}
                   </Link>
                 );
               })}
             </nav>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+              <LangSwitcher />
               <BrandSwitcher />
               <Link
                 to="/web/mi-reserva"
-                aria-label="Mi reserva"
+                aria-label={t("Mi reserva")}
                 className="inline-flex shrink-0 items-center gap-1 bg-[var(--brand)] px-2.5 py-2 text-sm font-semibold text-white sm:px-4"
               >
-                <span className="hidden sm:inline">Mi reserva</span>
+                <span className="hidden sm:inline">{t("Mi reserva")}</span>
                 <UserRound className="h-4 w-4 sm:hidden" />
               </Link>
             </div>
@@ -108,7 +114,7 @@ function WebLayout() {
                     active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
                   }`}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               );
             })}
@@ -167,14 +173,14 @@ function WebLayout() {
               )}
               {brand.websiteUrl && (
                 <a href={brand.websiteUrl} className="hover:text-neutral-900">
-                  Web del hotel
+                  {t("Web del hotel")}
                 </a>
               )}
               {/* Demo navigation, only outside a hotel's own domain. */}
               {!locked && (
                 <>
                   <a href="/today" className="hover:text-neutral-900">
-                    Panel de gestión
+                    {t("Panel de gestión")}
                   </a>
                 </>
               )}
@@ -187,16 +193,41 @@ function WebLayout() {
                   params={{ page: p }}
                   className="hover:text-neutral-900"
                 >
-                  {LEGAL_PAGES[p]}
+                  {t(LEGAL_PAGES[p])}
                 </Link>
               ))}
             </p>
             <p className="text-xs">
-              © {new Date().getFullYear()} {brand.name} · Reservas con Melend/OS
+              © {new Date().getFullYear()} {brand.name} · {t("Reservas con Melend/OS")}
             </p>
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/** ES | EN, remembered in this browser. */
+function LangSwitcher() {
+  const { lang, t } = useLang();
+  return (
+    <div role="group" aria-label={t("Idioma")} className="flex text-xs font-semibold">
+      {(Object.keys(LANGS) as Lang[]).map((l) => (
+        <button
+          key={l}
+          type="button"
+          title={LANGS[l]}
+          aria-pressed={lang === l}
+          onClick={() => setActiveLang(l, true)}
+          className={`px-1.5 py-1 uppercase transition ${
+            lang === l
+              ? "text-neutral-900 underline underline-offset-4"
+              : "text-neutral-400 hover:text-neutral-700"
+          }`}
+        >
+          {l}
+        </button>
+      ))}
     </div>
   );
 }

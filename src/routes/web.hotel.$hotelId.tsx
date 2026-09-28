@@ -20,6 +20,7 @@ import {
 import { HotelCoverArt } from "@/components/cover-art";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import type { AssetType } from "@/integrations/pms";
+import { useLang } from "@/lib/i18n";
 
 const isYmd = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
@@ -53,6 +54,7 @@ function WebHotelDetail() {
   const [assetType, setAssetType] = useState<AssetType | null>(null);
   const [promo, setPromo] = useState(search.promo);
   const { tenantId } = useBrand();
+  const { t } = useLang();
 
   const { data: hotel } = useQuery({
     queryKey: ["pms", "property", hotelId],
@@ -102,7 +104,7 @@ function WebHotelDetail() {
                   key={a}
                   className=" bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600"
                 >
-                  {AMENITY_LABELS[a] ?? a}
+                  {t(AMENITY_LABELS[a] ?? a)}
                 </span>
               ))}
             </div>
@@ -113,7 +115,7 @@ function WebHotelDetail() {
         <div className="mt-8 flex flex-wrap items-end gap-4  bg-white p-4 shadow-sm ring-1 ring-neutral-100">
           <div className="w-full sm:w-72">
             <span className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-              <CalendarDays className="h-3 w-3" /> Fechas
+              <CalendarDays className="h-3 w-3" /> {t("Fechas")}
             </span>
             <DateRangePicker
               checkIn={checkIn}
@@ -136,7 +138,7 @@ function WebHotelDetail() {
                     : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                 }`}
               >
-                {f.label}
+                {t(f.label)}
               </button>
             ))}
           </div>
@@ -145,15 +147,18 @@ function WebHotelDetail() {
         <div className="mt-8 grid gap-10 lg:grid-cols-3">
           {/* Assets */}
           <div id="rooms" className="scroll-mt-24 lg:col-span-2">
-            <h2 className="text-xl font-bold tracking-tight">Habitaciones</h2>
+            <h2 className="text-xl font-bold tracking-tight">{t("Habitaciones")}</h2>
             <p className="text-sm text-neutral-500">
               {assetType
-                ? ASSET_TYPE_LABELS[assetType]
-                : "Precio total para tus fechas, impuestos incluidos."}
+                ? t(ASSET_TYPE_LABELS[assetType])
+                : t("Precio total para tus fechas, impuestos incluidos.")}
             </p>
             {promo && (
               <p className="mt-1 text-xs font-medium text-emerald-700">
-                Código {promo} aplicado: se descuenta de la habitación al confirmar la reserva.
+                {t(
+                  "Código {code} aplicado: se descuenta de la habitación al confirmar la reserva.",
+                  { code: promo },
+                )}
               </p>
             )}
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -178,21 +183,23 @@ function WebHotelDetail() {
                       </div>
                     )}
                     <span className="absolute left-3 top-3 bg-[var(--brand)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                      {ASSET_TYPE_SHORT[o.room.assetType]}
+                      {t(ASSET_TYPE_SHORT[o.room.assetType])}
                     </span>
                     {!o.available && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                         <span className="bg-white/90 px-3 py-1 text-xs font-semibold text-neutral-700">
-                          No disponible
+                          {t("No disponible")}
                         </span>
                       </div>
                     )}
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold">Habitación {o.room.name}</h3>
+                    <h3 className="font-semibold">
+                      {t("Habitación {name}", { name: o.room.name })}
+                    </h3>
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-neutral-500">
-                      <Users className="h-3 w-3" /> Hasta {o.room.capacity}{" "}
-                      {o.room.capacity === 1 ? "persona" : "personas"}
+                      <Users className="h-3 w-3" /> {t("Hasta")} {o.room.capacity}{" "}
+                      {t(o.room.capacity === 1 ? "persona" : "personas")}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {o.room.features.slice(0, 4).map((fe) => (
@@ -200,7 +207,7 @@ function WebHotelDetail() {
                           key={fe}
                           className="bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand)]"
                         >
-                          {FEATURE_LABELS[fe]}
+                          {t(FEATURE_LABELS[fe])}
                         </span>
                       ))}
                     </div>
@@ -210,18 +217,20 @@ function WebHotelDetail() {
                           <div>
                             <p className="text-base font-semibold leading-tight">
                               {eur0(o.pricePerNight)}
-                              <span className="text-xs font-normal text-neutral-400">/noche</span>
+                              <span className="text-xs font-normal text-neutral-400">
+                                /{t("noche")}
+                              </span>
                             </p>
                             <p className="text-[11px] text-neutral-500">
-                              {eur0(o.price)} · {o.nights} {o.nights === 1 ? "noche" : "noches"}
+                              {eur0(o.price)} · {o.nights} {t(o.nights === 1 ? "noche" : "noches")}
                             </p>
                           </div>
                         ) : (
-                          <p className="text-sm font-medium text-amber-600">No disponible</p>
+                          <p className="text-sm font-medium text-amber-600">{t("No disponible")}</p>
                         )}
                       </div>
                       <span className="inline-flex items-center gap-1  bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white">
-                        Ver <ArrowRight className="h-3.5 w-3.5" />
+                        {t("Ver")} <ArrowRight className="h-3.5 w-3.5" />
                       </span>
                     </div>
                   </div>
@@ -229,7 +238,7 @@ function WebHotelDetail() {
               ))}
               {filteredOffers.length === 0 && (
                 <p className="col-span-2 py-8 text-center text-sm text-neutral-400">
-                  No hay habitaciones para los filtros seleccionados.
+                  {t("No hay habitaciones para los filtros seleccionados.")}
                 </p>
               )}
             </div>
@@ -259,12 +268,13 @@ function WebHotelDetail() {
 function HotelReviews({ propertyId, hotelName }: { propertyId: string; hotelName?: string }) {
   const features = useFeatures();
   const [limit, setLimit] = useState(6);
+  const { t } = useLang();
   const { data } = useReviews({ property: propertyId }, limit);
   if (!features.reviews || !data) return null;
   return (
     <section className="mt-12">
       <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
-        <Star className="h-5 w-5 text-[var(--brand)]" /> Opiniones de huéspedes
+        <Star className="h-5 w-5 text-[var(--brand)]" /> {t("Opiniones de huéspedes")}
       </h2>
       <div className="mt-4 bg-white p-5 shadow-sm ring-1 ring-neutral-100">
         <ReviewSummary page={data} />
@@ -280,7 +290,7 @@ function HotelReviews({ propertyId, hotelName }: { propertyId: string; hotelName
           onClick={() => setLimit((n) => n + 12)}
           className="mt-4 text-sm font-medium text-[var(--brand)] underline-offset-4 hover:underline"
         >
-          Ver más opiniones
+          {t("Ver más opiniones")}
         </button>
       )}
     </section>

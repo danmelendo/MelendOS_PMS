@@ -6,13 +6,17 @@ import { addDays } from "@domain/dates.ts";
 import { pms } from "@/integrations/pms";
 import { eur0 } from "@/lib/stays";
 import { useHotelOffers, type HotelSale, type PublishedPromo } from "@/lib/offers";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 // "Habitaciones en oferta" on the hotel page: the rooms that are cheaper on
 // the nights of a sale, and the promo codes the hotel publishes. Prices come
 // from the booking engine, so what is shown here is what the guest pays.
 
 const shortDate = (ymd: string) =>
-  new Date(`${ymd}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  new Date(`${ymd}T12:00:00`).toLocaleDateString(currentLocale(), {
+    day: "numeric",
+    month: "short",
+  });
 
 /** A short stay inside the sale (two nights, or fewer if the sale is shorter). */
 function saleStay(s: HotelSale): { checkIn: string; checkOut: string } {
@@ -37,15 +41,16 @@ export function HotelOffers({
   activePromo: string | undefined;
 }) {
   const { data, isLoading } = useHotelOffers(tenantId);
+  const { t } = useLang();
   const sales = data?.sales.slice(0, 3) ?? [];
   const promos = data?.promos.slice(0, 4) ?? [];
 
   return (
     <div>
       <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
-        <Tag className="h-5 w-5 text-[var(--brand)]" /> Habitaciones en oferta
+        <Tag className="h-5 w-5 text-[var(--brand)]" /> {t("Habitaciones en oferta")}
       </h2>
-      <p className="text-sm text-neutral-500">Rebajas por fechas y códigos del hotel.</p>
+      <p className="text-sm text-neutral-500">{t("Rebajas por fechas y códigos del hotel.")}</p>
       <div className="mt-5 space-y-3">
         {sales.map((s) => (
           <SaleCard
@@ -67,7 +72,7 @@ export function HotelOffers({
         ))}
         {!isLoading && sales.length === 0 && promos.length === 0 && (
           <p className="bg-white p-4 text-sm text-neutral-500 ring-1 ring-neutral-100">
-            Ahora no hay ofertas. En el calendario de fechas verás el precio de cada noche.
+            {t("Ahora no hay ofertas. En el calendario de fechas verás el precio de cada noche.")}
           </p>
         )}
       </div>
@@ -89,6 +94,7 @@ function SaleCard({
   onPickDates: (checkIn: string, checkOut: string) => void;
 }) {
   const stay = saleStay(sale);
+  const { t } = useLang();
   const { data: rooms } = useQuery({
     queryKey: ["pms", "availability", propertyId, stay.checkIn, stay.checkOut, guests],
     queryFn: () => pms.searchAvailability({ propertyId, ...stay, guests }),
@@ -104,7 +110,7 @@ function SaleCard({
         <div>
           <h3 className="font-semibold leading-tight">{sale.name}</h3>
           <p className="mt-0.5 text-xs text-neutral-500">
-            Noches del {shortDate(sale.from)} al {shortDate(sale.to)}
+            {t("Noches del {from} al {to}", { from: shortDate(sale.from), to: shortDate(sale.to) })}
           </p>
         </div>
         <span className="flex shrink-0 items-center gap-0.5 bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
@@ -121,10 +127,10 @@ function SaleCard({
                 search={{ hotelId: propertyId, ...stay, ...(promo ? { promo } : {}) }}
                 className="flex items-center justify-between py-2 hover:text-[var(--brand)]"
               >
-                <span>Habitación {o.room.name}</span>
+                <span>{t("Habitación {name}", { name: o.room.name })}</span>
                 <span className="font-semibold">
                   {eur0(o.pricePerNight)}
-                  <span className="text-xs font-normal text-neutral-400">/noche</span>
+                  <span className="text-xs font-normal text-neutral-400">/{t("noche")}</span>
                 </span>
               </Link>
             </li>
@@ -132,14 +138,14 @@ function SaleCard({
         </ul>
       )}
       {rooms && cheapest.length === 0 && (
-        <p className="mt-3 text-xs text-neutral-400">Completo en esas fechas.</p>
+        <p className="mt-3 text-xs text-neutral-400">{t("Completo en esas fechas.")}</p>
       )}
       <button
         type="button"
         onClick={() => onPickDates(stay.checkIn, stay.checkOut)}
         className="mt-2 text-sm font-medium text-[var(--brand)] underline-offset-4 hover:underline"
       >
-        Ver todas las habitaciones en esas fechas
+        {t("Ver todas las habitaciones en esas fechas")}
       </button>
     </div>
   );
@@ -155,21 +161,22 @@ function PromoCard({
   onToggle: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useLang();
   const amount =
     promo.discount_type === "percent"
-      ? `−${promo.discount_value.toLocaleString("es-ES")} %`
+      ? `−${promo.discount_value.toLocaleString(currentLocale())} %`
       : `−${eur0(promo.discount_value)}`;
   return (
     <div className="bg-white p-4 shadow-sm ring-1 ring-neutral-100">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold leading-tight">
-            {promo.headline || "Descuento en tu habitación"}
+            {promo.headline || t("Descuento en tu habitación")}
           </h3>
           <p className="mt-0.5 text-xs text-neutral-500">
-            En todas las habitaciones
+            {t("En todas las habitaciones")}
             {promo.valid_until
-              ? ` · reservando hasta el ${new Date(promo.valid_until).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`
+              ? ` · ${t("reservando hasta el {date}", { date: new Date(promo.valid_until).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" }) })}`
               : ""}
           </p>
         </div>
@@ -180,7 +187,7 @@ function PromoCard({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          title="Copiar el código"
+          title={t("Copiar el código")}
           onClick={() => {
             void navigator.clipboard?.writeText(promo.code).then(() => {
               setCopied(true);
@@ -205,11 +212,13 @@ function PromoCard({
               : "bg-[var(--brand-soft)] text-[var(--brand)] hover:opacity-80"
           }`}
         >
-          {active ? "Código aplicado" : "Usar este código"}
+          {t(active ? "Código aplicado" : "Usar este código")}
         </button>
       </div>
       <p className="mt-2 text-[11px] text-neutral-400">
-        Se descuenta de la habitación al confirmar la reserva; los extras no llevan descuento.
+        {t(
+          "Se descuenta de la habitación al confirmar la reserva; los extras no llevan descuento.",
+        )}
       </p>
     </div>
   );

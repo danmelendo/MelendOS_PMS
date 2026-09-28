@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { preferredLang, setActiveLang } from "./i18n";
 
 // Helpers of the pages that live inside the widget's iframes on a hotel's own
 // website (public/embed.js). Messages always carry a "melendos:" type; the
@@ -17,6 +18,11 @@ export function postToHost(message: EmbedMessage): boolean {
 }
 
 /** The iframe shows the host page behind it. */
+/** The iframe takes the language the host page passed (?lang=), or the guest's. */
+export function useEmbedLang() {
+  useState(() => setActiveLang(preferredLang()));
+}
+
 export function useTransparentPage() {
   useEffect(() => {
     const prev = document.body.style.background;

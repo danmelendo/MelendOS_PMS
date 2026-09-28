@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 
 // Lightweight handwritten-signature canvas. Pointer events (mouse + touch +
 // stylus), no external dependency. Emits a PNG data URL via onChange whenever the
@@ -15,6 +16,7 @@ export function SignaturePad({
   disabled?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { t } = useLang();
   const drawing = useRef(false);
   const last = useRef<{ x: number; y: number } | null>(null);
   const [hasInk, setHasInk] = useState(false);
@@ -97,14 +99,14 @@ export function SignaturePad({
         />
         {!hasInk && (
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            Firma aquí con el dedo o el ratón
+            {t("Firma aquí con el dedo o el ratón")}
           </span>
         )}
       </div>
       <div className="flex justify-end">
         <Button type="button" variant="ghost" size="sm" onClick={clear} disabled={!hasInk}>
           <Eraser className="mr-1.5 h-3.5 w-3.5" />
-          Borrar
+          {t("Borrar")}
         </Button>
       </div>
     </div>

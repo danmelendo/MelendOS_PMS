@@ -37,6 +37,19 @@ export interface Brand {
   facebook: string;
   /** The hotel's main website, if it has one besides this booking web. */
   websiteUrl: string | null;
+  /** English versions of the hotel's own texts (empty: the Spanish one is shown). */
+  en: Partial<Record<CopyField, string>>;
+}
+
+/** The hotel's own texts of its booking web that can also be written in English. */
+export const COPY_FIELDS = ["eyebrow", "tagline", "heroTitle", "heroSubtitle", "about"] as const;
+export type CopyField = (typeof COPY_FIELDS)[number];
+
+/** The hotel's texts in the guest's language (English falls back to Spanish). */
+export function brandCopy(brand: Brand, lang: "es" | "en"): Record<CopyField, string> {
+  return Object.fromEntries(
+    COPY_FIELDS.map((k) => [k, (lang === "en" && brand.en[k]) || brand[k]]),
+  ) as Record<CopyField, string>;
 }
 
 export interface TenantRow {
@@ -100,6 +113,9 @@ export function brandOf(t: TenantRow): Brand {
     instagram: text(b.instagram),
     facebook: text(b.facebook),
     websiteUrl: typeof site === "string" && /^https?:\/\//.test(site) ? site : null,
+    en: Object.fromEntries(
+      COPY_FIELDS.map((k) => [k, text(b[`${k}_en`])]).filter(([, v]) => v),
+    ) as Partial<Record<CopyField, string>>,
   };
 }
 

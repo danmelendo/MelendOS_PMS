@@ -65,6 +65,16 @@ describe("bookingEmail", () => {
     expect(e.text).not.toContain("check-in online");
   });
 
+  it("writes in English for a guest who booked in English", () => {
+    const e = bookingEmail({ ...data, lang: "en" });
+    expect(e.subject).toBe("Booking confirmed at Hotel Lumen · AB12CD34");
+    expect(e.text).toContain("Hello Laura,");
+    expect(e.text).toContain("Check-in: Thursday, 15 October 2026, from 15:00");
+    expect(e.text).toContain("Total €360.00, paid.");
+    expect(e.text).toContain("Free cancellation until 13 October at 15:00.");
+    expect(e.html).toContain('<html lang="en">');
+  });
+
   it("escapes what the hotel or the guest typed", () => {
     const e = bookingEmail({
       ...data,

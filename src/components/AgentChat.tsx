@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBrand } from "@/lib/brand";
 import { useBrandTenant, useFeatures } from "@/lib/features";
 import { Formatted } from "@/components/FormattedText";
+import { t, useLang } from "@/lib/i18n";
 
 // The booking agent on the public website. The server keeps the conversation
 // (agent-chat function); the browser only remembers its id for the session.
@@ -43,7 +44,7 @@ type Attachment =
 
 const nightsOf = (a: string, b: string) =>
   Math.round((Date.parse(a + "T12:00:00Z") - Date.parse(b + "T12:00:00Z")) / -86_400_000);
-const people = (n: number) => n + (n === 1 ? " persona" : " personas");
+const people = (n: number) => `${n} ${t(n === 1 ? "persona" : "personas")}`;
 
 function Stepper({
   value,
@@ -58,6 +59,7 @@ function Stepper({
   onChange: (v: number) => void;
   label: string;
 }) {
+  const { t } = useLang();
   return (
     <div className="flex items-center gap-1" aria-label={label}>
       <button
@@ -65,7 +67,7 @@ function Stepper({
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         className="flex h-7 w-7 items-center justify-center border border-neutral-200 bg-white disabled:opacity-40"
-        aria-label={"Menos " + label}
+        aria-label={t("Menos {x}", { x: label })}
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
@@ -75,7 +77,7 @@ function Stepper({
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         className="flex h-7 w-7 items-center justify-center border border-neutral-200 bg-white disabled:opacity-40"
-        aria-label={"Más " + label}
+        aria-label={t("Más {x}", { x: label })}
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -100,6 +102,7 @@ function RoomCards({
     checkOut: att.search.check_out,
   });
   const [guests, setGuests] = useState(att.search.guests);
+  const { t } = useLang();
   const changed =
     dates.checkIn !== att.search.check_in ||
     dates.checkOut !== att.search.check_out ||
@@ -116,26 +119,24 @@ function RoomCards({
         />
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-            <Users className="h-3.5 w-3.5" /> Personas
+            <Users className="h-3.5 w-3.5" /> {t("Personas")}
           </span>
-          <Stepper value={guests} min={1} max={8} onChange={setGuests} label="personas" />
+          <Stepper value={guests} min={1} max={8} onChange={setGuests} label={t("personas")} />
           <button
             type="button"
             disabled={!changed || disabled}
             onClick={() =>
               onSend(
-                "Busca disponibilidad del " +
-                  dates.checkIn +
-                  " al " +
-                  dates.checkOut +
-                  " para " +
-                  people(guests) +
-                  ".",
+                t("Busca disponibilidad del {from} al {to} para {people}.", {
+                  from: dates.checkIn,
+                  to: dates.checkOut,
+                  people: people(guests),
+                }),
               )
             }
             className="bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
           >
-            Buscar
+            {t("Buscar")}
           </button>
         </div>
       </div>
@@ -153,15 +154,16 @@ function RoomCards({
               )}
               <div className="space-y-1 p-2">
                 <p className="truncate text-sm font-semibold">
-                  {r.type ?? "Habitación"} · {r.room}
+                  {r.type ?? t("Habitación")} · {r.room}
                 </p>
                 <p className="text-[11px] text-neutral-500">
-                  Hasta {r.capacity} personas · {nights} {nights === 1 ? "noche" : "noches"}
+                  {t("Hasta")} {people(r.capacity)} · {nights}{" "}
+                  {t(nights === 1 ? "noche" : "noches")}
                 </p>
                 <p className="text-sm font-semibold text-[var(--brand)]">
                   {eur(r.price_total)}{" "}
                   <span className="text-[11px] font-normal text-neutral-500">
-                    ({eur(r.price_per_night)}/noche)
+                    ({eur(r.price_per_night)}/{t("noche")})
                   </span>
                 </p>
                 <button
@@ -169,21 +171,18 @@ function RoomCards({
                   disabled={disabled}
                   onClick={() =>
                     onSend(
-                      "Elijo la habitación " +
-                        r.room +
-                        (r.type ? " (" + r.type + ")" : "") +
-                        " del " +
-                        att.search.check_in +
-                        " al " +
-                        att.search.check_out +
-                        " para " +
-                        people(att.search.guests) +
-                        ".",
+                      t("Elijo la habitación {room}{type} del {from} al {to} para {people}.", {
+                        room: r.room,
+                        type: r.type ? ` (${r.type})` : "",
+                        from: att.search.check_in,
+                        to: att.search.check_out,
+                        people: people(att.search.guests),
+                      }),
                     )
                   }
                   className="w-full bg-[var(--brand)] py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                 >
-                  Elegir
+                  {t("Elegir")}
                 </button>
               </div>
             </div>
@@ -205,6 +204,7 @@ function ExtrasPicker({
   disabled: boolean;
 }) {
   const [qty, setQty] = useState<Record<string, number>>({});
+  const { t } = useLang();
   const picked = att.extras.filter((e) => (qty[e.extra_id] ?? 0) > 0);
   return (
     <div className="space-y-2 bg-white p-2 ring-1 ring-neutral-100">
@@ -228,14 +228,14 @@ function ExtrasPicker({
         disabled={!picked.length || disabled}
         onClick={() =>
           onSend(
-            "Quiero añadir estos extras: " +
-              picked.map((e) => e.name + " ×" + qty[e.extra_id]).join(", ") +
-              ".",
+            t("Quiero añadir estos extras: {list}.", {
+              list: picked.map((e) => e.name + " ×" + qty[e.extra_id]).join(", "),
+            }),
           )
         }
         className="w-full bg-[var(--brand)] py-1.5 text-xs font-semibold text-white disabled:opacity-40"
       >
-        Añadir a mi reserva
+        {t("Añadir a mi reserva")}
       </button>
     </div>
   );
@@ -259,6 +259,7 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
   const { brandId } = useBrand();
   const { data: tenant } = useBrandTenant();
   const features = useFeatures();
+  const { t } = useLang();
   const storageKey = `agent-chat-${brandId}`;
   const [open, setOpen] = useState(embedded);
   const close = () =>
@@ -325,9 +326,11 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
         {
           role: "assistant",
           text:
-            body?.reply ??
-            body?.error ??
-            "No he podido responder ahora mismo. Inténtalo de nuevo en un momento.",
+            // Fixed replies of the server are in the dictionary; the model's own
+            // text is not, and stays as it is.
+            (body?.reply ? t(body.reply) : undefined) ??
+            (body?.error ? t(body.error) : undefined) ??
+            t("No he podido responder ahora mismo. Inténtalo de nuevo en un momento."),
           attachments: body?.attachments ?? [],
         },
       ]);
@@ -344,13 +347,13 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-110"
         >
-          <MessageCircle className="h-5 w-5" /> ¿Te ayudo a reservar?
+          <MessageCircle className="h-5 w-5" /> {t("¿Te ayudo a reservar?")}
         </button>
       )}
       {open && (
         <div
           role="dialog"
-          aria-label="Asistente de reservas"
+          aria-label={t("Asistente de reservas")}
           className={
             embedded
               ? "fixed inset-0 z-50 flex flex-col bg-[#f4f6f9]"
@@ -361,18 +364,20 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
               <div>
-                <p className="text-sm font-semibold">Asistente de reservas</p>
-                <p className="text-[11px] opacity-80">Precios y disponibilidad en tiempo real</p>
+                <p className="text-sm font-semibold">{t("Asistente de reservas")}</p>
+                <p className="text-[11px] opacity-80">
+                  {t("Precios y disponibilidad en tiempo real")}
+                </p>
               </div>
             </div>
-            <button type="button" onClick={close} aria-label="Cerrar">
+            <button type="button" onClick={close} aria-label={t("Cerrar")}>
               <X className="h-5 w-5" />
             </button>
           </div>
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4 text-sm">
             <div className="max-w-[88%] bg-white px-3 py-2 shadow-sm ring-1 ring-neutral-100">
-              {GREETING}
+              {t(GREETING)}
             </div>
             {lines.map((l, i) =>
               l.role === "user" ? (
@@ -414,7 +419,9 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
                         ) : (
                           <ExternalLink className="h-4 w-4" />
                         )}
-                        {a.label}
+                        {a.kind === "payment"
+                          ? a.label.replace("Pagar la reserva", t("Pagar la reserva"))
+                          : t(a.label)}
                       </a>
                     ),
                   )}
@@ -423,7 +430,7 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
             )}
             {busy && (
               <div className="flex w-fit items-center gap-1.5 bg-white px-3 py-2.5 shadow-sm ring-1 ring-neutral-100">
-                <span className="sr-only">Escribiendo…</span>
+                <span className="sr-only">{t("Escribiendo…")}</span>
                 {[0, 1, 2].map((d) => (
                   <span
                     key={d}
@@ -454,14 +461,14 @@ export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
               }}
               rows={1}
               maxLength={1000}
-              placeholder="Ej. 2 personas del 20 al 23 de noviembre"
-              aria-label="Mensaje para el asistente"
+              placeholder={t("Ej. 2 personas del 20 al 23 de noviembre")}
+              aria-label={t("Mensaje para el asistente")}
               className="max-h-28 min-h-[42px] flex-1 resize-none border border-neutral-200 px-3 py-2.5 text-sm"
             />
             <button
               type="submit"
               disabled={busy || !text.trim()}
-              aria-label="Enviar"
+              aria-label={t("Enviar")}
               className="flex h-[42px] w-[42px] shrink-0 items-center justify-center bg-[var(--brand)] text-white disabled:opacity-40"
             >
               <SendHorizonal className="h-4 w-4" />

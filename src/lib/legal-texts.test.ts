@@ -61,4 +61,16 @@ describe("legal pages", () => {
     expect(t).not.toContain("inteligencia artificial");
     expect(t).toContain("club de fidelización");
   });
+
+  it("come in English for guests browsing in English, with the same data", () => {
+    const en = (page: Parameters<typeof legalPage>[0]) =>
+      legalPage(page, hotel, "en")
+        .flatMap((s) => [s.heading, ...s.paragraphs])
+        .join("\n");
+    expect(en("aviso-legal")).toContain("Owner: Lumen Hoteles SL, trading as “Hotel Lumen”.");
+    expect(en("condiciones")).toContain("up to 2 days (48 hours) before the check-in time");
+    expect(en("condiciones")).toContain("costs the price of the first night");
+    expect(en("privacidad")).toContain("artificial intelligence");
+    expect(en("cookies")).toContain("the Spanish version prevails");
+  });
 });

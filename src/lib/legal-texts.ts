@@ -1,3 +1,4 @@
+import { legalPageEn } from "./legal-texts-en";
 import { hotelPolicies } from "@domain/policies.ts";
 
 // Legal pages of the hotel's booking web, built from what the hotel already
@@ -48,7 +49,12 @@ function holder(d: HotelLegal): string[] {
   ];
 }
 
-export function legalPage(page: LegalPage, d: HotelLegal): LegalSection[] {
+export function legalPage(
+  page: LegalPage,
+  d: HotelLegal,
+  lang: "es" | "en" = "es",
+): LegalSection[] {
+  if (lang === "en") return legalPageEn(page, d);
   const policies = hotelPolicies({ payment: d.payment, cancellation: d.cancellation });
   const contact = d.email ?? "el email de contacto del establecimiento";
 

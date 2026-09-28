@@ -21,7 +21,11 @@ export interface ChatMessage {
 /** Quick requests: a tagged message instead of a form. */
 export const QUICK_REQUESTS = [
   { category: "towels", label: "Toallas", text: "¿Podrían subirme toallas limpias, por favor?" },
-  { category: "housekeeping", label: "Limpieza", text: "¿Pueden hacer la habitación hoy?" },
+  {
+    category: "housekeeping",
+    label: "Limpieza de habitación",
+    text: "¿Pueden hacer la habitación hoy?",
+  },
   { category: "room_service", label: "Room service", text: "Quisiera pedir room service." },
   {
     category: "maintenance",

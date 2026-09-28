@@ -6,6 +6,7 @@ import { guestToken } from "@/integrations/pms/demo-stays-connector";
 import { StayChat } from "@/components/StayChat";
 import { GuestBookingMissing } from "@/components/GuestBookingMissing";
 import { chatOpen } from "@/lib/chat";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/web/chat/$bookingId")({
   component: WebChatPage,
@@ -17,6 +18,7 @@ function WebChatPage() {
     queryKey: ["pms", "booking", bookingId],
     queryFn: () => pms.getBooking(bookingId),
   });
+  const { t } = useLang();
   if (!booking) return <GuestBookingMissing loading={isPending} />;
 
   return (
@@ -25,13 +27,15 @@ function WebChatPage() {
         <Link
           to="/web/booking/$bookingId"
           params={{ bookingId }}
-          aria-label="Volver a la reserva"
+          aria-label={t("Volver a la reserva")}
           className="text-neutral-500"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold">Recepción · {booking.propertyName}</h1>
+          <h1 className="truncate text-xl font-bold">
+            {t("Recepción")} · {booking.propertyName}
+          </h1>
           <p className="truncate text-sm text-neutral-500">
             {booking.roomName} · Ref. {booking.reference}
           </p>

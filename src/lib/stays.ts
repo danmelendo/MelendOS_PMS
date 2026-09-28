@@ -10,11 +10,13 @@ import type {
   OccupancyBand,
 } from "@/integrations/pms";
 
+import { currentLocale, t } from "./i18n";
+
 export { eur } from "./data";
 
 // Whole-euro formatting for catalogue prices ("95 €" rather than "95,00 €").
 export function eur0(n: number | null | undefined) {
-  return new Intl.NumberFormat("es-ES", {
+  return new Intl.NumberFormat(currentLocale(), {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
@@ -162,14 +164,14 @@ export function accentColor(accent: string, alpha = 1): string {
 }
 
 export function formatDateShort(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("es-ES", {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(currentLocale(), {
     day: "numeric",
     month: "short",
   });
 }
 
 export function formatDateLong(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-ES", {
+  return new Date(iso).toLocaleDateString(currentLocale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -186,6 +188,6 @@ export function dateOffset(days: number): string {
 
 /** "pagado online" / "se paga en el hotel" for a booking summary. */
 export function paymentLabel(b: { paymentMode: "prepay" | "at_hotel"; paidOnline: boolean }) {
-  if (b.paymentMode === "at_hotel") return "se paga en el hotel";
-  return b.paidOnline ? "pagado online" : "pago online pendiente";
+  if (b.paymentMode === "at_hotel") return t("se paga en el hotel");
+  return b.paidOnline ? t("pagado online") : t("pago online pendiente");
 }

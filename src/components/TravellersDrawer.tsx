@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { FIELD_LABELS, useStayTravellers, useTravellerActions, type TravellerRow } from "@/lib/ses";
+import { useLang } from "@/lib/i18n";
 
 export interface StayRef {
   id: string;
@@ -276,6 +277,7 @@ export function TravellerForm({
   onCancel: () => void;
 }) {
   const [f, setF] = useState<Form>(() => emptyForm(initial, firstOne));
+  const { t, lang } = useLang();
   const set = (k: keyof Form) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   // A new guest sends every field; a correction only what was typed (the rest
   // is kept on the server, since it is never shown back).
@@ -300,7 +302,7 @@ export function TravellerForm({
   const field = (k: keyof Form, label: string, props: React.ComponentProps<typeof Input> = {}) => (
     <div className="space-y-1">
       <Label htmlFor={`t-${k}`} className={bad(k) ? "text-destructive" : undefined}>
-        {label}
+        {t(label)}
       </Label>
       <Input
         id={`t-${k}`}
@@ -313,7 +315,7 @@ export function TravellerForm({
   );
   const select = (k: keyof Form, label: string, options: [string, string][], placeholder = "—") => (
     <div className="space-y-1">
-      <Label className={bad(k) ? "text-destructive" : undefined}>{label}</Label>
+      <Label className={bad(k) ? "text-destructive" : undefined}>{t(label)}</Label>
       <Select value={f[k] || undefined} onValueChange={set(k)}>
         <SelectTrigger aria-invalid={bad(k) || undefined}>
           <SelectValue placeholder={placeholder} />
@@ -321,25 +323,27 @@ export function TravellerForm({
         <SelectContent>
           {options.map(([v, l]) => (
             <SelectItem key={v} value={v}>
-              {l}
+              {t(l)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
     </div>
   );
-  const countries = COUNTRIES.map((c) => [c.code, c.name] as [string, string]);
+  const countries = (lang === "en" ? countryOptions("en") : COUNTRIES).map(
+    (c) => [c.code, c.name] as [string, string],
+  );
 
   return (
     <div className="space-y-4 rounded-md border border-info/40 bg-info/5 p-4">
       <div className="flex items-center justify-between">
-        <p className="font-medium">{initial ? "Corregir viajero" : "Nuevo viajero"}</p>
+        <p className="font-medium">{t(initial ? "Corregir viajero" : "Nuevo viajero")}</p>
         <label className="flex items-center gap-2 text-xs">
           <Switch
             checked={f.is_holder === "true"}
             onCheckedChange={(v) => set("is_holder")(String(v))}
           />
-          Titular de la reserva
+          {t("Titular de la reserva")}
         </label>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
@@ -390,24 +394,24 @@ export function TravellerForm({
       {tried && issues.length > 0 && (
         <ul className="list-disc space-y-0.5 pl-5 text-xs text-gold-foreground">
           {issues.map((i) => (
-            <li key={i.field + i.message}>{i.message}</li>
+            <li key={i.field + i.message}>{t(i.message)}</li>
           ))}
         </ul>
       )}
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          Cancelar
+          {t("Cancelar")}
         </Button>
         <Button
           disabled={saving || !f.first_name.trim()}
           onClick={() => {
             setTried(true);
             if (f.municipality_code && !/^\d{5}$/.test(f.municipality_code))
-              return toast.error("El código de municipio del INE tiene 5 cifras");
+              return toast.error(t("El código de municipio del INE tiene 5 cifras"));
             onSave(data);
           }}
         >
-          {saving ? "Guardando…" : issues.length ? "Guardar incompleto" : "Guardar"}
+          {t(saving ? "Guardando…" : issues.length ? "Guardar incompleto" : "Guardar")}
         </Button>
       </div>
     </div>

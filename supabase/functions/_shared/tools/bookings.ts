@@ -51,6 +51,8 @@ export const bookingDraftInput = z
       .default([]),
     /** Promo code the guest typed; checked and counted on the server. */
     promo_code: z.string().trim().min(1).max(40).optional(),
+    /** The guest's language on the booking web (emails go in it). */
+    lang: z.enum(["es", "en"]).optional(),
   })
   .refine((v) => nightsBetween(v.check_in, v.check_out) >= 1, {
     message: "La salida debe ser posterior a la entrada",
@@ -96,6 +98,7 @@ export interface NewReservation {
   extras_total: number;
   discount_amount: number;
   promo_code_id: string | null;
+  guest_lang?: "es" | "en" | null;
   total: number;
   /** Amount to pay online now (legacy column name): the total, or 0 at the hotel. */
   deposit_amount: number;
@@ -439,6 +442,7 @@ export async function createBookingDraft(
     extras_total: breakdown.extrasTotal,
     discount_amount: breakdown.discount ?? 0,
     promo_code_id: quote.promo?.id ?? null,
+    guest_lang: input.lang ?? null,
     total: breakdown.total,
     deposit_amount: dueNow,
     payment_mode: mode,

@@ -28,6 +28,11 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
     facebook: b.facebook,
     logo_url: b.logoUrl ?? "",
     hero_image_url: b.heroImageUrl ?? "",
+    heroTitle_en: b.en.heroTitle ?? "",
+    eyebrow_en: b.en.eyebrow ?? "",
+    tagline_en: b.en.tagline ?? "",
+    heroSubtitle_en: b.en.heroSubtitle ?? "",
+    about_en: b.en.about ?? "",
   });
   const [gallery, setGallery] = useState<string[]>(b.gallery);
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
@@ -120,6 +125,42 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
               onChange={(e) => set("about")(e.target.value)}
             />
           </div>
+          <details className="rounded-md border p-3 sm:col-span-2">
+            <summary className="cursor-pointer font-medium">Textos en inglés (opcional)</summary>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Para los huéspedes que ven tu web en inglés. Si dejas uno vacío, se muestra el texto
+              en español.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              {text(
+                "heroTitle_en",
+                "Título de la portada (inglés)",
+                120,
+                "Sleep in the heart of town",
+              )}
+              {text("eyebrow_en", "Antetítulo (inglés)", 80)}
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="tw-heroSubtitle_en">Subtítulo de la portada (inglés)</Label>
+                <textarea
+                  id="tw-heroSubtitle_en"
+                  maxLength={400}
+                  className="min-h-16 w-full rounded-md border bg-background px-3 py-2"
+                  value={f.heroSubtitle_en}
+                  onChange={(e) => set("heroSubtitle_en")(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="tw-about_en">Sobre nosotros (inglés)</Label>
+                <textarea
+                  id="tw-about_en"
+                  maxLength={2000}
+                  className="min-h-28 w-full rounded-md border bg-background px-3 py-2"
+                  value={f.about_en}
+                  onChange={(e) => set("about_en")(e.target.value)}
+                />
+              </div>
+            </div>
+          </details>
           {text("short", "Nombre corto", 40, data.brand.name)}
           <div className="space-y-1">
             <Label htmlFor="tw-accent">Color de la marca</Label>

@@ -1955,6 +1955,7 @@ export type Database = {
           external_ref: string | null
           extras_total: number
           free_cancellation_until: string | null
+          guest_lang: string | null
           hold_expires_at: string | null
           id: string
           internal_notes: string | null
@@ -2002,6 +2003,7 @@ export type Database = {
           external_ref?: string | null
           extras_total?: number
           free_cancellation_until?: string | null
+          guest_lang?: string | null
           hold_expires_at?: string | null
           id?: string
           internal_notes?: string | null
@@ -2049,6 +2051,7 @@ export type Database = {
           external_ref?: string | null
           extras_total?: number
           free_cancellation_until?: string | null
+          guest_lang?: string | null
           hold_expires_at?: string | null
           id?: string
           internal_notes?: string | null
@@ -3219,6 +3222,7 @@ export type Database = {
       }
       cancel_stale_pending_reservations: { Args: never; Returns: number }
       channel_secret: { Args: { p_channel: string }; Returns: string }
+      channels_tick: { Args: never; Returns: undefined }
       check_invoice_recipient: { Args: { p: Json }; Returns: Json }
       claim_promo_code: {
         Args: { p_id: string; p_tenant: string }
@@ -3447,6 +3451,7 @@ export type Database = {
           external_ref: string | null
           extras_total: number
           free_cancellation_until: string | null
+          guest_lang: string | null
           hold_expires_at: string | null
           id: string
           internal_notes: string | null
@@ -3529,6 +3534,7 @@ export type Database = {
           external_ref: string | null
           extras_total: number
           free_cancellation_until: string | null
+          guest_lang: string | null
           hold_expires_at: string | null
           id: string
           internal_notes: string | null
@@ -3632,6 +3638,16 @@ export type Database = {
       next_invoice_number: {
         Args: { p_prefix: string; p_tenant: string; p_year: number }
         Returns: string
+      }
+      ops_alerts: {
+        Args: never
+        Returns: {
+          hotel: string
+          items: number
+          oldest: string
+          problem: string
+          source: string
+        }[]
       }
       order_service: {
         Args: {

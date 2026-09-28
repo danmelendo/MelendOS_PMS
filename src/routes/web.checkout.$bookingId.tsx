@@ -8,6 +8,7 @@ import { DEMO_ACCESS } from "@/lib/demo-access";
 import { followPaymentRedirect, paymentReturnSearch } from "@/lib/payments";
 import { GuestBookingMissing } from "@/components/GuestBookingMissing";
 import { eur, formatDateShort } from "@/lib/stays";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/web/checkout/$bookingId")({
   component: WebCheckoutScreen,
@@ -23,6 +24,7 @@ function WebCheckoutScreen() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const autoFired = useRef(false);
+  const { t } = useLang();
 
   const { data: booking, isPending: bookingLoading } = useQuery({
     queryKey: ["pms", "booking", bookingId],
@@ -39,7 +41,7 @@ function WebCheckoutScreen() {
       qc.invalidateQueries({ queryKey: ["pms"] });
       followPaymentRedirect(redirect);
     },
-    onError: (e: Error) => toast.error(e.message || "No se pudo iniciar el pago"),
+    onError: (e: Error) => toast.error(t(e.message || "No se pudo iniciar el pago")),
   });
 
   useEffect(() => {
@@ -64,7 +66,7 @@ function WebCheckoutScreen() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <h1 className="text-2xl font-bold">Confirmar y pagar</h1>
+        <h1 className="text-2xl font-bold">{t("Confirmar y pagar")}</h1>
       </div>
 
       {booking.status === "held" && <Countdown until={booking.holdExpiresAt} />}
@@ -74,18 +76,18 @@ function WebCheckoutScreen() {
         <p className="text-sm text-neutral-500">{booking.propertyName}</p>
         <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-500">Fechas</span>
+            <span className="text-neutral-500">{t("Fechas")}</span>
             <span className="font-medium">
               {formatDateShort(booking.checkIn)} → {formatDateShort(booking.checkOut)} ·{" "}
-              {booking.nights} noches
+              {booking.nights} {t(booking.nights === 1 ? "noche" : "noches")}
             </span>
           </div>
           <div className="flex items-center justify-between border-t border-neutral-100 pt-2">
-            <span className="text-neutral-500">Total estancia</span>
+            <span className="text-neutral-500">{t("Total estancia")}</span>
             <span className="font-semibold">{eur(booking.total)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-neutral-500">A pagar ahora</span>
+            <span className="text-neutral-500">{t("A pagar ahora")}</span>
             <span className="text-xl font-bold text-[var(--brand)]">
               {eur(booking.payNow || booking.total)}
             </span>
@@ -94,31 +96,34 @@ function WebCheckoutScreen() {
       </div>
 
       <div className="mt-3  bg-[var(--brand-soft)] px-4 py-3 text-sm text-[var(--brand)]">
-        {DEMO_ACCESS
-          ? "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."
-          : "Pago seguro con la pasarela del hotel."}
+        {t(
+          DEMO_ACCESS
+            ? "Pago seguro en el entorno de pruebas de Redsys. Tarjeta de prueba: 4548 8120 4940 0004, caducidad 12/49, CVV 123."
+            : "Pago seguro con la pasarela del hotel.",
+        )}
       </div>
 
       <div className="mt-6">
         {payment === "ko" && !alreadyConfirmed && (
           <div className="mb-3 bg-rose-50 px-4 py-3 text-center text-sm font-medium text-rose-600">
-            El pago no se ha completado. Puedes intentarlo de nuevo.
+            {t("El pago no se ha completado. Puedes intentarlo de nuevo.")}
           </div>
         )}
         {awaitingNotification ? (
           <div className="flex items-center justify-center gap-2 bg-sky-50 py-4 text-sm font-medium text-sky-700">
-            <Clock className="h-4 w-4 animate-pulse" /> Confirmando el pago con el banco…
+            <Clock className="h-4 w-4 animate-pulse" /> {t("Confirmando el pago con el banco…")}
           </div>
         ) : alreadyConfirmed ? (
           <button
-            onClick={() => navigate({ to: "/web/sign/$bookingId", params: { bookingId } })}
+            onClick={() => navigate({ to: "/web/checkin/$bookingId", params: { bookingId } })}
             className="flex w-full items-center justify-center gap-2  bg-emerald-600 py-4 font-semibold text-white"
           >
-            <CheckCircle2 className="h-5 w-5" /> Reserva confirmada · firmar check-in
+            <CheckCircle2 className="h-5 w-5" />{" "}
+            {t("Reserva confirmada · hacer el check-in online")}
           </button>
         ) : expired ? (
           <div className=" bg-rose-50 px-4 py-3 text-center text-sm font-medium text-rose-600">
-            La prereserva ha expirado. Vuelve a buscar disponibilidad.
+            {t("La prereserva ha expirado. Vuelve a buscar disponibilidad.")}
           </div>
         ) : (
           <button
@@ -128,8 +133,8 @@ function WebCheckoutScreen() {
           >
             <CreditCard className="h-5 w-5" />
             {confirm.isPending
-              ? "Redirigiendo al pago…"
-              : `Pagar ${eur(booking.payNow || booking.total)}`}
+              ? t("Redirigiendo al pago…")
+              : t("Pagar {amount}", { amount: eur(booking.payNow || booking.total) })}
           </button>
         )}
       </div>
@@ -139,16 +144,18 @@ function WebCheckoutScreen() {
 
 function Countdown({ until }: { until: string | null }) {
   const [left, setLeft] = useState(() => remaining(until));
+  const { t } = useLang();
   useEffect(() => {
-    const t = setInterval(() => setLeft(remaining(until)), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setLeft(remaining(until)), 1000);
+    return () => clearInterval(timer);
   }, [until]);
   if (left <= 0) return null;
   const m = Math.floor(left / 60);
   const s = left % 60;
   return (
     <div className="mb-4 flex items-center justify-center gap-2  bg-amber-50 py-3 text-sm font-medium text-amber-700">
-      <Clock className="h-4 w-4" /> Prereserva activa · expira en {m}:{String(s).padStart(2, "0")}
+      <Clock className="h-4 w-4" />{" "}
+      {t("Prereserva activa · expira en {time}", { time: `${m}:${String(s).padStart(2, "0")}` })}
     </div>
   );
 }

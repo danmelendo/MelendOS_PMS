@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
 import { Globe } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -8,6 +8,7 @@ import { CopilotWidget } from "@/components/CopilotWidget";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
 import { useAssurance } from "@/lib/mfa";
+import { setActiveLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -17,6 +18,8 @@ function AppLayout() {
   const { session, loading } = useAuth();
   const { isGroup, canOperate } = useRoles();
   const aal = useAssurance(!!session);
+  // The panel is in Spanish, whatever the guest web was showing in this tab.
+  useState(() => setActiveLang("es"));
   // Panel scrollbars (styles.css: html.panel).
   useEffect(() => {
     document.documentElement.classList.add("panel");

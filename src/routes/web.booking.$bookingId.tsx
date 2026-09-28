@@ -34,6 +34,7 @@ import {
 } from "@/lib/stays";
 import type { JournalEventType } from "@/integrations/pms";
 import { GuestBookingMissing } from "@/components/GuestBookingMissing";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/web/booking/$bookingId")({
   component: WebBookingDetail,
@@ -60,6 +61,7 @@ function WebBookingDetail() {
   const { bookingId } = Route.useParams();
   const features = useFeatures();
   const navigate = useNavigate();
+  const { t } = useLang();
   const qc = useQueryClient();
 
   const { data: booking, isPending: bookingLoading } = useQuery({
@@ -90,30 +92,30 @@ function WebBookingDetail() {
         >
           <Home className="h-4 w-4" />
         </Link>
-        <h1 className="text-2xl font-bold">Detalle de reserva</h1>
+        <h1 className="text-2xl font-bold">{t("Detalle de reserva")}</h1>
       </div>
 
       <div className=" bg-white p-6 shadow-sm ring-1 ring-neutral-100">
         <span
           className={` border px-2 py-0.5 text-[11px] font-medium ${BOOKING_STATUS_CLASSES[booking.status]}`}
         >
-          {BOOKING_STATUS_LABELS[booking.status]}
+          {t(BOOKING_STATUS_LABELS[booking.status])}
         </span>
         <span className="ml-2 font-mono text-xs text-neutral-500">Ref. {booking.reference}</span>
         <h2 className="mt-2 text-2xl font-semibold">{booking.roomName}</h2>
         <p className="text-neutral-500">{booking.propertyName}</p>
 
         <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 text-sm">
-          <DRow icon={CalendarDays} label="Entrada">
+          <DRow icon={CalendarDays} label={t("Entrada")}>
             {formatDateLong(`${booking.checkIn}T15:00:00`)}
           </DRow>
-          <DRow icon={CalendarDays} label="Salida">
+          <DRow icon={CalendarDays} label={t("Salida")}>
             {formatDateLong(`${booking.checkOut}T12:00:00`)}
           </DRow>
-          <DRow icon={Users} label="Huéspedes">
+          <DRow icon={Users} label={t("Huéspedes")}>
             {booking.guests}
           </DRow>
-          <DRow icon={ClipboardList} label="Total">
+          <DRow icon={ClipboardList} label={t("Total")}>
             {eur(booking.total)} · {paymentLabel(booking)}
           </DRow>
         </div>
@@ -122,22 +124,22 @@ function WebBookingDetail() {
       {/* Signature */}
       <div className="mt-4 flex items-center justify-between  bg-white p-5 shadow-sm ring-1 ring-neutral-100">
         <span className="flex items-center gap-2 font-medium text-neutral-700">
-          <FileSignature className="h-5 w-5 text-[var(--brand)]" /> Check-in online
+          <FileSignature className="h-5 w-5 text-[var(--brand)]" /> {t("Check-in online")}
         </span>
         {signature?.status === "signed" ? (
           <span className="flex items-center gap-1.5 font-medium text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" /> Firmado
+            <CheckCircle2 className="h-4 w-4" /> {t("Firmado")}
           </span>
         ) : canSign ? (
           <button
             onClick={() => navigate({ to: "/web/checkin/$bookingId", params: { bookingId } })}
             className=" bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
           >
-            Hacer check-in
+            {t("Hacer check-in")}
           </button>
         ) : (
           <span className="flex items-center gap-1 text-sm text-neutral-400">
-            <XCircle className="h-4 w-4" /> Pendiente
+            <XCircle className="h-4 w-4" /> {t("Pendiente")}
           </span>
         )}
       </div>
@@ -160,7 +162,7 @@ function WebBookingDetail() {
           params={{ bookingId: booking.id }}
           className="mt-4 flex items-center justify-center gap-2 bg-[var(--brand)] py-3 text-sm font-semibold text-white"
         >
-          <MessagesSquare className="h-4 w-4" /> Hablar con recepción
+          <MessagesSquare className="h-4 w-4" /> {t("Hablar con recepción")}
         </Link>
       )}
 
@@ -173,11 +175,11 @@ function WebBookingDetail() {
       {/* Timeline */}
       <div className="mt-4  bg-white p-6 shadow-sm ring-1 ring-neutral-100">
         <h3 className="mb-4 flex items-center gap-2 font-semibold text-neutral-700">
-          <ClipboardList className="h-5 w-5" /> Historial de la reserva
+          <ClipboardList className="h-5 w-5" /> {t("Historial de la reserva")}
         </h3>
         <ol className="relative space-y-4 border-l border-neutral-200 pl-5">
           {timeline.length === 0 && (
-            <li className="text-sm text-neutral-400">Sin eventos todavía.</li>
+            <li className="text-sm text-neutral-400">{t("Sin eventos todavía.")}</li>
           )}
           {timeline.map((e) => {
             const meta = EVENT_META[e.eventType];
@@ -187,9 +189,11 @@ function WebBookingDetail() {
                 <span className="absolute -left-[27px] flex h-5 w-5 items-center justify-center  bg-[var(--brand)] text-white">
                   <Icon className="h-3 w-3" />
                 </span>
-                <p className="text-sm font-medium text-neutral-800">{meta?.label ?? e.eventType}</p>
+                <p className="text-sm font-medium text-neutral-800">
+                  {meta ? t(meta.label) : e.eventType}
+                </p>
                 <p className="text-xs text-neutral-400">
-                  {new Date(e.createdAt).toLocaleString("es-ES", {
+                  {new Date(e.createdAt).toLocaleString(currentLocale(), {
                     day: "numeric",
                     month: "short",
                     hour: "2-digit",
@@ -207,7 +211,7 @@ function WebBookingDetail() {
 
       <div className="mt-5 text-center">
         <Link to="/web" className="text-sm font-medium text-[var(--brand)]">
-          Volver al inicio
+          {t("Volver al inicio")}
         </Link>
       </div>
     </div>

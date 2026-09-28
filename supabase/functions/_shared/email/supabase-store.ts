@@ -14,6 +14,7 @@ interface Row {
   paid_amount: number | null;
   payment_mode: "prepay" | "at_hotel";
   free_cancellation_until: string | null;
+  guest_lang: "es" | "en" | null;
   rooms: { name: string } | null;
   customers: { name: string | null; email: string | null } | null;
   members: { name: string | null; email: string | null } | null;
@@ -44,7 +45,7 @@ export function supabaseEmailStore(db: SupabaseClient, publicWebUrl: string | nu
       const { data, error } = await db
         .from("reservations")
         .select(
-          "tenant_id, reference, start_at, end_at, people, total, paid_amount, payment_mode, free_cancellation_until, rooms(name), customers(name, email), members(name, email), tenants(name, slug, domain, brand, settings)",
+          "tenant_id, reference, start_at, end_at, people, total, paid_amount, payment_mode, free_cancellation_until, guest_lang, rooms(name), customers(name, email), members(name, email), tenants(name, slug, domain, brand, settings)",
         )
         .eq("id", reservationId)
         .maybeSingle();
@@ -75,6 +76,7 @@ export function supabaseEmailStore(db: SupabaseClient, publicWebUrl: string | nu
         paymentMode: r.payment_mode,
         paid: Number(r.paid_amount ?? 0),
         freeCancellationUntil: r.free_cancellation_until,
+        lang: r.guest_lang,
         timezone: tz,
         // The hotel's own domain; otherwise the shared booking web.
         webUrl: r.tenants.domain
