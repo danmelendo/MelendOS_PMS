@@ -83,7 +83,7 @@ export const SEO: PageSeo[] = [
   {
     file: "admin/index.html",
     path: "/admin/",
-    title: "Panel de leads · Melend/OS",
+    title: "Panel de gestión · Melend/OS",
     description: "Acceso del equipo de ventas.",
     noindex: true,
   },
