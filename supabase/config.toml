@@ -470,3 +470,6 @@ verify_jwt = false
 
 [functions.staff-invite]
 verify_jwt = false
+
+[functions.payments-refund]
+verify_jwt = false

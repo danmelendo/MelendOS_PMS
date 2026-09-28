@@ -161,3 +161,80 @@ export async function verifyNotification(
     raw,
   };
 }
+
+// ── Refunds (REST, operation type 3) ─────────────────────────────────────────
+
+export const REDSYS_REST_URLS = {
+  test: "https://sis-t.redsys.es:25443/sis/rest/trataPeticionREST",
+  production: "https://sis.redsys.es/sis/rest/trataPeticionREST",
+} as const;
+
+export interface RedsysRefundRequest {
+  merchantCode: string;
+  terminal: string;
+  secretKeyB64: string;
+  /** The order of the original payment. */
+  order: string;
+  /** Euros to give back (at most what was charged). */
+  amount: number;
+  environment: keyof typeof REDSYS_REST_URLS;
+}
+
+/** The signed body of a refund request (the same signature as a payment). */
+export async function buildRefundRequest(req: RedsysRefundRequest) {
+  const params = {
+    DS_MERCHANT_AMOUNT: String(Math.round(req.amount * 100)),
+    DS_MERCHANT_ORDER: req.order,
+    DS_MERCHANT_MERCHANTCODE: req.merchantCode,
+    DS_MERCHANT_CURRENCY: "978",
+    DS_MERCHANT_TRANSACTIONTYPE: "3", // refund
+    DS_MERCHANT_TERMINAL: req.terminal,
+  };
+  const merchantParams = utf8ToB64(JSON.stringify(params));
+  return {
+    url: REDSYS_REST_URLS[req.environment],
+    body: {
+      Ds_SignatureVersion: SIGNATURE_VERSION,
+      Ds_MerchantParameters: merchantParams,
+      Ds_Signature: await sign(req.secretKeyB64, req.order, merchantParams),
+    },
+  };
+}
+
+export interface RedsysRefundResult {
+  ok: boolean;
+  /** Ds_Response (0900 = refund accepted) or the SIS error code. */
+  code: string;
+}
+
+/**
+ * Asks Redsys to give back part or all of a payment. Only an answer signed
+ * with the hotel's key and Ds_Response 0900 counts as done.
+ */
+export async function refund(
+  req: RedsysRefundRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RedsysRefundResult> {
+  const { url, body } = await buildRefundRequest(req);
+  const res = await fetchImpl(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    errorCode?: string;
+    Ds_MerchantParameters?: string;
+    Ds_Signature?: string;
+  };
+  if (json.errorCode) return { ok: false, code: json.errorCode };
+  if (!json.Ds_MerchantParameters || !json.Ds_Signature) {
+    return { ok: false, code: `HTTP ${res.status}` };
+  }
+  const answer = await verifyNotification(
+    req.secretKeyB64,
+    json.Ds_MerchantParameters,
+    json.Ds_Signature,
+  );
+  const code = String(answer.raw.Ds_Response ?? answer.raw.DS_RESPONSE ?? "");
+  return { ok: Number(code) === 900, code };
+}

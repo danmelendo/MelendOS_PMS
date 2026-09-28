@@ -117,3 +117,40 @@ export async function signWebhookForTest(
 ): Promise<string> {
   return `t=${t},v1=${await hmacHex(webhookSecret, `${t}.${rawBody}`)}`;
 }
+
+/**
+ * Gives back part or all of a Checkout payment: the refund goes to the
+ * PaymentIntent behind the session (our providerRef).
+ */
+export async function refundCheckoutSession(
+  secretKey: string,
+  sessionId: string,
+  amount: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ ok: boolean; id: string | null; error?: string }> {
+  const auth = { Authorization: `Bearer ${secretKey}` };
+  const sessionRes = await fetchImpl(`${API}/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+    headers: auth,
+  });
+  const session = (await sessionRes.json()) as {
+    payment_intent?: string | null;
+    error?: { message: string };
+  };
+  if (!sessionRes.ok || !session.payment_intent) {
+    return { ok: false, id: null, error: session.error?.message ?? "Pago no encontrado en Stripe" };
+  }
+  const body = new URLSearchParams({
+    payment_intent: session.payment_intent,
+    amount: String(Math.round(amount * 100)),
+  });
+  const res = await fetchImpl(`${API}/refunds`, {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const json = (await res.json()) as { id?: string; status?: string; error?: { message: string } };
+  if (!res.ok || !json.id || json.status === "failed") {
+    return { ok: false, id: json.id ?? null, error: json.error?.message ?? json.status };
+  }
+  return { ok: true, id: json.id };
+}

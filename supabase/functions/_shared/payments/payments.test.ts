@@ -5,6 +5,7 @@ import {
   buildOrder,
   buildPaymentForm,
   deriveOrderKey,
+  refund,
   sign,
   verifyNotification,
 } from "./redsys.ts";
@@ -103,5 +104,55 @@ describe("Redsys notification", () => {
     await expect(verifyNotification(TEST_KEY, tampered, n.signature)).rejects.toThrow(/signature/);
     const otherKey = Buffer.from(randomBytes(24)).toString("base64");
     await expect(verifyNotification(otherKey, n.params, n.signature)).rejects.toThrow(/signature/);
+  });
+});
+
+describe("Redsys refunds", () => {
+  const req = {
+    merchantCode: "999008881",
+    terminal: "1",
+    secretKeyB64: TEST_KEY,
+    order: "840376792n8q",
+    amount: 90,
+    environment: "test" as const,
+  };
+  // What Redsys answers: parameters signed with the hotel's key.
+  const answer = async (response: string, key = TEST_KEY) => {
+    const params = Buffer.from(
+      JSON.stringify({ Ds_Order: req.order, Ds_Amount: "9000", Ds_Response: response }),
+    ).toString("base64");
+    return {
+      Ds_SignatureVersion: "HMAC_SHA256_V1",
+      Ds_MerchantParameters: params,
+      Ds_Signature: await sign(key, req.order, params),
+    };
+  };
+  const fetchWith = (body: unknown, sent: unknown[] = []) =>
+    (async (url: string, init?: RequestInit) => {
+      sent.push({ url, body: JSON.parse(String(init?.body)) });
+      return new Response(JSON.stringify(body), { status: 200 });
+    }) as unknown as typeof fetch;
+
+  it("asks for operation 3 on the original order, signed, and accepts only 0900", async () => {
+    const sent: { url: string; body: { Ds_MerchantParameters: string } }[] = [];
+    const ok = await refund(req, fetchWith(await answer("0900"), sent));
+    expect(ok).toEqual({ ok: true, code: "0900" });
+    expect(sent[0].url).toBe("https://sis-t.redsys.es:25443/sis/rest/trataPeticionREST");
+    const params = JSON.parse(Buffer.from(sent[0].body.Ds_MerchantParameters, "base64").toString());
+    expect(params).toMatchObject({
+      DS_MERCHANT_TRANSACTIONTYPE: "3",
+      DS_MERCHANT_ORDER: "840376792n8q",
+      DS_MERCHANT_AMOUNT: "9000",
+    });
+    expect(await refund(req, fetchWith(await answer("0190")))).toEqual({ ok: false, code: "0190" });
+    expect(await refund(req, fetchWith({ errorCode: "SIS0054" }))).toEqual({
+      ok: false,
+      code: "SIS0054",
+    });
+  });
+
+  it("never takes a forged answer as a refund", async () => {
+    const forged = await answer("0900", randomBytes(24).toString("base64"));
+    await expect(refund(req, fetchWith(forged))).rejects.toThrow(/signature/);
   });
 });

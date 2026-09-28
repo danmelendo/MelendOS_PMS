@@ -27,6 +27,7 @@ import {
 } from "@/lib/data";
 import { FEATURE_LABELS } from "@/lib/stays";
 import { GuestEmails } from "@/components/GuestEmails";
+import { RefundCard } from "@/components/RefundCard";
 import type { AssetFeature } from "@/integrations/pms/types";
 import { calculateNightlyPrice, type PriceBreakdown } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -735,6 +736,7 @@ export function NewReservationDialog({
                 </div>
               </Section>
               {isEdit && editReservationId && <GuestEmails reservationId={editReservationId} />}
+              {isEdit && editReservationId && <RefundCard reservationId={editReservationId} />}
             </div>
 
             {/* ── Summary ──────────────────────────────────────────── */}
