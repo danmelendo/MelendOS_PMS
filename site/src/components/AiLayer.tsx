@@ -52,7 +52,7 @@ export function AiLayer() {
       className="relative grid gap-6 lg:grid-cols-[0.9fr_auto_1.6fr] lg:items-center lg:gap-0"
     >
       {/* Hotel data */}
-      <div className="rounded-2xl border border-navy-border bg-navy-accent/60 p-5">
+      <div className="glow rounded-2xl border border-navy-border bg-navy-accent/60 p-5">
         <p className="font-figure text-xs text-navy-foreground/60">Tu hotel</p>
         <ul className="mt-3 space-y-2">
           {DATA.map((d, i) => (
@@ -92,7 +92,7 @@ export function AiLayer() {
             data-reveal
             data-spotlight
             style={{ ["--d" as string]: `${150 + i * 120}ms` }}
-            className={`rounded-2xl border p-5 ${
+            className={`glow rounded-2xl border p-5 ${
               i === 0
                 ? "border-brass/40 bg-[linear-gradient(160deg,oklch(0.3_0.06_262),oklch(0.22_0.05_262))]"
                 : "border-navy-border bg-navy-accent/40"

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { ArrowRight, Minus, Sparkles } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { HeroPhoto } from "../components/HeroPhoto";
 import { Marker, SectionHead, Tick } from "../components/ui";
 import { PAGES } from "../config";
 import { PRICING_FAQ as FAQ } from "../content/faq";
@@ -81,7 +82,7 @@ export function PricingPage() {
   return (
     <Layout page="pricing">
       <section className="lamp relative overflow-hidden bg-night text-navy-foreground">
-        <div aria-hidden="true" className="ledger-grid absolute inset-0" />
+        <HeroPhoto />
         <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-28 sm:px-6 lg:px-8">
           <div className="rise">
             <Marker n="Precios" onNight>
@@ -195,8 +196,10 @@ export function PricingPage() {
                 <div
                   key={id}
                   data-spotlight
-                  className={`relative flex flex-col rounded-2xl p-6 transition-shadow ${
-                    on ? "bg-night text-navy-foreground shadow-[var(--shadow-night)]" : "surface"
+                  className={`glow relative flex flex-col rounded-2xl border p-6 ${
+                    on
+                      ? "border-transparent bg-night text-navy-foreground shadow-[var(--shadow-night)]"
+                      : "surface"
                   }`}
                 >
                   {id === suggested && (
@@ -542,7 +545,7 @@ export function PricingPage() {
             </table>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div className="surface rounded-2xl p-6 text-sm" data-reveal>
+            <div className="surface glow rounded-2xl p-6 text-sm" data-reveal>
               <p className="font-semibold">Compensación si no cumplimos</p>
               <ul className="font-figure mt-3 space-y-1.5 text-stone">
                 <li>Por debajo del compromiso: 10 % de la cuota del mes</li>
@@ -554,7 +557,7 @@ export function PricingPage() {
               </p>
             </div>
             <div
-              className="surface rounded-2xl p-6 text-sm"
+              className="surface glow rounded-2xl p-6 text-sm"
               data-reveal
               style={{ ["--d" as string]: "120ms" }}
             >

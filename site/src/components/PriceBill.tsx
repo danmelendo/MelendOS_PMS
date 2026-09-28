@@ -54,7 +54,7 @@ export function PriceBill() {
                 aria-checked={on}
                 onClick={() => pick(id)}
                 data-spotlight
-                className={`relative rounded-xl border px-4 py-3 text-left transition-colors ${
+                className={`glow relative rounded-xl border px-4 py-3 text-left ${
                   on ? "border-night bg-night text-navy-strong" : "surface hover:border-stone/40"
                 }`}
               >

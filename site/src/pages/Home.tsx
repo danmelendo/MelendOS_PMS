@@ -1,5 +1,6 @@
 import { ArrowRight, Handshake, Plug } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { HeroPhoto } from "../components/HeroPhoto";
 import { HeroBoard } from "../components/HeroBoard";
 import { StayStory } from "../components/StayStory";
 import { ProductTour } from "../components/ProductTour";
@@ -46,7 +47,7 @@ export function HomePage() {
     <Layout page="home">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="lamp relative overflow-hidden bg-night text-navy-foreground">
-        <div aria-hidden="true" className="ledger-grid absolute inset-0" />
+        <HeroPhoto priority />
         <div className="relative mx-auto grid max-w-7xl gap-16 px-4 pt-14 pb-24 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:gap-10 lg:px-8 lg:pt-20 lg:pb-32">
           <div>
             <div className="rise [--d:0ms]">
@@ -71,7 +72,7 @@ export function HomePage() {
               </a>
             </div>
           </div>
-          <div className="px-2 sm:px-6 lg:px-0">
+          <div className="px-2 sm:px-6 lg:self-end lg:px-0 lg:pt-52">
             <HeroBoard />
           </div>
         </div>
@@ -113,10 +114,6 @@ export function HomePage() {
 
       {/* ── 02 The system ────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,var(--sand),var(--ivory))]">
-        <div
-          aria-hidden="true"
-          className="ledger-grid-light absolute inset-0 opacity-60 [mask-image:linear-gradient(180deg,black,transparent_70%)]"
-        />
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
           <SectionHead
             n="02"
@@ -158,7 +155,7 @@ export function HomePage() {
                 data-reveal
                 data-spotlight
                 style={{ ["--d" as string]: `${(FLOORS.length - i) * 70}ms` }}
-                className={`surface w-full rounded-xl p-5 ${FLOOR_WIDTH[id]}`}
+                className={`surface glow w-full rounded-xl p-5 ${FLOOR_WIDTH[id]}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold">{PACKAGES[id].name}</p>
@@ -177,7 +174,7 @@ export function HomePage() {
             {/* Ground floor */}
             <div
               data-reveal
-              className="w-full rounded-xl bg-night p-6 text-navy-foreground shadow-[var(--shadow-night)]"
+              className="glow w-full rounded-xl border border-transparent bg-night p-6 text-navy-foreground shadow-[var(--shadow-night)]"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-lg font-semibold text-navy-strong">Base</p>
@@ -260,7 +257,7 @@ export function HomePage() {
           <div
             data-reveal
             data-spotlight
-            className="relative overflow-hidden rounded-2xl border border-brass/40 bg-[linear-gradient(135deg,oklch(0.96_0.03_82),var(--card))] p-7"
+            className="glow relative overflow-hidden rounded-2xl border border-brass/40 bg-[linear-gradient(135deg,oklch(0.96_0.03_82),var(--card))] p-7"
           >
             <Handshake className="h-5 w-5 text-brass-deep" aria-hidden="true" />
             <p className="font-display mt-4 text-[1.9rem] leading-tight">
@@ -277,7 +274,7 @@ export function HomePage() {
             data-reveal
             data-spotlight
             style={{ ["--d" as string]: "120ms" }}
-            className="surface rounded-2xl p-7"
+            className="surface glow rounded-2xl p-7"
           >
             <Plug className="h-5 w-5 text-stone" aria-hidden="true" />
             <p className="mt-4 text-lg font-semibold">Abierto a lo que ya usas</p>

@@ -112,13 +112,18 @@ Search Console and submit `/sitemap.xml`.
 and a mineral green for states. Tokens, surfaces, buttons and motion live in `src/styles.css`;
 product mock-ups sit inside `.product-ui`, which restores the panel's real colours.
 
-- **Type**: Instrument Serif (display), Geist (UI and reading), Geist Mono (figures, times, room
-  numbers). Self-hosted from `@fontsource` packages, all under the SIL Open Font License 1.1
+- **Type**: Archivo (display: a sober, slightly narrow grotesque), Geist (UI and reading), Geist
+  Mono (figures, times, room numbers). Self-hosted from `@fontsource` packages, all under the SIL Open Font License 1.1
   (commercial use allowed); no request to Google Fonts.
 - **Motion**: [Motion](https://motion.dev) (MIT) for interactive bits (tab indicator, screen
   swaps, springs, cursor parallax); entrances and scroll reveals are CSS so the prerendered page
   paints without JavaScript. `prefers-reduced-motion` turns them off; without JavaScript nothing
   is hidden (`html.js` gates the reveals).
 - **Icons**: Lucide (ISC), one family, stroke icons only.
-- **Images**: `isologo.png`, `melend-os.jpg` and `og.jpg` are Melend/OS brand assets (Dan). No
-  stock photography; mock-ups and illustrations are HTML/CSS/SVG.
+- **Images**: `isologo.png`, `melend-os.jpg` and `og.jpg` are Melend/OS brand assets (Dan).
+  `hero-hotel-*.webp` (header background) is
+  ["a hotel sign lit up against a dark sky"](https://unsplash.com/photos/E3Z7MmweGgc) by Ana
+  Vieyra, free under the [Unsplash License](https://unsplash.com/license) (commercial use, no
+  attribution required; credited here anyway). Mock-ups and illustrations are HTML/CSS/SVG.
+- **Emphasis**: cards with `.glow` (rows: `.glow-row`) light up on hover and when scrolling brings
+  them to the middle of the screen (`is-focus`, set in `mount.tsx`), so phones get the cue too.
