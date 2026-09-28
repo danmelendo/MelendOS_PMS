@@ -64,8 +64,12 @@ limits 3 leads per email and 5 per IP a day, and a unique index prevents double-
   - **Facturación** (`#facturacion`): `generate_client_invoices()` creates the drafts of every
     active client on its due date (monthly, or yearly when paying annually) and the setup fee
     once. It runs daily with pg_cron at 06:00 UTC and on demand from the panel.
-    `issue_client_invoice()` numbers them `MOS-<year>-0001…`; once issued an invoice cannot be
-    edited, only paid or cancelled. Pending, overdue, collected and CSV export.
+    `issue_client_invoice()` numbers them `MOS-<year>-0001…` and freezes the issuer (`sales_settings`,
+    «Datos del emisor») and the client's details; once issued an invoice cannot be edited, only
+    paid or cancelled. Pending, overdue, collected and CSV export. Each invoice opens as a
+    document with the Melend/OS branding, printable or saved as PDF from the browser
+    (`InvoiceDocument.tsx`; migration `20260929150000_billing_settings.sql`). VERI\*FACTU is not
+    integrated yet (see `Cambiospendientes.md`).
   - Tables in migration `20260929120000_clients.sql`.
   - **Seguridad** (`#seguridad`): the IPs the panel opens from (`sales_allowed_ips`, migration
     `20260929140000_admin_ip_allowlist.sql`). Two layers over one list:
