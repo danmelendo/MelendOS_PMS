@@ -54,7 +54,6 @@ producción. En la demo se entra eligiendo una cuenta ficticia de una lista
 - «Mi reserva»: chat con recepción, cuenta de la estancia, facturas, reseñas y cancelación.
 - Check-in online con firma digital y subida de documentación.
 - Club de fidelización con niveles, puntos y recompensas (paquete Cadena).
-- Avisos de disponibilidad por notificación del navegador.
 - Todo consume el PMS a través de un **conector tipado** (`src/integrations/pms/`, interfaz
   `PmsConnector`): integrar otro PMS es implementar esa interfaz.
 
