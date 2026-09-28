@@ -3248,4 +3248,40 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(other.ok).toBe(false);
     });
   });
+
+  describe("operations alerts", () => {
+    it("report stuck queues across hotels, only to the platform", async () => {
+      await client.query("savepoint setup");
+      const stay = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, simulated)
+           values ($1, $2, now() + interval '3300 days', now() + interval '3301 days', 'pending', 100, 'public', true)
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      await client.query(
+        `insert into public.guest_emails (tenant_id, reservation_id, kind, status, created_at)
+         values ($1, $2, 'booking_confirmed', 'pending', now() - interval '2 hours')`,
+        [ids.lumen, stay],
+      );
+      const byStaff = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select * from public.ops_alerts()"),
+      );
+      await client.query("set local role service_role");
+      const alerts = (await client.query("select * from public.ops_alerts()")).rows;
+      await client.query("reset role");
+      await client.query("rollback to savepoint setup");
+
+      expect(byStaff.ok).toBe(false);
+      expect(alerts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            source: "Emails al huésped",
+            problem: "en cola más de 30 min",
+          }),
+        ]),
+      );
+    });
+  });
 });

@@ -63,6 +63,7 @@ Secretos de GitHub del repositorio: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWO
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`          | Asistente de reservas y copiloto (cualquier API compatible con OpenAI)            | Ollama por túnel | proveedor de API                 |
 | `RESEND_API_KEY`, `EMAIL_FROM`                      | Emails al huésped. Sin ellos, los emails quedan como «simulados»                  | sin definir      | obligatorio (dominio verificado) |
 | `GUEST_EMAILS_CRON_KEY`                             | Llamada programada a `guest-emails-dispatch` (lo pone `scripts/emails-setup.mjs`) | puesto           | puesto                           |
+| `CHANNELS_CRON_KEY`                                 | Envío programado de disponibilidad a los canales (`scripts/channels-setup.mjs`)   | puesto           | puesto                           |
 | `SES_CRON_KEY`                                      | Envío programado a SES.HOSPEDAJES (`scripts/ses-setup.mjs`)                       | puesto           | puesto                           |
 | `VERIFACTU_CRON_KEY`                                | Envío programado a VERI\*FACTU (`scripts/verifactu-setup.mjs`)                    | puesto           | puesto                           |
 | `VERIFACTU_PRODUCER_NAME`, `VERIFACTU_PRODUCER_NIF` | Productor del sistema de facturación (obligatorio fuera del entorno simulado)     | —                | razón social y NIF               |
@@ -84,6 +85,7 @@ npx supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
 node scripts/ses-setup.mjs       # cron + clave de SES.HOSPEDAJES
 node scripts/verifactu-setup.mjs # cron + clave de VERI*FACTU
 node scripts/emails-setup.mjs    # cron + clave de los emails al huésped
+node scripts/channels-setup.mjs  # cron + clave del envío a los canales
 ```
 
 Solo en la demo: `node --env-file=.env scripts/seed-auth.mjs` (cuentas ficticias), `scripts/simulate-history.ts` (historial) y las semillas de `supabase/seeds/` con `scripts/sql-apply.mjs`.
@@ -101,12 +103,13 @@ Antes de abrir producción: copias con PITR, alertas de errores de las funciones
 
 ## Tareas programadas
 
-| Qué                                   | Dónde                           | Frecuencia       |
-| ------------------------------------- | ------------------------------- | ---------------- |
-| Envíos SES, VERI\*FACTU y emails      | `pg_cron` en la base (`*_tick`) | cada minuto      |
-| Reservas sin pagar, códigos caducados | `pg_cron`                       | 15 min / diario  |
-| Exportación al data lake              | GitHub Actions `lake.yml`       | diario 03:15 UTC |
-| Keep-alive de los proyectos gratuitos | GitHub Actions `keepalive.yml`  | cada 3 días      |
+| Qué                                       | Dónde                                                               | Frecuencia       |
+| ----------------------------------------- | ------------------------------------------------------------------- | ---------------- |
+| Envíos SES, VERI\*FACTU, emails y canales | `pg_cron` en la base (`*_tick`)                                     | cada minuto      |
+| Alertas de operación (colas, IA)          | GitHub Actions `ops-alerts.yml` → incidencia «Alertas de operación» | cada hora        |
+| Reservas sin pagar, códigos caducados     | `pg_cron`                                                           | 15 min / diario  |
+| Exportación al data lake                  | GitHub Actions `lake.yml`                                           | diario 03:15 UTC |
+| Keep-alive de los proyectos gratuitos     | GitHub Actions `keepalive.yml`                                      | cada 3 días      |
 
 ## Web comercial (`site/`)
 
