@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { REVIEW_SCORES, type ReviewScore } from "@domain/reviews.ts";
 import { useMyReview, useSubmitReview, type Review, type ReviewPage } from "@/lib/reviews";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 // Reviews on the public web and in the guest app (brand-coloured, square).
 
@@ -28,11 +29,12 @@ export function Stars({ value, size = 14 }: { value: number; size?: number }) {
 }
 
 const dateLabel = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  new Date(iso).toLocaleDateString(currentLocale(), { month: "long", year: "numeric" });
 
 export function ReviewSummary({ page }: { page: ReviewPage }) {
+  const { t } = useLang();
   if (!page.count || page.average == null) {
-    return <p className="text-sm text-neutral-500">Todavía no hay valoraciones.</p>;
+    return <p className="text-sm text-neutral-500">{t("Todavía no hay valoraciones.")}</p>;
   }
   return (
     <div className="grid gap-6 sm:grid-cols-[auto_1fr]">
@@ -40,7 +42,7 @@ export function ReviewSummary({ page }: { page: ReviewPage }) {
         <p className="text-5xl font-bold tabular-nums">{page.average.toFixed(1)}</p>
         <Stars value={page.average} size={16} />
         <p className="mt-1 text-xs text-neutral-500">
-          {page.count} valoraciones de estancias verificadas
+          {t("{n} valoraciones de estancias verificadas", { n: page.count })}
         </p>
       </div>
       <div className="grid gap-6 sm:grid-cols-2">
@@ -65,7 +67,7 @@ export function ReviewSummary({ page }: { page: ReviewPage }) {
           {Object.entries(REVIEW_SCORES).map(([k, label]) =>
             page.scores[k] != null ? (
               <div key={k} className="flex items-center justify-between text-xs">
-                <span className="text-neutral-600">{label}</span>
+                <span className="text-neutral-600">{t(label)}</span>
                 <span className="font-semibold tabular-nums">{page.scores[k].toFixed(1)}</span>
               </div>
             ) : null,
@@ -77,6 +79,7 @@ export function ReviewSummary({ page }: { page: ReviewPage }) {
 }
 
 export function ReviewCard({ review, hotelName }: { review: Review; hotelName?: string }) {
+  const { t } = useLang();
   return (
     <article className="bg-white p-4 shadow-sm ring-1 ring-neutral-100">
       <div className="flex items-center justify-between gap-2">
@@ -88,7 +91,7 @@ export function ReviewCard({ review, hotelName }: { review: Review; hotelName?: 
       {review.reply && (
         <div className="mt-3 border-l-2 border-[var(--brand)] bg-neutral-50 px-3 py-2 text-sm">
           <p className="text-xs font-semibold text-neutral-500">
-            Respuesta de {hotelName ?? "el hotel"}
+            {hotelName ? t("Respuesta de {hotel}", { hotel: hotelName }) : t("Respuesta del hotel")}
           </p>
           <p className="mt-0.5 text-neutral-700">{review.reply}</p>
         </div>
@@ -108,6 +111,7 @@ function StarInput({
   size?: number;
   label: string;
 }) {
+  const { t } = useLang();
   return (
     <div role="radiogroup" aria-label={label} className="flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
@@ -116,7 +120,7 @@ function StarInput({
           type="button"
           role="radio"
           aria-checked={value === n}
-          aria-label={`${n} de 5`}
+          aria-label={t("{n} de 5", { n })}
           onClick={() => onChange(n)}
           className="p-0.5"
         >
@@ -148,12 +152,13 @@ export function GuestReview({
   const [rating, setRating] = useState(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
+  const { t } = useLang();
 
   if (!completed || isPending) return null;
   if (mine) {
     return (
       <section className="mt-4">
-        <h3 className="mb-2 text-sm font-semibold">Tu valoración</h3>
+        <h3 className="mb-2 text-sm font-semibold">{t("Tu valoración")}</h3>
         <ReviewCard review={mine} />
       </section>
     );
@@ -161,22 +166,22 @@ export function GuestReview({
 
   return (
     <section className="mt-4 bg-white p-5 shadow-sm ring-1 ring-neutral-100">
-      <h3 className="font-semibold">¿Qué tal tu estancia?</h3>
+      <h3 className="font-semibold">{t("¿Qué tal tu estancia?")}</h3>
       <p className="text-sm text-neutral-500">
-        Tu opinión se publica en la web del hotel con tu nombre y la inicial del apellido.
+        {t("Tu opinión se publica en la web del hotel con tu nombre y la inicial del apellido.")}
       </p>
       <div className="mt-3">
-        <StarInput value={rating} onChange={setRating} label="Nota general" />
+        <StarInput value={rating} onChange={setRating} label={t("Nota general")} />
       </div>
       {rating > 0 && (
         <>
           <div className="mt-4 space-y-2">
             {Object.entries(REVIEW_SCORES).map(([k, label]) => (
               <div key={k} className="flex items-center justify-between gap-3">
-                <span className="text-sm text-neutral-600">{label}</span>
+                <span className="text-sm text-neutral-600">{t(label)}</span>
                 <StarInput
                   size={20}
-                  label={label}
+                  label={t(label)}
                   value={scores[k as ReviewScore] ?? 0}
                   onChange={(n) => setScores((s) => ({ ...s, [k]: n }))}
                 />
@@ -188,7 +193,7 @@ export function GuestReview({
             onChange={(e) => setComment(e.target.value)}
             maxLength={2000}
             rows={4}
-            placeholder="Cuéntanos qué te gustó y qué mejorarías (opcional)"
+            placeholder={t("Cuéntanos qué te gustó y qué mejorarías (opcional)")}
             className="mt-4 w-full border border-neutral-200 px-3 py-2 text-sm"
           />
           <button
@@ -198,14 +203,14 @@ export function GuestReview({
               submit.mutate(
                 { rating, scores, comment },
                 {
-                  onSuccess: () => toast.success("¡Gracias por tu valoración!"),
+                  onSuccess: () => toast.success(t("¡Gracias por tu valoración!")),
                   onError: (e) => toast.error(e.message),
                 },
               )
             }
             className="mt-3 w-full bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-50"
           >
-            {submit.isPending ? "Enviando…" : "Publicar valoración"}
+            {t(submit.isPending ? "Enviando…" : "Publicar valoración")}
           </button>
         </>
       )}

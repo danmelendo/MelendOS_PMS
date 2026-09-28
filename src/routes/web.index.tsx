@@ -5,6 +5,8 @@ import { pms } from "@/integrations/pms";
 import { useBrand } from "@/lib/brand";
 import { HotelCoverArt } from "@/components/cover-art";
 import { accentGradient, eur0, priceBand, AMENITY_LABELS } from "@/lib/stays";
+import { useLang } from "@/lib/i18n";
+import { brandCopy } from "@/lib/hotel-web";
 
 export const Route = createFileRoute("/web/")({
   component: WebHome,
@@ -18,6 +20,8 @@ function WebHome() {
     queryFn: () => pms.listProperties({ tenantId: tenantId ?? undefined }),
   });
   const main = hotels?.[0];
+  const { t, lang } = useLang();
+  const copy = brandCopy(brand, lang);
 
   return (
     <div>
@@ -38,12 +42,12 @@ function WebHome() {
         <div className={`absolute inset-0 ${brand.heroImageUrl ? "bg-black/45" : "bg-black/20"}`} />
         <div className="relative mx-auto max-w-6xl px-5 py-20 text-white sm:py-28">
           <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/80">
-            {brand.eyebrow}
+            {copy.eyebrow}
           </p>
           <h1 className="mt-3 max-w-2xl text-4xl font-bold leading-tight sm:text-5xl">
-            {brand.heroTitle}
+            {copy.heroTitle}
           </h1>
-          <p className="mt-4 max-w-xl text-lg text-white/85">{brand.heroSubtitle}</p>
+          <p className="mt-4 max-w-xl text-lg text-white/85">{copy.heroSubtitle}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             {main && (
               <Link
@@ -51,25 +55,25 @@ function WebHome() {
                 params={{ hotelId: main.id }}
                 className="inline-flex items-center gap-2 bg-white px-6 py-3 font-semibold text-neutral-900"
               >
-                Ver habitaciones y precios <ArrowRight className="h-4 w-4" />
+                {t("Ver habitaciones y precios")} <ArrowRight className="h-4 w-4" />
               </Link>
             )}
             <Link
               to="/web/mi-reserva"
               className="inline-flex items-center gap-2 border border-white/40 px-6 py-3 font-semibold text-white"
             >
-              Gestionar mi reserva
+              {t("Gestionar mi reserva")}
             </Link>
           </div>
         </div>
       </section>
 
       {/* About the hotel (template text, edited in the panel) */}
-      {brand.about && (
+      {copy.about && (
         <section className="mx-auto max-w-6xl px-5 pt-14">
           <div className="max-w-3xl">
-            <h2 className="text-2xl font-bold tracking-tight">Sobre nosotros</h2>
-            <p className="mt-3 whitespace-pre-line text-neutral-600">{brand.about}</p>
+            <h2 className="text-2xl font-bold tracking-tight">{t("Sobre nosotros")}</h2>
+            <p className="mt-3 whitespace-pre-line text-neutral-600">{copy.about}</p>
           </div>
         </section>
       )}
@@ -102,10 +106,10 @@ function WebHome() {
       <section className="mx-auto max-w-6xl px-5 py-6">
         <div className="flex items-end justify-between">
           <h2 className="text-2xl font-bold tracking-tight">
-            {(hotels?.length ?? 0) > 1 ? "Nuestros hoteles" : "El hotel"}
+            {t((hotels?.length ?? 0) > 1 ? "Nuestros hoteles" : "El hotel")}
           </h2>
           <Link to="/web/hotels" className="text-sm font-medium text-[var(--brand)]">
-            Ver habitaciones
+            {t("Ver habitaciones")}
           </Link>
         </div>
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
@@ -143,14 +147,14 @@ function WebHome() {
                         key={a}
                         className="bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--brand)]"
                       >
-                        {AMENITY_LABELS[a] ?? a}
+                        {t(AMENITY_LABELS[a] ?? a)}
                       </span>
                     ))}
                   </div>
                   {h.fromPrice != null && (
                     <span className="shrink-0 text-sm font-semibold">
-                      desde {eur0(priceBand(h.fromPrice).from)}
-                      <span className="text-xs font-normal text-neutral-400">/noche</span>
+                      {t("desde")} {eur0(priceBand(h.fromPrice).from)}
+                      <span className="text-xs font-normal text-neutral-400">/{t("noche")}</span>
                     </span>
                   )}
                 </div>
@@ -165,7 +169,7 @@ function WebHome() {
         <section className="mx-auto max-w-6xl px-5 pt-14">
           <div className="grid gap-6 bg-white p-6 shadow-sm ring-1 ring-neutral-100 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Dónde estamos</h2>
+              <h2 className="text-xl font-bold tracking-tight">{t("Dónde estamos")}</h2>
               {brand.address && <p className="mt-2 text-neutral-600">{brand.address}</p>}
               <div className="mt-3 flex flex-wrap gap-4 text-sm">
                 {brand.phone && (
@@ -193,7 +197,7 @@ function WebHome() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 border border-neutral-300 px-4 py-2 text-sm font-semibold"
               >
-                <MapPin className="h-4 w-4" /> Cómo llegar
+                <MapPin className="h-4 w-4" /> {t("Cómo llegar")}
               </a>
             )}
           </div>

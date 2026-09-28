@@ -13,6 +13,7 @@ import {
   type TravellerRow,
 } from "@/lib/ses";
 import { formatDateShort } from "@/lib/stays";
+import { useLang } from "@/lib/i18n";
 
 // Online check-in, step 1: the guests of the stay for the traveller register
 // the law requires (SES.HOSPEDAJES). Same form and checks as reception's; the
@@ -34,18 +35,19 @@ function WebCheckinScreen() {
   const { data: travellers, error } = useGuestTravellers(bookingId, token);
   const save = useGuestTravellerSave(bookingId, token);
   const [editing, setEditing] = useState<TravellerRow | "new" | null>(null);
+  const { t, tn } = useLang();
 
   if (error) {
     return (
       <div className="mx-auto max-w-2xl px-5 py-16 text-center text-neutral-500">
-        No se encontró la reserva. Ábrela desde el enlace de tu email de confirmación.
+        {t("No se encontró la reserva. Ábrela desde el enlace de tu email de confirmación.")}
       </div>
     );
   }
   if (!booking || !travellers) return <div className="min-h-[60vh]" />;
 
   const people = booking.guests ?? 1;
-  const complete = travellers.filter((t) => t.missing.length === 0).length;
+  const complete = travellers.filter((tr) => tr.missing.length === 0).length;
   const done = travellers.length >= people && complete === travellers.length;
   const stay = {
     id: booking.id,
@@ -61,62 +63,70 @@ function WebCheckinScreen() {
         <button
           onClick={() => navigate({ to: "/web/booking/$bookingId", params: { bookingId } })}
           className="flex h-10 w-10 items-center justify-center border border-neutral-200 bg-white text-neutral-700"
-          aria-label="Volver a la reserva"
+          aria-label={t("Volver a la reserva")}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold">Check-in online</h1>
+          <h1 className="text-2xl font-bold">{t("Check-in online")}</h1>
           <p className="text-sm text-neutral-500">
-            Paso 1 de 2 · Datos de los viajeros · llegada el {formatDateShort(booking.checkIn)}
+            {t("Paso 1 de 2 · Datos de los viajeros · llegada el {date}", {
+              date: formatDateShort(booking.checkIn),
+            })}
           </p>
         </div>
       </div>
 
       <div className="space-y-3 bg-white p-6 shadow-sm ring-1 ring-neutral-100">
         <p className="text-sm text-neutral-600">
-          La ley obliga al hotel a registrar a cada huésped y enviar sus datos al Ministerio del
-          Interior (SES.HOSPEDAJES). Rellénalos ahora y en recepción solo te pedirán el documento.
+          {t(
+            "La ley obliga al hotel a registrar a cada huésped y enviar sus datos al Ministerio del Interior (SES.HOSPEDAJES). Rellénalos ahora y en recepción solo te pedirán el documento.",
+          )}
         </p>
         <p className="flex items-start gap-2 text-xs text-neutral-400">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Por seguridad no volvemos a mostrar los datos guardados: si te equivocas, corrige solo lo
-          que haga falta.
+          {t(
+            "Por seguridad no volvemos a mostrar los datos guardados: si te equivocas, corrige solo lo que haga falta.",
+          )}
         </p>
 
         <ul className="divide-y divide-neutral-100">
-          {travellers.map((t) => (
-            <li key={t.id} className="flex items-start justify-between gap-3 py-3">
+          {travellers.map((tr) => (
+            <li key={tr.id} className="flex items-start justify-between gap-3 py-3">
               <div className="min-w-0">
                 <p className="flex items-center gap-1.5 font-medium">
-                  {t.is_minor ? (
+                  {tr.is_minor ? (
                     <Baby className="h-4 w-4 text-neutral-400" />
                   ) : (
                     <UserRound className="h-4 w-4 text-neutral-400" />
                   )}
-                  {[t.first_name, t.last_name1, t.last_name2].filter(Boolean).join(" ")}
-                  {t.is_holder && <span className="text-xs text-neutral-400">· titular</span>}
+                  {[tr.first_name, tr.last_name1, tr.last_name2].filter(Boolean).join(" ")}
+                  {tr.is_holder && (
+                    <span className="text-xs text-neutral-400">· {t("titular")}</span>
+                  )}
                 </p>
                 <p className="mt-0.5 text-xs text-neutral-500">
-                  {t.document_type
-                    ? `${t.document_type} ${t.document_hint ?? ""}`
-                    : "Sin documento"}
+                  {tr.document_type
+                    ? `${tr.document_type} ${tr.document_hint ?? ""}`
+                    : t("Sin documento")}
                 </p>
-                {t.missing.length > 0 ? (
+                {tr.missing.length > 0 ? (
                   <p className="mt-1 text-xs text-amber-700">
-                    Falta: {t.missing.map((m) => FIELD_LABELS[m] ?? m).join(", ")}
+                    {t("Falta: {fields}", {
+                      fields: tr.missing.map((m) => t(FIELD_LABELS[m] ?? m)).join(", "),
+                    })}
                   </p>
                 ) : (
                   <p className="mt-1 flex items-center gap-1 text-xs text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Completo
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {t("Completo")}
                   </p>
                 )}
               </div>
               <button
-                onClick={() => setEditing(t)}
+                onClick={() => setEditing(tr)}
                 className="flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--brand)]"
               >
-                <Pencil className="h-3.5 w-3.5" /> Corregir
+                <Pencil className="h-3.5 w-3.5" /> {t("Corregir")}
               </button>
             </li>
           ))}
@@ -135,7 +145,7 @@ function WebCheckinScreen() {
                 { id: editing === "new" ? undefined : editing.id, data },
                 {
                   onSuccess: () => {
-                    toast.success("Viajero guardado");
+                    toast.success(t("Viajero guardado"));
                     setEditing(null);
                   },
                   onError: (e) => toast.error(e.message),
@@ -150,14 +160,18 @@ function WebCheckinScreen() {
               className="flex w-full items-center justify-center gap-2 border border-dashed border-neutral-300 py-3 text-sm font-semibold text-neutral-700"
             >
               <Plus className="h-4 w-4" />
-              {travellers.length === 0 ? "Añadir al titular" : "Añadir otro viajero"}
+              {t(travellers.length === 0 ? "Añadir al titular" : "Añadir otro viajero")}
             </button>
           )
         )}
 
         <p className="text-xs text-neutral-500">
-          {travellers.length} de {people} {people === 1 ? "viajero" : "viajeros"} · {complete}{" "}
-          completos
+          {t("{n} de {people} {travellers} · {complete} completos", {
+            n: travellers.length,
+            people,
+            travellers: tn(people, "viajero", "viajeros"),
+            complete,
+          })}
         </p>
       </div>
 
@@ -166,12 +180,13 @@ function WebCheckinScreen() {
         onClick={() => navigate({ to: "/web/sign/$bookingId", params: { bookingId } })}
         className="mt-5 w-full bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-40"
       >
-        Continuar a la firma
+        {t("Continuar a la firma")}
       </button>
       {!done && (
         <p className="mt-2 text-center text-xs text-neutral-400">
-          Completa los datos de {people === 1 ? "tu estancia" : `los ${people} viajeros`} para
-          continuar.
+          {people === 1
+            ? t("Completa los datos de tu estancia para continuar.")
+            : t("Completa los datos de los {n} viajeros para continuar.", { n: people })}
         </p>
       )}
     </div>

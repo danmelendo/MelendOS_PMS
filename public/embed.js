@@ -12,6 +12,7 @@
  * data-assistant  "false" to leave the booking assistant out
  * data-color      colour of the assistant button (default #1F3A5F)
  * data-label      text of the assistant button
+ * data-lang       "es" or "en" (default: the lang of the page, else Spanish)
  *
  * The search box and the assistant are iframes of the booking web: prices,
  * availability and payments stay on the booking domain; this page only sizes
@@ -29,7 +30,12 @@
     return v === null || v === "" ? fallback : v;
   };
   var hotel = attr("hotel", "");
-  var query = hotel ? "?hotel=" + encodeURIComponent(hotel) : "";
+  var lang = (attr("lang", "") || document.documentElement.lang || "").slice(0, 2).toLowerCase();
+  if (lang !== "en" && lang !== "es") lang = "";
+  var params = [];
+  if (hotel) params.push("hotel=" + encodeURIComponent(hotel));
+  if (lang) params.push("lang=" + lang);
+  var query = params.length ? "?" + params.join("&") : "";
   var color = attr("color", "#1F3A5F");
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = "#1F3A5F";
 
@@ -79,7 +85,10 @@
   if (attr("assistant", "true") !== "false") {
     button = document.createElement("button");
     button.type = "button";
-    button.textContent = attr("label", "¿Te ayudo a reservar?");
+    button.textContent = attr(
+      "label",
+      lang === "en" ? "Can I help you book?" : "¿Te ayudo a reservar?",
+    );
     button.style.cssText =
       "position:fixed;right:20px;bottom:20px;z-index:2147483645;display:flex;align-items:center;" +
       "gap:8px;border:0;cursor:pointer;padding:12px 16px;font:600 14px/1.2 system-ui,sans-serif;" +

@@ -6,7 +6,8 @@ import { pms } from "@/integrations/pms";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { useBrand } from "@/lib/brand";
 import { dateOffset } from "@/lib/stays";
-import { postToHost, useTransparentPage } from "@/lib/embed";
+import { postToHost, useEmbedLang, useTransparentPage } from "@/lib/embed";
+import { currentLang, useLang } from "@/lib/i18n";
 
 // The search box of the widget on the hotel's own website (public/embed.js
 // puts it in an iframe). "Buscar" takes the guest to the booking web with
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/embed/search")({
 function EmbedSearch() {
   const { brand, tenantId, ready } = useBrand();
   useTransparentPage();
+  useEmbedLang();
+  const { t } = useLang();
   const { data: properties } = useQuery({
     queryKey: ["pms", "properties-embed", tenantId],
     enabled: !!tenantId,
@@ -53,6 +56,7 @@ function EmbedSearch() {
     url.searchParams.set("checkOut", dates.checkOut);
     url.searchParams.set("guests", String(guests));
     url.searchParams.set("hotel", brand.id);
+    url.searchParams.set("lang", currentLang());
     if (!postToHost({ type: "melendos:navigate", url: url.toString() }))
       window.location.href = url.toString();
   };
@@ -86,26 +90,26 @@ function EmbedSearch() {
         </div>
         <div
           className="flex items-center gap-1 border border-neutral-200 px-2"
-          aria-label="Personas"
+          aria-label={t("Personas")}
         >
           <button
             type="button"
             onClick={() => setGuests((g) => Math.max(1, g - 1))}
             disabled={guests <= 1}
             className="p-1 disabled:opacity-30"
-            aria-label="Menos personas"
+            aria-label={t("Menos {x}", { x: t("personas") })}
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
           <span className="w-20 whitespace-nowrap text-center text-sm tabular-nums">
-            {guests} {guests === 1 ? "persona" : "personas"}
+            {guests} {t(guests === 1 ? "persona" : "personas")}
           </span>
           <button
             type="button"
             onClick={() => setGuests((g) => Math.min(8, g + 1))}
             disabled={guests >= 8}
             className="p-1 disabled:opacity-30"
-            aria-label="Más personas"
+            aria-label={t("Más {x}", { x: t("personas") })}
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
@@ -116,7 +120,7 @@ function EmbedSearch() {
           disabled={!chosen}
           className="flex flex-1 items-center justify-center gap-2 bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none"
         >
-          <Search className="h-4 w-4" /> Buscar
+          <Search className="h-4 w-4" /> {t("Buscar")}
         </button>
       </div>
     </div>

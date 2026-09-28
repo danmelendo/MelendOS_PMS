@@ -53,6 +53,8 @@ export interface CreatePrebookingInput {
   extras?: { extra_id: string; qty: number }[];
   /** Promo code the guest typed; the server checks it and applies the discount. */
   promoCode?: string;
+  /** The guest's language (emails about the booking go in it). */
+  lang?: "es" | "en";
 }
 
 export interface CreateWatchInput {

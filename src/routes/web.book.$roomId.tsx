@@ -10,6 +10,7 @@ import { eur, formatDateLong } from "@/lib/stays";
 import { useBrand } from "@/lib/brand";
 import { findPromo, type AppliedPromo } from "@/lib/offers";
 import { promoDiscount } from "@domain/pricing.ts";
+import { currentLang, useLang } from "@/lib/i18n";
 
 interface WebBookSearch {
   checkIn: string;
@@ -43,6 +44,7 @@ function WebBookScreen() {
   const { checkIn, checkOut, guests, promo: promoFromLink } = Route.useSearch();
   const navigate = useNavigate();
   const { tenantId } = useBrand();
+  const { t } = useLang();
   // Guest details (no account needed).
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
   const guestValid = guest.name.trim().length >= 2 && /^\S+@\S+\.\S+$/.test(guest.email.trim());
@@ -81,7 +83,7 @@ function WebBookScreen() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const applyPromo = useMutation({
     mutationFn: async (code: string) => {
-      if (!tenantId) throw new Error("Hotel no disponible");
+      if (!tenantId) throw new Error(t("Hotel no disponible"));
       return findPromo(tenantId, code);
     },
     onSuccess: (p) => {
@@ -98,7 +100,7 @@ function WebBookScreen() {
 
   const create = useMutation({
     mutationFn: async ({ mode, hold }: { mode: PaymentMode; hold: boolean }) => {
-      if (!room || !propertyId) throw new Error("Habitación no disponible");
+      if (!room || !propertyId) throw new Error(t("Habitación no disponible"));
       const prebooking = await pms.createPrebooking({
         guest: {
           name: guest.name.trim(),
@@ -113,15 +115,16 @@ function WebBookScreen() {
         hold,
         paymentMode: mode,
         ...(promo ? { promoCode: promo.code } : {}),
+        lang: currentLang(),
       });
       return { prebooking, hold, mode };
     },
     onSuccess: ({ prebooking, hold, mode }) => {
       if (mode === "at_hotel") {
-        toast.success("Reserva confirmada · pagas en el hotel");
+        toast.success(t("Reserva confirmada · pagas en el hotel"));
         navigate({ to: "/web/booking/$bookingId", params: { bookingId: prebooking.id } });
       } else if (hold) {
-        toast.success("Prereserva creada · tienes 30 min para confirmar");
+        toast.success(t("Prereserva creada · tienes 30 min para confirmar"));
         navigate({ to: "/web/checkout/$bookingId", params: { bookingId: prebooking.id } });
       } else {
         navigate({
@@ -131,7 +134,7 @@ function WebBookScreen() {
         });
       }
     },
-    onError: (e: Error) => toast.error(e.message || "No se pudo crear la reserva"),
+    onError: (e: Error) => toast.error(t(e.message || "No se pudo crear la reserva")),
   });
 
   const nights = offer?.nights ?? 0;
@@ -153,7 +156,7 @@ function WebBookScreen() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <h1 className="text-2xl font-bold">Confirma tu reserva</h1>
+        <h1 className="text-2xl font-bold">{t("Confirma tu reserva")}</h1>
       </div>
 
       <div className="overflow-hidden  bg-white shadow-sm ring-1 ring-neutral-100">
@@ -161,25 +164,27 @@ function WebBookScreen() {
           <img src={room.imageUrl} alt={room.name} className="h-52 w-full object-cover" />
         )}
         <div className="space-y-3 p-6">
-          <h2 className="text-xl font-semibold">Habitación {room?.name ?? ""}</h2>
-          <Row icon={CalendarDays} label="Entrada">
+          <h2 className="text-xl font-semibold">
+            {t("Habitación {name}", { name: room?.name ?? "" })}
+          </h2>
+          <Row icon={CalendarDays} label={t("Entrada")}>
             {formatDateLong(`${checkIn}T15:00:00`)} · 15:00
           </Row>
-          <Row icon={CalendarDays} label="Salida">
+          <Row icon={CalendarDays} label={t("Salida")}>
             {formatDateLong(`${checkOut}T12:00:00`)} · 12:00
           </Row>
-          <Row icon={Clock} label="Noches">
+          <Row icon={Clock} label={t("Noches")}>
             {nights}
           </Row>
-          <Row icon={Users} label="Huéspedes">
+          <Row icon={Users} label={t("Huéspedes")}>
             {guests}
           </Row>
         </div>
       </div>
 
       <div className="mt-5 space-y-3 bg-white p-6 shadow-sm ring-1 ring-neutral-100">
-        <h3 className="font-semibold">Datos del huésped</h3>
-        <Field label="Nombre y apellidos">
+        <h3 className="font-semibold">{t("Datos del huésped")}</h3>
+        <Field label={t("Nombre y apellidos")}>
           <input
             value={guest.name}
             onChange={(e) => setGuest({ ...guest, name: e.target.value })}
@@ -197,7 +202,7 @@ function WebBookScreen() {
               className="w-full border border-neutral-200 px-3 py-2.5 text-sm"
             />
           </Field>
-          <Field label="Teléfono (opcional)">
+          <Field label={t("Teléfono (opcional)")}>
             <input
               type="tel"
               value={guest.phone}
@@ -208,19 +213,21 @@ function WebBookScreen() {
           </Field>
         </div>
         <p className="text-xs text-neutral-400">
-          Te enviaremos la confirmación y el enlace para gestionar la reserva.
+          {t("Te enviaremos la confirmación y el enlace para gestionar la reserva.")}
         </p>
       </div>
 
       <div className="mt-5 space-y-2 bg-white p-6 shadow-sm ring-1 ring-neutral-100">
         <h3 className="flex items-center gap-2 font-semibold">
-          <Tag className="h-4 w-4 text-[var(--brand)]" /> ¿Tienes un código promocional?
+          <Tag className="h-4 w-4 text-[var(--brand)]" /> {t("¿Tienes un código promocional?")}
         </h3>
         {promo ? (
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span>
               <span className="font-mono font-semibold">{promo.code}</span> ·{" "}
-              <span className="text-emerald-700">−{eur(discount)} en la habitación</span>
+              <span className="text-emerald-700">
+                {t("−{amount} en la habitación", { amount: eur(discount) })}
+              </span>
             </span>
             <button
               type="button"
@@ -230,7 +237,7 @@ function WebBookScreen() {
               }}
               className="text-xs text-neutral-500 underline-offset-4 hover:underline"
             >
-              Quitar
+              {t("Quitar")}
             </button>
           </div>
         ) : (
@@ -247,7 +254,7 @@ function WebBookScreen() {
                 setPromoInput(e.target.value.toUpperCase());
                 setPromoError(null);
               }}
-              placeholder="CÓDIGO"
+              placeholder={t("CÓDIGO")}
               maxLength={40}
               className="w-full border border-neutral-200 px-3 py-2.5 font-mono text-sm uppercase"
             />
@@ -256,14 +263,15 @@ function WebBookScreen() {
               disabled={!promoInput.trim() || applyPromo.isPending}
               className="shrink-0 border border-neutral-300 px-4 text-sm font-semibold disabled:opacity-50"
             >
-              Aplicar
+              {t("Aplicar")}
             </button>
           </form>
         )}
-        {promoError && <p className="text-xs text-red-600">{promoError}</p>}
+        {promoError && <p className="text-xs text-red-600">{t(promoError)}</p>}
         {promo && (
           <p className="text-xs text-neutral-400">
-            {eur(roomPrice)} − {eur(discount)} = {eur(total)}. Los extras no llevan descuento.
+            {eur(roomPrice)} − {eur(discount)} = {eur(total)}.{" "}
+            {t("Los extras no llevan descuento.")}
           </p>
         )}
       </div>
@@ -279,7 +287,7 @@ function WebBookScreen() {
       />
 
       <Link to="/web" className="mt-6 block text-center text-xs text-neutral-400 underline">
-        Cancelar y volver al inicio
+        {t("Cancelar y volver al inicio")}
       </Link>
     </div>
   );

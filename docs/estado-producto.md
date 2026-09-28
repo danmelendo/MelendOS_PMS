@@ -48,7 +48,7 @@ Total orientativo: **3-5 semanas de trabajo**, más los tiempos de terceros (ban
 
 ### 2. Importante en los primeros meses
 
-- **Idiomas**: la web del huésped y los emails solo están en español. En costa y ciudad turística el inglés es imprescindible (y según el mercado, francés o alemán).
+- **Idiomas**: la web del huésped, el widget, los emails y los textos legales ya están en español e inglés (28/09). Faltan los textos que escribe cada hotel (portada, descripciones) en varios idiomas y, según el mercado, francés o alemán.
 - **LLM de producción**: hoy el asistente usa un modelo local en el PC de Dan. Hace falta un proveedor de API por hotel con el consumo medido (ya se registra por turno) y afinar lo conocido: a veces responde preguntas fuera de tema.
 - **Un channel manager real** (p. ej. Channex): sin conexión con Booking y Expedia muchos hoteles no cambian de PMS.
 - **Cobro de la suscripción** (propuesta: Stripe Billing) y facturas propias de Melend/OS.

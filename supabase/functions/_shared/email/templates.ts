@@ -1,11 +1,15 @@
-// Emails to the guest about their booking (confirmation, cancellation), in
-// Spanish, plain HTML with inline styles so every mail client shows them the
-// same. Pure: the dispatcher loads the data and sends what this returns.
+// Emails to the guest about their booking (confirmation, cancellation), in the
+// guest's language (Spanish or English, chosen on the booking web), plain HTML
+// with inline styles so every mail client shows them the same. Pure: the
+// dispatcher loads the data and sends what this returns.
 
 export type BookingEmailKind = "booking_confirmed" | "booking_cancelled";
+export type EmailLang = "es" | "en";
 
 export interface BookingEmailData {
   kind: BookingEmailKind;
+  /** The guest's language; Spanish when unknown. */
+  lang?: EmailLang | null;
   hotelName: string;
   /** Brand colour (#rrggbb); falls back to a neutral navy. */
   accent: string | null;
@@ -38,34 +42,92 @@ export interface RenderedEmail {
   text: string;
 }
 
+interface Copy {
+  locale: string;
+  hello: (name: string | null) => string;
+  subject: (confirmed: boolean, hotel: string, ref: string) => string;
+  intro: (confirmed: boolean, hotel: string) => string;
+  refunded: (amount: string) => string;
+  nothingCharged: string;
+  atHotel: (total: string) => string;
+  paidAll: (total: string) => string;
+  paidPart: (total: string, paid: string) => string;
+  freeUntil: (when: string) => string;
+  noFree: string;
+  rows: {
+    reference: string;
+    room: string;
+    checkIn: string;
+    checkOut: string;
+    nights: string;
+    guests: string;
+  };
+  from: (date: string, hour: string) => string;
+  until: (date: string, hour: string) => string;
+  cta: (confirmed: boolean) => string;
+  whatNext: string;
+}
+
+const COPY: Record<EmailLang, Copy> = {
+  es: {
+    locale: "es-ES",
+    hello: (n) => (n ? `Hola, ${n}:` : "Hola:"),
+    subject: (c, h, r) => `Reserva ${c ? "confirmada" : "cancelada"} en ${h} · ${r}`,
+    intro: (c, h) => `Tu reserva en ${h} está ${c ? "confirmada" : "cancelada"}.`,
+    refunded: (a) =>
+      `Pagaste ${a} online: el hotel tramita la devolución que corresponda según las condiciones que aceptaste.`,
+    nothingCharged: "No se ha cobrado nada.",
+    atHotel: (t) => `Total ${t}, que pagas en el hotel.`,
+    paidAll: (t) => `Total ${t}, pagado.`,
+    paidPart: (t, p) => `Total ${t}; pagado ${p}.`,
+    freeUntil: (w) => `Cancelación gratuita hasta el ${w}.`,
+    noFree: "Esta reserva no tiene cancelación gratuita.",
+    rows: {
+      reference: "Referencia",
+      room: "Habitación",
+      checkIn: "Entrada",
+      checkOut: "Salida",
+      nights: "Noches",
+      guests: "Huéspedes",
+    },
+    from: (d, h) => `${d}, desde las ${h}`,
+    until: (d, h) => `${d}, hasta las ${h}`,
+    cta: (c) => (c ? "Ver o gestionar mi reserva" : "Ver mi reserva"),
+    whatNext: "Desde ahí puedes hacer el check-in online, escribir a recepción o cancelar.",
+  },
+  en: {
+    locale: "en-GB",
+    hello: (n) => (n ? `Hello ${n},` : "Hello,"),
+    subject: (c, h, r) => `Booking ${c ? "confirmed" : "cancelled"} at ${h} · ${r}`,
+    intro: (c, h) => `Your booking at ${h} is ${c ? "confirmed" : "cancelled"}.`,
+    refunded: (a) =>
+      `You paid ${a} online: the hotel will process any refund due under the terms you accepted.`,
+    nothingCharged: "Nothing has been charged.",
+    atHotel: (t) => `Total ${t}, to pay at the hotel.`,
+    paidAll: (t) => `Total ${t}, paid.`,
+    paidPart: (t, p) => `Total ${t}; paid ${p}.`,
+    freeUntil: (w) => `Free cancellation until ${w}.`,
+    noFree: "This booking has no free cancellation.",
+    rows: {
+      reference: "Reference",
+      room: "Room",
+      checkIn: "Check-in",
+      checkOut: "Check-out",
+      nights: "Nights",
+      guests: "Guests",
+    },
+    from: (d, h) => `${d}, from ${h}`,
+    until: (d, h) => `${d}, until ${h}`,
+    cta: (c) => (c ? "View or manage my booking" : "View my booking"),
+    whatNext: "From there you can check in online, message reception or cancel.",
+  },
+};
+
 const esc = (s: string) =>
   s.replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
-
-const eur = (n: number) =>
-  n.toLocaleString("es-ES", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
-
-function longDate(ymd: string): string {
-  return new Date(`${ymd}T12:00:00Z`).toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function instant(iso: string, timeZone: string): string {
-  return new Date(iso).toLocaleString("es-ES", {
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone,
-  });
-}
 
 const hour = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
@@ -76,42 +138,58 @@ function nights(checkIn: string, checkOut: string): number {
 }
 
 export function bookingEmail(d: BookingEmailData): RenderedEmail {
+  const L = COPY[d.lang === "en" ? "en" : "es"];
+  const eur = (n: number) =>
+    n.toLocaleString(L.locale, { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
+  const longDate = (ymd: string) =>
+    new Date(`${ymd}T12:00:00Z`).toLocaleDateString(L.locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  const instant = (iso: string) =>
+    new Date(iso).toLocaleString(L.locale, {
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: d.timezone,
+    });
+
   const accent = d.accent && /^#[0-9a-f]{6}$/i.test(d.accent) ? d.accent : "#1e3a5f";
   const n = nights(d.checkIn, d.checkOut);
-  const hello = d.guestName ? `Hola, ${d.guestName.split(/\s+/)[0]}:` : "Hola:";
+  const hello = L.hello(d.guestName ? d.guestName.split(/\s+/)[0] : null);
   const confirmed = d.kind === "booking_confirmed";
-  const subject = confirmed
-    ? `Reserva confirmada en ${d.hotelName} · ${d.reference}`
-    : `Reserva cancelada en ${d.hotelName} · ${d.reference}`;
+  const subject = L.subject(confirmed, d.hotelName, d.reference);
 
   const payment = !confirmed
     ? d.paid > 0
-      ? `Pagaste ${eur(d.paid)} online: el hotel tramita la devolución que corresponda según las condiciones que aceptaste.`
-      : "No se ha cobrado nada."
+      ? L.refunded(eur(d.paid))
+      : L.nothingCharged
     : d.paymentMode === "at_hotel"
-      ? `Total ${eur(d.total)}, que pagas en el hotel.`
+      ? L.atHotel(eur(d.total))
       : d.paid >= d.total
-        ? `Total ${eur(d.total)}, pagado.`
-        : `Total ${eur(d.total)}; pagado ${eur(d.paid)}.`;
+        ? L.paidAll(eur(d.total))
+        : L.paidPart(eur(d.total), eur(d.paid));
   const cancellation = !confirmed
     ? null
     : d.freeCancellationUntil && Date.parse(d.freeCancellationUntil) > 0
-      ? `Cancelación gratuita hasta el ${instant(d.freeCancellationUntil, d.timezone)}.`
-      : "Esta reserva no tiene cancelación gratuita.";
+      ? L.freeUntil(instant(d.freeCancellationUntil))
+      : L.noFree;
 
-  const intro = confirmed
-    ? `Tu reserva en ${d.hotelName} está confirmada.`
-    : `Tu reserva en ${d.hotelName} está cancelada.`;
+  const intro = L.intro(confirmed, d.hotelName);
   const rows: [string, string][] = [
-    ["Referencia", d.reference],
-    ["Habitación", d.roomName],
-    ["Entrada", `${longDate(d.checkIn)}, desde las ${hour(d.checkInHour)}`],
-    ["Salida", `${longDate(d.checkOut)}, hasta las ${hour(d.checkOutHour)}`],
-    ["Noches", String(n)],
-    ["Huéspedes", String(d.guests)],
+    [L.rows.reference, d.reference],
+    [L.rows.room, d.roomName],
+    [L.rows.checkIn, L.from(longDate(d.checkIn), hour(d.checkInHour))],
+    [L.rows.checkOut, L.until(longDate(d.checkOut), hour(d.checkOutHour))],
+    [L.rows.nights, String(n)],
+    [L.rows.guests, String(d.guests)],
   ];
   const contact = [d.hotelPhone, d.hotelEmail, d.hotelAddress].filter(Boolean) as string[];
-  const cta = confirmed ? "Ver o gestionar mi reserva" : "Ver mi reserva";
+  const cta = L.cta(confirmed);
 
   const text = [
     hello,
@@ -124,16 +202,14 @@ export function bookingEmail(d: BookingEmailData): RenderedEmail {
     ...(cancellation ? [cancellation] : []),
     "",
     `${cta}: ${d.manageUrl}`,
-    ...(confirmed
-      ? ["Desde ahí puedes hacer el check-in online, escribir a recepción o cancelar."]
-      : []),
+    ...(confirmed ? [L.whatNext] : []),
     "",
     d.hotelName,
     ...contact,
   ].join("\n");
 
   const html = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(subject)}</title></head>
+<html lang="${d.lang === "en" ? "en" : "es"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff">
@@ -152,7 +228,7 @@ ${rows
 <p style="margin:20px 0 4px;font-size:14px">${esc(payment)}</p>
 ${cancellation ? `<p style="margin:0 0 4px;font-size:14px;color:#6b7280">${esc(cancellation)}</p>` : ""}
 <p style="margin:24px 0"><a href="${esc(d.manageUrl)}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;font-size:14px">${esc(cta)}</a></p>
-${confirmed ? `<p style="margin:0;font-size:13px;color:#6b7280">Desde ahí puedes hacer el check-in online, escribir a recepción o cancelar.</p>` : ""}
+${confirmed ? `<p style="margin:0;font-size:13px;color:#6b7280">${esc(L.whatNext)}</p>` : ""}
 </td></tr>
 <tr><td style="padding:16px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280">${[d.hotelName, ...contact].map(esc).join(" · ")}</td></tr>
 </table>

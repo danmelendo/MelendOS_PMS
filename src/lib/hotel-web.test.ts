@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandOf, hexToHsl, hostHotel } from "./hotel-web";
+import { brandCopy, brandOf, hexToHsl, hostHotel } from "./hotel-web";
 
 describe("hostHotel", () => {
   it("finds the hotel by its own domain, by platform subdomain or not at all (demo)", () => {
@@ -48,5 +48,27 @@ describe("brandOf", () => {
     expect(hexToHsl("#1F3A5F")).toBe("215 51% 25%");
     expect(hexToHsl("#ffffff")).toBe("0 0% 100%");
     expect(hexToHsl("nope")).toBe("214 51% 25%");
+  });
+});
+
+describe("brandCopy", () => {
+  it("gives the hotel's English texts to English guests, and the Spanish ones otherwise", () => {
+    const brand = brandOf({
+      id: "t1",
+      slug: "hotel-sol",
+      name: "Hotel Sol",
+      domain: null,
+      settings: null,
+      brand: {
+        heroTitle: "Duerme en el centro",
+        about: "Somos un hotel familiar",
+        heroTitle_en: "Sleep in the centre",
+      },
+    });
+    expect(brandCopy(brand, "en")).toMatchObject({
+      heroTitle: "Sleep in the centre",
+      about: "Somos un hotel familiar",
+    });
+    expect(brandCopy(brand, "es").heroTitle).toBe("Duerme en el centro");
   });
 });

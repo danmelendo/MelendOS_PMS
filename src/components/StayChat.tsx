@@ -8,9 +8,10 @@ import {
   useSendGuestMessage,
   type ChatMessage,
 } from "@/lib/chat";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 const time = (iso: string) =>
-  new Date(iso).toLocaleString("es-ES", {
+  new Date(iso).toLocaleString(currentLocale(), {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -19,6 +20,7 @@ const time = (iso: string) =>
 
 function Bubble({ m }: { m: ChatMessage }) {
   const mine = m.sender === "guest";
+  const { t } = useLang();
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
@@ -35,7 +37,7 @@ function Bubble({ m }: { m: ChatMessage }) {
             ) : (
               <ConciergeBell className="h-3 w-3" />
             )}
-            {m.sender === "assistant" ? "Asistente" : "Recepción"}
+            {t(m.sender === "assistant" ? "Asistente" : "Recepción")}
           </p>
         )}
         {m.category && CATEGORY_LABELS[m.category] && (
@@ -44,13 +46,13 @@ function Bubble({ m }: { m: ChatMessage }) {
               mine ? "bg-white/20" : "bg-neutral-100 text-neutral-500"
             }`}
           >
-            {CATEGORY_LABELS[m.category]}
+            {t(CATEGORY_LABELS[m.category])}
           </span>
         )}
         <p className="whitespace-pre-wrap break-words">{m.body}</p>
         <p className={`mt-1 text-right text-[10px] ${mine ? "text-white/70" : "text-neutral-400"}`}>
           {time(m.created_at)}
-          {mine && m.read_at ? " · leído" : ""}
+          {mine && m.read_at ? ` · ${t("leído")}` : ""}
         </p>
       </div>
     </div>
@@ -79,6 +81,7 @@ export function StayChat({
   const [text, setText] = useState<string>(preset?.text ?? "");
   const [category, setCategory] = useState<string | undefined>(preset?.category);
   const end = useRef<HTMLDivElement>(null);
+  const { t } = useLang();
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
@@ -100,20 +103,23 @@ export function StayChat({
 
   if (error) {
     return (
-      <p className="py-10 text-center text-sm text-neutral-500">No encontramos esta reserva.</p>
+      <p className="py-10 text-center text-sm text-neutral-500">
+        {t("No encontramos esta reserva.")}
+      </p>
     );
   }
 
   return (
     <div className="flex flex-col">
       <div className="min-h-[55vh] space-y-2 px-4 py-4">
-        {isPending && <p className="text-center text-sm text-neutral-400">Cargando…</p>}
+        {isPending && <p className="text-center text-sm text-neutral-400">{t("Cargando…")}</p>}
         {messages && messages.length === 0 && (
           <div className="bg-white p-4 text-sm text-neutral-600 shadow-sm ring-1 ring-neutral-100">
-            <p className="font-semibold text-neutral-800">Hola 👋</p>
+            <p className="font-semibold text-neutral-800">{t("Hola")} 👋</p>
             <p className="mt-1">
-              Escríbenos lo que necesites o usa una petición rápida. Recepción te responde aquí
-              mismo, las 24 horas.
+              {t(
+                "Escríbenos lo que necesites o usa una petición rápida. Recepción te responde aquí mismo, las 24 horas.",
+              )}
             </p>
           </div>
         )}
@@ -132,7 +138,7 @@ export function StayChat({
                 type="button"
                 onClick={() => {
                   setCategory(q.category);
-                  setText(q.text);
+                  setText(t(q.text));
                 }}
                 className={`shrink-0 border px-2.5 py-1 text-xs font-medium ${
                   category === q.category
@@ -140,7 +146,7 @@ export function StayChat({
                     : "border-neutral-200 bg-white text-neutral-600"
                 }`}
               >
-                {q.label}
+                {t(q.label)}
               </button>
             ))}
           </div>
@@ -162,14 +168,14 @@ export function StayChat({
               }}
               rows={1}
               maxLength={2000}
-              placeholder="Escribe a recepción…"
-              aria-label="Mensaje para recepción"
+              placeholder={t("Escribe a recepción…")}
+              aria-label={t("Mensaje para recepción")}
               className="max-h-32 min-h-[42px] flex-1 resize-none border border-neutral-200 px-3 py-2.5 text-sm"
             />
             <button
               type="submit"
               disabled={send.isPending || !text.trim()}
-              aria-label="Enviar"
+              aria-label={t("Enviar")}
               className="flex h-[42px] w-[42px] shrink-0 items-center justify-center bg-[var(--brand)] text-white disabled:opacity-40"
             >
               <SendHorizonal className="h-4 w-4" />
@@ -178,7 +184,7 @@ export function StayChat({
         </div>
       ) : (
         <p className="border-t border-neutral-200 px-4 py-3 text-center text-xs text-neutral-500">
-          La conversación de esta reserva está cerrada.
+          {t("La conversación de esta reserva está cerrada.")}
         </p>
       )}
     </div>

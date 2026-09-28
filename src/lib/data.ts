@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "./roles";
 import type { Database } from "@/integrations/supabase/types";
+import { currentLocale } from "./i18n";
 
 type Tables = Database["public"]["Tables"];
 export type Room = Tables["rooms"]["Row"];
@@ -140,5 +141,7 @@ export function useDynamicRules() {
 }
 
 export function eur(n: number | null | undefined) {
-  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n ?? 0);
+  return new Intl.NumberFormat(currentLocale(), { style: "currency", currency: "EUR" }).format(
+    n ?? 0,
+  );
 }

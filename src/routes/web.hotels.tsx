@@ -6,6 +6,7 @@ import { pms } from "@/integrations/pms";
 import { useBrand } from "@/lib/brand";
 import { accentGradient, eur0, priceBand } from "@/lib/stays";
 import { HotelCoverArt } from "@/components/cover-art";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/web/hotels")({
   component: WebHotels,
@@ -31,16 +32,17 @@ function WebHotels() {
       }),
   });
 
+  const { t } = useLang();
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
-      <h1 className="text-3xl font-bold tracking-tight">Hoteles y habitaciones</h1>
+      <h1 className="text-3xl font-bold tracking-tight">{t("Hoteles y habitaciones")}</h1>
       <p className="mt-1 text-neutral-500">
-        Elige hotel para ver sus habitaciones y precios para tus fechas.
+        {t("Elige hotel para ver sus habitaciones y precios para tus fechas.")}
       </p>
 
       {(provinces?.length ?? 0) > 1 && (
         <div className="no-scrollbar mt-5 flex gap-2 overflow-x-auto pb-1">
-          <Chip active={province === null} onClick={() => setProvince(null)} label="Todas" />
+          <Chip active={province === null} onClick={() => setProvince(null)} label={t("Todas")} />
           {(provinces ?? []).map((p) => (
             <Chip
               key={p.id}
@@ -52,7 +54,7 @@ function WebHotels() {
         </div>
       )}
 
-      {isLoading && <p className="py-16 text-center text-neutral-400">Cargando…</p>}
+      {isLoading && <p className="py-16 text-center text-neutral-400">{t("Cargando…")}</p>}
 
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {(hotels ?? []).map((c) => (
@@ -84,10 +86,10 @@ function WebHotels() {
               <p className="line-clamp-1 pr-2 text-sm text-neutral-500">{c.description}</p>
               {c.fromPrice != null && (
                 <span className="shrink-0 text-right text-sm font-semibold">
-                  desde {eur0(priceBand(c.fromPrice).from)}
-                  <span className="font-normal text-neutral-400">/noche</span>
+                  {t("desde")} {eur0(priceBand(c.fromPrice).from)}
+                  <span className="font-normal text-neutral-400">/{t("noche")}</span>
                   <span className="block text-[10px] font-normal text-neutral-400">
-                    según fechas
+                    {t("según fechas")}
                   </span>
                 </span>
               )}

@@ -431,6 +431,7 @@ export class DemoStaysConnector implements PmsConnector {
         ...(input.guest ? { customer: input.guest } : {}),
         ...(input.extras?.length ? { extras: input.extras } : {}),
         ...(input.promoCode ? { promo_code: input.promoCode } : {}),
+        ...(input.lang ? { lang: input.lang } : {}),
       },
     });
     if (error || !data) {

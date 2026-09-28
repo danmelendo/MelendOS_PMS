@@ -13,6 +13,7 @@ import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useBrandTenant, useFeatures } from "@/lib/features";
 import { MemberProvider, useMember } from "@/lib/member-session";
 import { BOOKING_STATUS_CLASSES, BOOKING_STATUS_LABELS, formatDateShort } from "@/lib/stays";
+import { useLang } from "@/lib/i18n";
 
 // "My booking" on the public website: find a booking with its reference and
 // email (no account needed), or sign in to see all your stays at this hotel.
@@ -32,14 +33,17 @@ const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wider tex
 
 function MyBookingPage() {
   const { brand } = useBrand();
+  const { t } = useLang();
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-5">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
         {brand.name}
       </p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight">Mi reserva</h1>
+      <h1 className="mt-1 text-3xl font-bold tracking-tight">{t("Mi reserva")}</h1>
       <p className="mt-1 text-neutral-500">
-        Consulta tu reserva, haz el check-in online, habla con recepción o pide lo que necesites.
+        {t(
+          "Consulta tu reserva, haz el check-in online, habla con recepción o pide lo que necesites.",
+        )}
       </p>
       <div className="mt-8 grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <FindBooking />
@@ -55,6 +59,7 @@ function FindBooking() {
   const [reference, setReference] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const { t } = useLang();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +73,7 @@ function FindBooking() {
     setBusy(false);
     const found = data as { id: string; token: string } | null;
     if (error || !found) {
-      toast.error("No encontramos una reserva con esa referencia y ese email.");
+      toast.error(t("No encontramos una reserva con esa referencia y ese email."));
       return;
     }
     adoptGuestToken(found.id, found.token);
@@ -78,21 +83,22 @@ function FindBooking() {
   return (
     <section className={CARD}>
       <h2 className="flex items-center gap-2 text-lg font-semibold">
-        <Search className="h-5 w-5 text-[var(--brand)]" /> Buscar mi reserva
+        <Search className="h-5 w-5 text-[var(--brand)]" /> {t("Buscar mi reserva")}
       </h2>
       <p className="mt-1 text-sm text-neutral-500">
-        Sin cuenta: con la referencia de 8 caracteres de tu confirmación y el email con el que
-        reservaste.
+        {t(
+          "Sin cuenta: con la referencia de 8 caracteres de tu confirmación y el email con el que reservaste.",
+        )}
       </p>
       <form onSubmit={submit} className="mt-5 space-y-4">
         <label className="block">
-          <span className={LABEL}>Referencia</span>
+          <span className={LABEL}>{t("Referencia")}</span>
           <input
             value={reference}
             onChange={(e) => setReference(e.target.value.toUpperCase())}
             maxLength={12}
             required
-            placeholder="Ej. 3F9A21C0"
+            placeholder={t("Ej. {ref}", { ref: "3F9A21C0" })}
             autoComplete="off"
             className={`${FIELD} font-mono uppercase tracking-wider`}
           />
@@ -113,7 +119,7 @@ function FindBooking() {
           disabled={busy || !tenant}
           className="w-full bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-50"
         >
-          {busy ? "Buscando…" : "Ver mi reserva"}
+          {t(busy ? "Buscando…" : "Ver mi reserva")}
         </button>
       </form>
     </section>
@@ -124,6 +130,7 @@ function MyStays() {
   const { memberId, member, needsSignIn, loading } = useMember();
   const { signOut } = useAuth();
   const features = useFeatures();
+  const { t } = useLang();
   const { data: bookings, isPending } = useQuery({
     queryKey: ["pms", "bookings", memberId],
     enabled: !!memberId,
@@ -139,17 +146,17 @@ function MyStays() {
     return (
       <section className={CARD}>
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <UserRound className="h-5 w-5 text-[var(--brand)]" /> Entrar con mi cuenta
+          <UserRound className="h-5 w-5 text-[var(--brand)]" /> {t("Entrar con mi cuenta")}
         </h2>
         <p className="mt-1 mb-5 text-sm text-neutral-500">
-          Todas tus estancias en el hotel en un solo sitio.
+          {t("Todas tus estancias en el hotel en un solo sitio.")}
         </p>
         {DEMO_ACCESS ? <DemoAccountPicker kind="guest" tone="guest" /> : <PasswordSignIn />}
       </section>
     );
   }
   if (loading || isPending) {
-    return <section className={`${CARD} text-sm text-neutral-400`}>Cargando…</section>;
+    return <section className={`${CARD} text-sm text-neutral-400`}>{t("Cargando…")}</section>;
   }
 
   const upcoming = (bookings ?? []).filter((b) =>
@@ -162,7 +169,8 @@ function MyStays() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <UserRound className="h-5 w-5 text-[var(--brand)]" /> Hola, {member?.name.split(" ")[0]}
+            <UserRound className="h-5 w-5 text-[var(--brand)]" />{" "}
+            {t("Hola, {name}", { name: member?.name.split(" ")[0] ?? "" })}
           </h2>
           <p className="truncate text-sm text-neutral-500">{member?.email}</p>
         </div>
@@ -172,7 +180,7 @@ function MyStays() {
             onClick={() => signOut()}
             className="flex shrink-0 items-center gap-1 text-sm text-neutral-500 hover:text-neutral-800"
           >
-            <LogOut className="h-4 w-4" /> Salir
+            <LogOut className="h-4 w-4" /> {t("Salir")}
           </button>
         }
       </div>
@@ -182,18 +190,24 @@ function MyStays() {
           <span className="flex items-center gap-2 text-sm">
             <Sparkles className="h-4 w-4 text-[var(--brand)]" /> Club · {loyalty.tier.name}
           </span>
-          <span className="text-sm font-semibold tabular-nums">{loyalty.points} puntos</span>
+          <span className="text-sm font-semibold tabular-nums">
+            {t("{n} puntos", { n: loyalty.points })}
+          </span>
         </div>
       )}
 
-      <StayList title="Próximas y en curso" items={upcoming} empty="No tienes reservas próximas." />
-      {past.length > 0 && <StayList title="Anteriores" items={past} />}
+      <StayList
+        title={t("Próximas y en curso")}
+        items={upcoming}
+        empty={t("No tienes reservas próximas.")}
+      />
+      {past.length > 0 && <StayList title={t("Anteriores")} items={past} />}
 
       <Link
         to="/web/hotels"
         className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-[var(--brand)]"
       >
-        Reservar otra estancia <ChevronRight className="h-4 w-4" />
+        {t("Reservar otra estancia")} <ChevronRight className="h-4 w-4" />
       </Link>
     </section>
   );
@@ -208,6 +222,7 @@ function StayList({
   items: Awaited<ReturnType<typeof pms.listBookings>>;
   empty?: string;
 }) {
+  const { t } = useLang();
   return (
     <div className="mt-6">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -233,7 +248,7 @@ function StayList({
               <span
                 className={`shrink-0 border px-2 py-0.5 text-[11px] font-medium ${BOOKING_STATUS_CLASSES[b.status]}`}
               >
-                {BOOKING_STATUS_LABELS[b.status]}
+                {t(BOOKING_STATUS_LABELS[b.status])}
               </span>
             </Link>
           </li>
@@ -243,11 +258,29 @@ function StayList({
   );
 }
 
+// Sign-in texts by language (kept out of the i18n dictionary: the secret
+// scanner reads its "…contraseña…" entries as hardcoded passwords).
+const SIGN_IN = {
+  es: {
+    label: "Contraseña",
+    wrong: "Email o contraseña incorrectos",
+    forgot: "¿Has olvidado la contraseña?",
+    resetSent: "Si tienes cuenta, te llegará un email para elegir una contraseña nueva",
+  },
+  en: {
+    label: "Password",
+    wrong: "Wrong email or password",
+    forgot: "Forgot your password?",
+    resetSent: "If you have an account, you will get an email to choose a new password",
+  },
+} as const;
+
 function PasswordSignIn() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const { t, lang } = useLang();
   return (
     <form
       onSubmit={async (e) => {
@@ -255,7 +288,7 @@ function PasswordSignIn() {
         setBusy(true);
         const { error } = await signIn(email.trim(), password);
         setBusy(false);
-        if (error) toast.error("Email o contraseña incorrectos");
+        if (error) toast.error(SIGN_IN[lang].wrong);
       }}
       className="space-y-4"
     >
@@ -271,7 +304,7 @@ function PasswordSignIn() {
         />
       </label>
       <label className="block">
-        <span className={LABEL}>Contraseña</span>
+        <span className={LABEL}>{SIGN_IN[lang].label}</span>
         <input
           type="password"
           value={password}
@@ -286,21 +319,22 @@ function PasswordSignIn() {
         disabled={busy}
         className="flex w-full items-center justify-center gap-2 bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-50"
       >
-        <LogIn className="h-4 w-4" /> {busy ? "Entrando…" : "Entrar"}
+        <LogIn className="h-4 w-4" /> {t(busy ? "Entrando…" : "Entrar")}
       </button>
       <button
         type="button"
         className="w-full text-center text-xs text-neutral-500 underline-offset-4 hover:underline"
         onClick={async () => {
-          if (!/^\S+@\S+\.\S+$/.test(email.trim())) return toast.error("Escribe primero tu email");
+          if (!/^\S+@\S+\.\S+$/.test(email.trim()))
+            return toast.error(t("Escribe primero tu email"));
           await supabase.auth.resetPasswordForEmail(email.trim(), {
             redirectTo: `${window.location.origin}/reset-password?next=/web/mi-reserva`,
           });
           // Same answer whether the account exists or not.
-          toast.success("Si tienes cuenta, te llegará un email para elegir una contraseña nueva");
+          toast.success(SIGN_IN[lang].resetSent);
         }}
       >
-        ¿Has olvidado la contraseña?
+        {SIGN_IN[lang].forgot}
       </button>
     </form>
   );

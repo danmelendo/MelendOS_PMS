@@ -12,9 +12,10 @@ import {
   useRequestExtension,
   useStayServices,
 } from "@/lib/folio";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 const longDay = (ymd: string) =>
-  new Date(`${ymd}T12:00:00Z`).toLocaleDateString("es-ES", {
+  new Date(`${ymd}T12:00:00Z`).toLocaleDateString(currentLocale(), {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -48,6 +49,7 @@ export function StayFolio({
   const [qty, setQty] = useState<Record<string, number>>({});
   const [newCheckOut, setNewCheckOut] = useState(addDays(checkOut, 1));
   const [paying, setPaying] = useState(false);
+  const { t } = useLang();
 
   if (!visible || !folio) return null;
   const ext = folio.extension;
@@ -64,17 +66,20 @@ export function StayFolio({
   };
 
   const grouped = Object.entries(SERVICE_CATEGORIES)
-    .map(([k, label]) => ({ label, items: (services ?? []).filter((s) => s.category === k) }))
+    .map(([k, label]) => ({
+      label: t(label),
+      items: (services ?? []).filter((s) => s.category === k),
+    }))
     .filter((g) => g.items.length);
 
   return (
     <section className="mt-4 bg-white p-5 shadow-sm ring-1 ring-neutral-100">
       <h3 className="flex items-center gap-2 font-semibold">
-        <Receipt className="h-4 w-4 text-[var(--brand)]" /> Tu cuenta
+        <Receipt className="h-4 w-4 text-[var(--brand)]" /> {t("Tu cuenta")}
       </h3>
       <dl className="mt-3 space-y-1.5 text-sm">
         <div className="flex justify-between gap-3">
-          <dt className="text-neutral-600">Reserva</dt>
+          <dt className="text-neutral-600">{t("Reserva")}</dt>
           <dd className="tabular-nums">{eur(folio.booking_total)}</dd>
         </div>
         {folio.charges.map((c) => (
@@ -83,7 +88,9 @@ export function StayFolio({
               {Number(c.qty) !== 1 ? `${Number(c.qty)} × ` : ""}
               {c.description}
               {c.status === "requested" && (
-                <span className="ml-1.5 text-[11px] text-amber-700">pendiente de confirmar</span>
+                <span className="ml-1.5 text-[11px] text-amber-700">
+                  {t("pendiente de confirmar")}
+                </span>
               )}
             </dt>
             <dd className={`tabular-nums ${c.status === "requested" ? "text-neutral-400" : ""}`}>
@@ -92,24 +99,26 @@ export function StayFolio({
           </div>
         ))}
         <div className="flex justify-between gap-3 text-neutral-500">
-          <dt>Pagado</dt>
+          <dt>{t("Pagado")}</dt>
           <dd className="tabular-nums">−{eur(folio.paid)}</dd>
         </div>
         <div className="flex justify-between gap-3 border-t border-neutral-100 pt-1.5 font-semibold">
-          <dt>Pendiente</dt>
+          <dt>{t("Pendiente")}</dt>
           <dd className="tabular-nums">{eur(Math.max(folio.balance, 0))}</dd>
         </div>
       </dl>
 
       {ext && ext.status === "pending" && (
         <p className="mt-3 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Ampliación hasta el {longDay(ext.new_check_out)} ({eur(Number(ext.amount))}) pendiente de
-          confirmar por recepción.
+          {t("Ampliación hasta el {date} ({amount}) pendiente de confirmar por recepción.", {
+            date: longDay(ext.new_check_out),
+            amount: eur(Number(ext.amount)),
+          })}
         </p>
       )}
       {ext && ext.status === "approved" && (
         <p className="mt-3 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Estancia ampliada hasta el {longDay(ext.new_check_out)}.
+          {t("Estancia ampliada hasta el {date}.", { date: longDay(ext.new_check_out) })}
         </p>
       )}
 
@@ -120,7 +129,7 @@ export function StayFolio({
             onClick={() => setPanel(panel === "services" ? "none" : "services")}
             className="flex items-center justify-center gap-2 border border-neutral-300 py-2.5 text-sm font-semibold"
           >
-            <ConciergeBell className="h-4 w-4" /> Pedir un servicio
+            <ConciergeBell className="h-4 w-4" /> {t("Pedir un servicio")}
           </button>
         )}
         {active && (!ext || ext.status !== "pending") && (
@@ -129,7 +138,7 @@ export function StayFolio({
             onClick={() => setPanel(panel === "extend" ? "none" : "extend")}
             className="flex items-center justify-center gap-2 border border-neutral-300 py-2.5 text-sm font-semibold"
           >
-            <CalendarPlus className="h-4 w-4" /> Ampliar estancia
+            <CalendarPlus className="h-4 w-4" /> {t("Ampliar estancia")}
           </button>
         )}
         {folio.balance > 0 && (
@@ -139,7 +148,9 @@ export function StayFolio({
             onClick={pay}
             className="bg-[var(--brand)] py-2.5 text-sm font-semibold text-white disabled:opacity-50 sm:col-span-2"
           >
-            {paying ? "Abriendo el pago…" : `Pagar pendiente (${eur(folio.balance)})`}
+            {paying
+              ? t("Abriendo el pago…")
+              : t("Pagar pendiente ({amount})", { amount: eur(folio.balance) })}
           </button>
         )}
       </div>
@@ -165,7 +176,7 @@ export function StayFolio({
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
-                          aria-label={`Menos ${s.name}`}
+                          aria-label={t("Menos {x}", { x: s.name })}
                           onClick={() => setQty({ ...qty, [s.id]: Math.max(1, n - 1) })}
                           className="flex h-8 w-8 items-center justify-center border border-neutral-200"
                         >
@@ -174,7 +185,7 @@ export function StayFolio({
                         <span className="w-6 text-center text-sm tabular-nums">{n}</span>
                         <button
                           type="button"
-                          aria-label={`Más ${s.name}`}
+                          aria-label={t("Más {x}", { x: s.name })}
                           onClick={() => setQty({ ...qty, [s.id]: Math.min(20, n + 1) })}
                           className="flex h-8 w-8 items-center justify-center border border-neutral-200"
                         >
@@ -188,8 +199,8 @@ export function StayFolio({
                               { serviceId: s.id, qty: n },
                               {
                                 onSuccess: () =>
-                                  toast.success("Pedido enviado", {
-                                    description: "Recepción lo confirmará en el chat.",
+                                  toast.success(t("Pedido enviado"), {
+                                    description: t("Recepción lo confirmará en el chat."),
                                   }),
                                 onError: (e) => toast.error(e.message),
                               },
@@ -197,7 +208,7 @@ export function StayFolio({
                           }
                           className="ml-1 bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          Pedir
+                          {t("Pedir")}
                         </button>
                       </div>
                     </li>
@@ -207,7 +218,9 @@ export function StayFolio({
             </div>
           ))}
           {grouped.length === 0 && (
-            <p className="text-sm text-neutral-500">Este hotel no ofrece servicios en la app.</p>
+            <p className="text-sm text-neutral-500">
+              {t("Este hotel no ofrece servicios durante la estancia.")}
+            </p>
           )}
         </div>
       )}
@@ -216,7 +229,7 @@ export function StayFolio({
         <div className="mt-4 space-y-3 border-t border-neutral-100 pt-4">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400">
-              Nueva fecha de salida
+              {t("Nueva fecha de salida")}
             </span>
             <input
               type="date"
@@ -228,8 +241,9 @@ export function StayFolio({
             />
           </label>
           <p className="text-xs text-neutral-500">
-            Calculamos el precio de las noches extra en tu misma habitación. Recepción te lo
-            confirma en el chat.
+            {t(
+              "Calculamos el precio de las noches extra en tu misma habitación. Recepción te lo confirma en el chat.",
+            )}
           </p>
           <button
             type="button"
@@ -238,8 +252,12 @@ export function StayFolio({
               extend.mutate(newCheckOut, {
                 onSuccess: (q) => {
                   setPanel("none");
-                  toast.success("Ampliación solicitada", {
-                    description: `${q.nights} ${q.nights === 1 ? "noche" : "noches"} más por ${eur(q.amount)}.`,
+                  toast.success(t("Ampliación solicitada"), {
+                    description: t("{n} {nights} más por {amount}.", {
+                      n: q.nights,
+                      nights: t(q.nights === 1 ? "noche" : "noches"),
+                      amount: eur(q.amount),
+                    }),
                   });
                 },
                 onError: (e) => toast.error(e.message),
@@ -247,7 +265,7 @@ export function StayFolio({
             }
             className="w-full bg-[var(--brand)] py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {extend.isPending ? "Consultando…" : "Solicitar ampliación"}
+            {t(extend.isPending ? "Consultando…" : "Solicitar ampliación")}
           </button>
         </div>
       )}

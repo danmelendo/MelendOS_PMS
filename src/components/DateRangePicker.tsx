@@ -9,11 +9,12 @@ import {
   parseISO,
   startOfMonth,
 } from "date-fns";
-import { es } from "date-fns/locale";
+import { enGB, es } from "date-fns/locale";
 import { CalendarDays } from "lucide-react";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { pms, type PriceCalendarNight } from "@/integrations/pms";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 // Single range date selector: pick check-in and check-out in the same calendar.
 // Explicit two-step flow: the first click sets the check-in, the second the
@@ -50,7 +51,7 @@ function usePriceNights(pricing: PickerPricing | undefined, month: Date) {
 }
 
 const NBSP = String.fromCharCode(0xa0); // keeps price and € together
-const euros = (n: number) => `${n.toLocaleString("es-ES")}${NBSP}€`;
+const euros = (n: number) => `${n.toLocaleString(currentLocale())}${NBSP}€`;
 
 const PricesContext = createContext<ReturnType<typeof usePriceNights> | null>(null);
 
@@ -150,18 +151,20 @@ export function DateRangePicker({
       ? { from: draft!.from, to: hover }
       : draft;
 
+  const { t, lang } = useLang();
+  const dfLocale = lang === "en" ? enGB : es;
   const label =
     checkIn && checkOut
-      ? `${format(parseISO(checkIn), "d MMM", { locale: es })} → ${format(parseISO(checkOut), "d MMM", { locale: es })}`
-      : "Elige tus fechas";
+      ? `${format(parseISO(checkIn), "d MMM", { locale: dfLocale })} → ${format(parseISO(checkOut), "d MMM", { locale: dfLocale })}`
+      : t("Elige tus fechas");
 
   const nights =
     choosingEnd && selected?.to ? differenceInCalendarDays(selected.to, selected.from!) : 0;
   const step = choosingEnd
     ? nights
-      ? `Salida el ${format(selected!.to!, "d MMM", { locale: es })} · ${nights} ${nights === 1 ? "noche" : "noches"}`
-      : "Ahora elige la fecha de salida"
-    : "Elige la fecha de entrada";
+      ? `${t("Salida el {date}", { date: format(selected!.to!, "d MMM", { locale: dfLocale }) })} · ${nights} ${t(nights === 1 ? "noche" : "noches")}`
+      : t("Ahora elige la fecha de salida")
+    : t("Elige la fecha de entrada");
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -194,13 +197,13 @@ export function DateRangePicker({
             month={month}
             onMonthChange={setMonth}
             disabled={{ before: today }}
-            locale={es}
+            locale={dfLocale}
             className={pricing ? "[--cell-size:2.75rem]" : undefined}
             components={pricing ? { DayButton: PricedDay } : undefined}
           />
           {pricing && (
             <p className="px-3 pb-3 text-[11px] text-neutral-500">
-              Precio medio por noche · «–» completo
+              {t("Precio medio por noche · «–» completo")}
             </p>
           )}
         </PricesContext.Provider>

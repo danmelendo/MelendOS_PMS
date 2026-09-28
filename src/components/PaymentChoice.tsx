@@ -4,9 +4,10 @@ import { zonedHourToUtc } from "@domain/dates.ts";
 import { cancellationTerms, type PaymentMode } from "@domain/policies.ts";
 import { usePolicies } from "@/lib/features";
 import { eur } from "@/lib/stays";
+import { currentLocale, useLang } from "@/lib/i18n";
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString("es-ES", {
+  new Date(iso).toLocaleString(currentLocale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -37,6 +38,7 @@ export function PaymentChoice({
   onBook: (mode: PaymentMode, hold: boolean) => void;
 }) {
   const policies = usePolicies();
+  const { t } = useLang();
   const [mode, setMode] = useState<PaymentMode>(policies.defaultPaymentMode);
   useEffect(() => {
     if (!policies.paymentModes.includes(mode)) setMode(policies.defaultPaymentMode);
@@ -51,14 +53,14 @@ export function PaymentChoice({
     <>
       <div className={`mt-4 bg-white shadow-sm ring-1 ring-neutral-100 ${pad}`}>
         <div className="flex items-center justify-between text-sm text-neutral-600">
-          <span>Total estancia</span>
+          <span>{t("Total estancia")}</span>
           <span className="text-xl font-semibold text-neutral-900">{eur(total)}</span>
         </div>
 
         {policies.paymentModes.length > 1 && (
           <fieldset className="mt-4 space-y-2">
             <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral-400">
-              ¿Cómo quieres pagar?
+              {t("¿Cómo quieres pagar?")}
             </legend>
             {policies.paymentModes.map((m) => (
               <label
@@ -81,12 +83,16 @@ export function PaymentChoice({
                     ) : (
                       <Building2 className="h-4 w-4" />
                     )}
-                    {m === "prepay" ? `Pagar ahora online (${eur(total)})` : "Pagar en el hotel"}
+                    {m === "prepay"
+                      ? t("Pagar ahora online ({amount})", { amount: eur(total) })
+                      : t("Pagar en el hotel")}
                   </span>
                   <span className="text-xs text-neutral-500">
-                    {m === "prepay"
-                      ? "Pago seguro con tarjeta; la reserva se confirma al pagar."
-                      : "Reserva confirmada ya; pagas al llegar."}
+                    {t(
+                      m === "prepay"
+                        ? "Pago seguro con tarjeta; la reserva se confirma al pagar."
+                        : "Reserva confirmada ya; pagas al llegar.",
+                    )}
                   </span>
                 </span>
               </label>
@@ -98,13 +104,13 @@ export function PaymentChoice({
           <p className="mt-3 flex gap-2 text-xs text-neutral-600">
             <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
             <span>
-              Cancelación gratuita hasta el {when(terms.freeUntil)}.
+              {t("Cancelación gratuita hasta el {date}.", { date: when(terms.freeUntil) })}
               {policies.penalty !== "none" &&
-                ` Después, ${
+                ` ${t(
                   policies.penalty === "full"
-                    ? "se cobra la estancia completa"
-                    : "se cobra la primera noche"
-                }.`}
+                    ? "Después, se cobra la estancia completa."
+                    : "Después, se cobra la primera noche.",
+                )}`}
             </span>
           </p>
         )}
@@ -117,7 +123,9 @@ export function PaymentChoice({
           className="flex w-full items-center justify-center gap-2 bg-[var(--brand)] py-4 font-semibold text-white disabled:opacity-50"
         >
           <ShieldCheck className="h-5 w-5" />
-          {mode === "prepay" ? `Reservar y pagar ${eur(total)}` : "Confirmar reserva"}
+          {mode === "prepay"
+            ? t("Reservar y pagar {amount}", { amount: eur(total) })
+            : t("Confirmar reserva")}
         </button>
         {mode === "prepay" && (
           <>
@@ -126,10 +134,12 @@ export function PaymentChoice({
               onClick={() => onBook(mode, true)}
               className="flex w-full items-center justify-center gap-2 border border-[var(--brand)]/40 bg-white py-4 font-semibold text-[var(--brand)] disabled:opacity-50"
             >
-              <Sparkles className="h-5 w-5" /> Guardar 30 min y pagar después
+              <Sparkles className="h-5 w-5" /> {t("Guardar 30 min y pagar después")}
             </button>
             <p className="text-center text-xs text-neutral-400">
-              Te guardamos la habitación 30 minutos sin pagar; confírmala antes de que expire.
+              {t(
+                "Te guardamos la habitación 30 minutos sin pagar; confírmala antes de que expire.",
+              )}
             </p>
           </>
         )}
