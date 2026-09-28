@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { FIELD_LABELS, useStayTravellers, useTravellerActions, type TravellerRow } from "@/lib/ses";
-import { useLang } from "@/lib/i18n";
+import { currentLang, useLang } from "@/lib/i18n";
 
 export interface StayRef {
   id: string;
@@ -237,23 +237,25 @@ function TravellerCard({
 type Form = Required<{ [K in keyof SesTraveller]: string }> & { is_holder: string };
 
 function emptyForm(initial: TravellerRow | null, holder: boolean): Form {
+  // A guest browsing in English is most likely foreign: no Spanish defaults.
+  const spanish = currentLang() !== "en";
   return {
     is_holder: initial ? String(initial.is_holder) : String(holder),
     first_name: initial?.first_name ?? "",
     last_name1: initial?.last_name1 ?? "",
     last_name2: initial?.last_name2 ?? "",
-    document_type: initial?.document_type ?? (initial?.is_minor ? "" : "NIF"),
+    document_type: initial?.document_type ?? (initial?.is_minor ? "" : spanish ? "NIF" : "PAS"),
     document_number: "",
     document_support: "",
     birth_date: "",
-    nationality: initial?.nationality ?? "ESP",
+    nationality: initial?.nationality ?? (spanish ? "ESP" : ""),
     sex: "",
     address: "",
     address_extra: "",
     municipality_code: "",
     municipality_name: "",
     postal_code: "",
-    country: initial ? "" : "ESP",
+    country: initial || !spanish ? "" : "ESP",
     phone: "",
     phone2: "",
     email: "",
