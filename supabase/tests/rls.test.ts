@@ -128,6 +128,17 @@ describe.skipIf(!DB_URL)("RLS", () => {
       ids["lumen-member-alex"],
       ids["albora-member-alex"],
     ]);
+    // The demo is live: people switch modules on and off from "Plan y módulos".
+    // The suite starts from the seed's packages (supabase/seeds/tenant-packages.sql);
+    // it all runs inside the transaction that is rolled back at the end.
+    await client.query(
+      `update public.tenants set plan = case slug when 'hotel-lumen' then 'starter' else 'pro' end,
+         settings = (settings - 'features') || case slug
+           when 'hotel-lumen' then '{"packages": ["stay", "ai", "data", "distribution"]}'::jsonb
+           else '{"packages": ["stay", "ai", "chain", "data", "distribution"]}'::jsonb end
+       where id in ($1, $2)`,
+      [ids.lumen, ids.albora],
+    );
   });
 
   afterAll(async () => {
