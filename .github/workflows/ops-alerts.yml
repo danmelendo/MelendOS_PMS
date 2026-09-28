@@ -2,9 +2,10 @@ name: Operations alerts
 
 # Every hour: stuck or failing sending queues (SES.HOSPEDAJES, VERI*FACTU,
 # guest emails, channels) and the AI failing too often, across every hotel
-# (ops_alerts). Opens the "Alertas de operación" issue (GitHub notifies whoever
-# watches the repo), comments on it only when the set of alerts changes, and
-# closes it when everything is back to normal. Can also be run by hand.
+# (ops_alerts), plus the public API and Edge Functions (smoke.mjs). Opens the
+# "Alertas de operación" issue (GitHub notifies whoever watches the repo),
+# comments on it only when the set of alerts changes, and closes it when
+# everything is back to normal. Can also be run by hand.
 on:
   schedule:
     - cron: "7 * * * *"
@@ -34,6 +35,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           node scripts/ops-alerts.mjs --out report.md | tee out.txt
           grep -E '^(alerts|signature)=' out.txt >> "$GITHUB_OUTPUT"

@@ -1,0 +1,94 @@
+name: Promote to production
+
+# Manual: takes a commit of main whose backend already runs in the demo
+# (pre-production) and applies it to the production Supabase project.
+# The "production" environment must require a reviewer (GitHub → Settings →
+# Environments), so nothing reaches production without a person approving it.
+# Secrets of that environment: SUPABASE_ACCESS_TOKEN (an account that only sees
+# production), SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_REF, SUPABASE_URL,
+# SUPABASE_PUBLISHABLE_KEY; variable SMOKE_HOTEL (slug of a hotel to check).
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit de main (SHA) que ya está en la demo"
+        required: true
+
+concurrency:
+  group: promote-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Already tested in the demo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REF: ${{ inputs.ref }}
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        name: The commit is on main, passed CI and its backend is the demo's
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse --verify "$REF^{commit}")
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$sha no está en main"; exit 1; }
+          ci=$(gh run list --workflow ci.yml --commit "$sha" --status success --json databaseId --jq 'length')
+          [ "$ci" -gt 0 ] || { echo "::error::la CI de $sha no está en verde"; exit 1; }
+          deployed=$(gh run list --workflow deploy.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha')
+          [ -n "$deployed" ] || { echo "::error::no hay despliegues correctos en la demo"; exit 1; }
+          # Either the demo already runs this commit or a later one, or nothing
+          # of the backend changed since the demo's last deploy.
+          if git merge-base --is-ancestor "$sha" "$deployed" || git diff --quiet "$deployed" "$sha" -- supabase/; then
+            echo "sha=$sha" >> "$GITHUB_OUTPUT"
+            echo "OK: $sha (demo en $deployed)"
+          else
+            echo "::error::el backend de $sha aún no se ha desplegado en la demo ($deployed)"
+            exit 1
+          fi
+
+  promote:
+    name: Migrations, Edge Functions and smoke test
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      SMOKE_HOTEL: ${{ vars.SMOKE_HOTEL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+      - name: Production is configured
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF SUPABASE_URL SUPABASE_PUBLISHABLE_KEY; do
+            [ -n "${!v}" ] || { echo "::error::falta el secreto $v en el environment production"; exit 1; }
+          done
+          [ "$SUPABASE_PROJECT_REF" != "isqompyvktijdasgophh" ] || { echo "::error::ese es el proyecto de la demo"; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Link project
+        run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
+      - name: Pending migrations
+        run: npx supabase db push -p "$SUPABASE_DB_PASSWORD" --dry-run
+      - name: Apply migrations
+        run: npx supabase db push -p "$SUPABASE_DB_PASSWORD" --yes
+      - name: Deploy Edge Functions
+        run: npx supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
+      - name: Smoke test
+        run: node scripts/smoke.mjs --production ${SMOKE_HOTEL:+--hotel "$SMOKE_HOTEL"}

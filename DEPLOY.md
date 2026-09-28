@@ -90,16 +90,32 @@ node scripts/channels-setup.mjs  # cron + clave del envío a los canales
 
 Solo en la demo: `node --env-file=.env scripts/seed-auth.mjs` (cuentas ficticias), `scripts/simulate-history.ts` (historial) y las semillas de `supabase/seeds/` con `scripts/sql-apply.mjs`.
 
-## Promoción a producción (por montar con el primer hotel)
+## Promoción a producción
 
-Propuesta:
+`.github/workflows/promote.yml`, lanzado a mano (Actions → «Promote to production» → SHA de `main`):
 
-1. Workflow `promote.yml`, lanzado a mano y con un **environment de GitHub `production` con aprobación obligatoria**.
-2. Usa los secretos del environment de producción (proyecto, contraseña y token de una cuenta que solo vea ese proyecto).
-3. Ejecuta `db push` y `functions deploy` desde el mismo commit que ya está en la demo, y después un humo mínimo (`scripts/e2e-bookings.mjs` contra un hotel de pruebas de producción).
-4. Frontend: el hosting publica la rama `main` (o una etiqueta) con las variables de producción.
+1. **Comprueba** que el commit está en `main`, que su CI pasó y que su backend ya corre en la demo: la demo tiene ese commit o uno posterior, o no ha cambiado nada de `supabase/` desde su último despliegue.
+2. **Espera la aprobación** del environment `production`. Hay que crearlo en GitHub (Settings → Environments) con _Required reviewers_ y estos secretos:
+   - `SUPABASE_ACCESS_TOKEN`, de una cuenta que solo vea producción.
+   - `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`.
+   - La variable `SMOKE_HOTEL`.
+3. Lista las migraciones pendientes, las aplica y despliega las Edge Functions del mismo commit.
+4. **Prueba de humo** (`scripts/smoke.mjs --production`):
+   - Solo lectura y con la clave pública.
+   - Comprueba la API, el calendario de precios, las ofertas, que el motor rechace una petición vacía sin romperse, que las reservas no se lean sin sesión y que el acceso de demostración esté apagado.
 
-Antes de abrir producción: copias con PITR, alertas de errores de las funciones y de la cola de envíos (SES, VERI\*FACTU, emails), y un simulacro de restauración.
+El frontend lo publica el hosting desde `main` (o una etiqueta) con las variables de producción.
+
+**Antes de abrir producción**, `node --env-file=.env.production scripts/prod-check.mjs --app-domain reservas.melendo.app` tiene que acabar sin bloqueantes. Es de solo lectura y revisa:
+
+- Auth: registro público cerrado, Site URL, Redirect URLs, SMTP propio y verificación en dos pasos.
+- PITR y copias recientes.
+- Los secretos (sin `DEMO_ACCESS`), las tareas programadas y que no queden datos de la demo.
+- Los hoteles activos: pasarelas, SES y VERI\*FACTU en modo real, y que todos tengan dirección.
+
+Contra la demo da 14 bloqueantes, y es lo esperado.
+
+Falta además un simulacro de restauración desde PITR.
 
 ## Tareas programadas
 
