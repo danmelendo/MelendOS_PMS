@@ -10,6 +10,7 @@ import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
 import { CancellationRequests } from "@/components/CancellationRequests";
 import { PendingRefunds } from "@/components/PendingRefunds";
+import { HotelAlerts } from "@/components/HotelAlerts";
 import { FolioDrawer } from "@/components/FolioDrawer";
 import {
   ReservationExtrasInfo,
@@ -207,6 +208,8 @@ function TodayPage() {
           hint="Total de las estancias que entran hoy"
         />
       </div>
+
+      <HotelAlerts />
 
       <CancellationRequests />
 

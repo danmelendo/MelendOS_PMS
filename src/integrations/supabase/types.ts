@@ -3581,6 +3581,16 @@ export type Database = {
         Args: { p_days?: number; p_tenant: string }
         Returns: Json
       }
+      hotel_alerts: {
+        Args: never
+        Returns: {
+          hotel: string
+          items: number
+          kind: string
+          oldest: string
+          tenant_id: string
+        }[]
+      }
       hotel_cancellation_penalty: {
         Args: { p_tenant: string }
         Returns: string
