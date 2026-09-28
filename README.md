@@ -1,138 +1,134 @@
-# Melend/OS · Motor de reservas y PMS para hoteles
+# Melend/OS · Hotel PMS and booking engine
 
-> Plataforma de reservas para hoteles tradicionales (estancias por noches): web pública con
-> reserva y pago (o incrustada en la web del hotel) y panel de gestión (PMS) para recepción y
-> administración.
+> A multi-tenant SaaS for traditional hotels and hostels (stays by the night): a property
+> management system for reception and management, a direct booking engine (the hotel's own
+> template website or a widget embedded in the site it already has), guest self-service, Spanish
+> regulatory compliance (SES.HOSPEDAJES, VERI\*FACTU) and an AI layer built on the same server
+> rules.
 >
-> ⚠️ **Repositorio de portfolio.** Todos los datos (hoteles, habitaciones, precios, huéspedes)
-> son ficticios. No contiene claves ni datos reales.
->
-> 🚧 En desarrollo: se está añadiendo una capa de IA (agente de reservas, servidor MCP, evals).
-> El README definitivo, en inglés, llegará al final de ese trabajo.
+> ⚠️ **Portfolio repository.** Every hotel, room, price and guest in it is fictitious. It holds
+> no keys and no real data.
+
+The day-to-day documentation of the project is in Spanish (`docs/`, `DEPLOY.md`,
+`docs/estado-producto.md` for the product status). This README is the overview.
 
 ---
 
-## 🚀 Arrancar en local
+## What it does
+
+**PMS (panel for the hotel's staff)**
+
+- Today (arrivals, departures, in-house, occupancy), a rooms × days planning board and a side
+  panel booking editor with live pricing.
+- Nightly rates (weekday / weekend) and dynamic pricing by date and occupancy, night by night;
+  extras, gifts by spend, promo codes, cleaning gaps between stays.
+- Customers with sensitive data restricted to management (re-authentication, audit log), stay
+  chat with guests, the stay's bill (charges, extensions, payment of the balance), reviews,
+  reports (occupancy, ADR, RevPAR, lead time, cancellations and their reasons, channels).
+- Team management with roles (reception, management, read-only group management), two-step
+  verification enforced in the database, and "Activity and consumption" (AI usage and cost,
+  sending queues, storage, recent errors).
+
+**Booking engine and guest self-service**
+
+- Availability with a price-per-night calendar, pay online in full or at the hotel, per-hotel
+  cancellation policy copied into each booking, promo codes redeemed on the server.
+- "My booking": look up by reference + email or sign in; stay chat with reception, the bill,
+  invoices, reviews, free cancellation within the window or a request to the hotel.
+- Online check-in: the guests fill in the traveller register required by Spanish law, then sign.
+- Confirmation and cancellation emails, legal pages generated from the hotel's data, Spanish and
+  English throughout (guest's language kept for emails).
+- Each hotel on its own domain or subdomain, a template website edited from the panel, and a
+  one-line widget (`embed.js`) with search and the booking assistant for the hotel's own site.
+
+**Compliance (Spain)**
+
+- **SES.HOSPEDAJES**: booking and traveller reports to the Ministry of the Interior (XML, ZIP,
+  SOAP), queued by database triggers and sent on a schedule with retries.
+- **VERI\*FACTU**: invoices, simplified and corrective invoices and cancellations with the chained
+  SHA-256 fingerprint (checked against the official AEAT vectors), XML validated against the
+  official XSD, QR code, mutual-TLS submission and flow control.
+
+Both are verified against simulated endpoints; certification against the real ones is pending.
+
+**AI layer** (any OpenAI-compatible model; a local 7B model in development)
+
+- **Booking assistant** on the website: searches, quotes, books, recovers a lost reference and
+  cancels in two steps, with guard-rails on the server (tenant fixed server-side, links never
+  pass through the model, fabricated claims are caught).
+- **MCP server** per hotel: the same typed tools for Claude or other assistants, with read or
+  read/write tokens.
+- **Management copilot**: business questions answered with predefined read-only tools rather
+  than model-written SQL (safer, reliable with small models, bounded cost), run with the user's
+  own session so row-level security still applies.
+- Automated evals against a real model and the demo database, scoring what the assistant does.
+
+**Distribution and data**
+
+- A provider-neutral channel layer (OTAs, channel managers, tour operators): signed inbound
+  webhooks and outbound availability/price messages; only the demo adapter exists so far.
+- Two years of simulated history and a daily Parquet export to a data lake (the contract for the
+  ML work is in `lake/README.md`).
+
+## Architecture
+
+```
+src/                      React SPA (TanStack Start/Router, Tailwind v4, shadcn, TanStack Query)
+  routes/_app.*           Panel
+  routes/web.*, embed.*   Booking web and embeddable widget
+  lib/                    Hooks, i18n (Spanish text as key + English dictionary)
+supabase/
+  migrations/             Schema: tenant_id + RLS on every table, SQL functions, triggers
+  functions/<fn>/         Edge Functions (Deno)
+  functions/_shared/      Business rules in plain TypeScript (@domain), typed tools (Zod),
+                          agent loop, MCP server, copilot, channels, SES, VERI*FACTU, email
+  tests/                  Permission and rule tests against Postgres
+lake/                     Daily export to Parquet (Python + DuckDB)
+scripts/                  End-to-end checks, onboarding, operations
+site/                     The commercial website (separate project)
+```
+
+Principles:
+
+- **The tenant is always fixed by the server**, never by the client or the model. Every table
+  carries `tenant_id` with row-level security; composite foreign keys keep rows within a hotel.
+- **Business rules live once**, in plain TypeScript shared by the browser and the Edge
+  Functions; where the database needs them, an SQL mirror with a parity test.
+- **Nothing irreversible without a human**: the hotel decides late cancellations; the guest
+  confirms a free cancellation in a separate message.
+- **Queues in the database** (SES, VERI\*FACTU, guest emails, channels) drained by `pg_cron` +
+  `pg_net` calling Edge Functions; an hourly check opens an issue when a queue is stuck.
+- **Demo = pre-production**: the same code and schema as production; only configuration and seed
+  data differ.
+
+## Getting started
 
 ```bash
 npm install
-cp .env.example .env   # y rellena los datos del proyecto Supabase de la demo
-npm run dev            # abre la URL que imprime (p. ej. http://localhost:5173)
+cp .env.example .env   # fill in a Supabase project (the demo one in development)
+npm run dev
 ```
 
-La app siempre trabaja contra un proyecto Supabase real. En desarrollo es el de la demo, que
-también es el entorno de **preproducción**: cada cambio se prueba ahí antes de llegar a
-producción. En la demo se entra eligiendo una cuenta ficticia de una lista
-(`VITE_DEMO_ACCESS=true`); en producción, con el formulario normal.
+| Route    | What it is                                                       |
+| -------- | ---------------------------------------------------------------- |
+| `/web`   | A hotel's booking website (`?lang=en` for English)               |
+| `/today` | The panel; in the demo you pick a fictitious account from a list |
 
-| Ruta     | Qué es                                                               |
-| -------- | -------------------------------------------------------------------- |
-| `/web`   | Web pública del hotel: descubrimiento, ficha de habitación y reserva |
-| `/today` | Panel de gestión (PMS); en la demo eliges una cuenta ficticia        |
+## Quality
 
-## ✨ Qué hace
+| Command                                       | What it checks                                                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                               | Typecheck, lint, unit tests (200+) and build, as the CI does                                                                                 |
+| `npm run test:db`                             | Permissions and rules against Postgres (75+ scenarios)                                                                                       |
+| `node --env-file=.env scripts/e2e-*.mjs`      | End-to-end flows against the demo project (payments, folio, MCP, channels, SES, VERI\*FACTU, promo codes and emails, two-step verification…) |
+| `npm run eval:agent` / `npm run eval:copilot` | The assistants against a real model                                                                                                          |
 
-**Panel de gestión (PMS)**
+Every change goes through a pull request to `main` with the CI green; merging deploys the
+migrations and Edge Functions to the demo (pre-production).
 
-- **Hoy:** llegadas con check-in, salidas con check-out, huéspedes alojados y ocupación de la noche.
-- **Planning:** habitaciones × días; clic en una celda libre para reservar, en una estancia para editarla.
-- **Editor de reservas** en panel lateral con vista previa de la habitación, disponibilidad y
-  desglose de precio en vivo.
-- **Tarifas por noche** (semana y fin de semana) y **precio dinámico** por fecha y por ocupación,
-  aplicado noche a noche.
-- **Separación de limpieza** entre estancias, con ampliación y reprogramación en cascada.
-- Extras (desayuno, parking, spa, experiencias), regalos por umbral de gasto, códigos promo,
-  clientes, informes, roles (administración / recepción) y **booking journal** inmutable.
+## Stack
 
-**Web de reservas del hotel** (plantilla propia o incrustada en su web con `embed.js`)
-
-- Búsqueda de disponibilidad con calendario de precios por noche; pago online completo o en el
-  hotel, con política de cancelación por hotel.
-- **Prereserva:** bloquea la habitación 30 minutos mientras se completa el pago.
-- **Habitaciones en oferta:** rebajas por fechas y códigos promocionales que el hotel publica;
-  el motor los aplica en el servidor.
-- «Mi reserva»: chat con recepción, cuenta de la estancia, facturas, reseñas y cancelación.
-- Check-in online con firma digital y subida de documentación.
-- Club de fidelización con niveles, puntos y recompensas (paquete Cadena).
-- Todo consume el PMS a través de un **conector tipado** (`src/integrations/pms/`, interfaz
-  `PmsConnector`): integrar otro PMS es implementar esa interfaz.
-
-## 🤖 Capa de IA
-
-Tres piezas sobre las mismas reglas del servidor. El modelo nunca toca la base de datos: solo
-usa herramientas tipadas (Zod) que aplican el hotel y los permisos en el servidor. Proveedor
-intercambiable: cualquier API compatible con OpenAI (en desarrollo, un modelo local con Ollama).
-
-- **Agente de reservas** en la web pública: busca, cotiza, reserva y gestiona cancelaciones
-  conversando. Los enlaces de pago llegan como botones construidos por el servidor.
-- **Servidor MCP** por hotel ([`docs/mcp.md`](docs/mcp.md)): las mismas herramientas para
-  Claude u otros asistentes, con tokens de solo lectura o de lectura y escritura.
-- **Copiloto del administrador** en el panel: preguntas sobre el negocio («¿qué habitación se
-  reserva menos entre semana?», «resume las peticiones del mes») respondidas con los datos del
-  hotel.
-
-**Por qué el copiloto usa consultas predefinidas y no SQL generado por el modelo.** Son siete
-herramientas de solo lectura (resumen del negocio, rendimiento por habitación, ocupación por día,
-peticiones, reseñas, pendientes y operativa del día) que calculan con el mismo código que los
-informes del panel. Frente a dejar que el modelo escriba SQL:
-
-- **Seguridad:** no hay SQL que inyectar ni consultas que se salgan del hotel. Además se
-  ejecutan con la sesión del propio usuario, así que RLS limita los datos a sus hoteles.
-- **Fiabilidad:** un modelo pequeño escribe SQL poco fiable; elegir una herramienta y sus
-  parámetros lo hace bien. Las métricas (ocupación, ADR, RevPAR) tienen una sola definición,
-  probada.
-- **Coste y latencia predecibles:** cada herramienta hace consultas acotadas (máximo 400 días).
-- Contrapartida: solo responde lo que cubren las herramientas. Una pregunta nueva es una
-  herramienta nueva con su test, no un prompt.
-
-**Evaluaciones** contra un modelo real y la base de la demo (`npm run eval:agent`,
-`npm run eval:copilot`): puntúan lo que hace el asistente (herramienta, argumentos y que la
-respuesta sea fiel a los datos), no la redacción.
-
-## 🧱 Stack técnico
-
-| Capa          | Tecnología                                                              |
-| ------------- | ----------------------------------------------------------------------- |
-| Framework     | **TanStack Start / Router** (SPA con Vite 7)                            |
-| UI            | React 19, Tailwind CSS v4, Radix UI / shadcn, `react-hook-form` + Zod   |
-| Datos cliente | TanStack Query                                                          |
-| Backend       | **Supabase**: Postgres, Row Level Security, Auth, Edge Functions (Deno) |
-| Pagos         | **Redsys** (firma `3DES` + `HMAC-SHA256`), entorno de pruebas           |
-| Tooling       | TypeScript, ESLint, Prettier, Vitest, npm                               |
-
-## 🏗️ Arquitectura
-
-```
-src/
-  routes/            Rutas: /web/*, /embed/*, panel /_app/*
-  components/        UI compartida (editor de reservas, barra lateral, ...)
-  integrations/
-    supabase/        Cliente de datos (Supabase)
-    pms/             Contrato PmsConnector + implementación sobre este backend
-  lib/               Motor de precios, datos y helpers
-```
-
-La app importa **un único cliente** (`@/integrations/supabase/client`). Más detalle en
-[`ARCHITECTURE.md`](ARCHITECTURE.md).
-
-## 🛠️ Scripts
-
-| Script              | Qué hace                              |
-| ------------------- | ------------------------------------- |
-| `npm run dev`       | Servidor de desarrollo                |
-| `npm run typecheck` | `tsc --noEmit`                        |
-| `npm run lint`      | ESLint + Prettier                     |
-| `npm run test`      | Tests unitarios (Vitest)              |
-| `npm run build`     | Build de producción                   |
-| `npm run check`     | Todo lo anterior en orden, como la CI |
-
-## 🔀 Flujo de trabajo
-
-- Todo cambio entra por **pull request hacia `main`**; no se hace push directo.
-- La CI (`.github/workflows/ci.yml`) ejecuta typecheck, lint, tests y build en cada PR y en cada
-  push a `main`. Un PR solo se integra con la CI en verde.
-- Recomendado en GitHub: activar la **protección de rama** de `main` (PR obligatorio y check `CI`
-  requerido).
-- La lógica de negocio compartida con las Edge Functions vive en
-  `supabase/functions/_shared/domain/` (TypeScript puro, sin dependencias) y se importa en el
-  frontend con el alias `@domain`. Sus tests están junto al código (`*.test.ts`).
+TypeScript everywhere; React 19, Vite, TanStack Start/Router and Query, Tailwind CSS v4,
+Radix/shadcn, Zod; Supabase (Postgres 17, row-level security, Auth with TOTP, Edge Functions on
+Deno, Storage, Vault, pg_cron, pg_net); Redsys and Stripe payment gateways; Resend for email;
+Vitest; Python + DuckDB for the data lake; GitHub Actions.
