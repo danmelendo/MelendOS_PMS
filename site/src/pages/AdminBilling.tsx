@@ -3,9 +3,11 @@ import {
   AlertTriangle,
   CalendarClock,
   Download,
+  FileText,
   Loader2,
   Plus,
   RefreshCw,
+  Settings,
   Trash2,
   TrendingUp,
   Wallet,
@@ -21,7 +23,8 @@ import {
   type ClientInvoice,
   type InvoiceStatus,
 } from "../lib/clients";
-import { BTN, BTN_OUTLINE, BTN_PRIMARY, FIELD, Stat } from "./admin-ui";
+import { BTN, BTN_OUTLINE, BTN_PRIMARY, Drawer, FIELD, Field, Stat } from "./admin-ui";
+import { InvoiceDocument, type Issuer } from "./InvoiceDocument";
 
 // Facturación: what we bill each client. Drafts are created on their due date
 // by generate_client_invoices() (daily cron, or "Generar ahora"); here they are
@@ -46,21 +49,26 @@ export function BillingTab() {
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ id: string; action: "cancel" | "delete" } | null>(null);
   const [adding, setAdding] = useState(false);
+  const [issuer, setIssuer] = useState<Issuer | null>(null);
+  const [viewing, setViewing] = useState<Row | null>(null);
+  const [editingIssuer, setEditingIssuer] = useState(false);
 
   const load = useCallback(async () => {
     const db = sales();
-    const [i, c] = await Promise.all([
+    const [i, c, s] = await Promise.all([
       db
         .from("client_invoices")
         .select("*, clients(name)")
         .order("created_at", { ascending: false })
         .limit(2000),
       db.from("clients").select("*").order("name"),
+      db.from("sales_settings").select("*").maybeSingle(),
     ]);
     if (i.error || c.error) return setError((i.error ?? c.error)!.message);
     setError(null);
     setRows(i.data as Row[]);
     setClients(c.data as Client[]);
+    setIssuer((s.data as Issuer | null) ?? null);
   }, []);
   useEffect(() => {
     load();
@@ -136,6 +144,19 @@ export function BillingTab() {
         />
       </div>
 
+      {issuer && !(issuer.issuer_name && issuer.issuer_tax_id) && (
+        <p className="rounded-xl border border-gold/50 bg-gold/10 p-3 text-sm">
+          Faltan los datos del emisor (razón social y NIF): las facturas saldrán con «pendiente».{" "}
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={() => setEditingIssuer(true)}
+          >
+            Completarlos
+          </button>
+        </p>
+      )}
+
       {drafts.length > 0 && (
         <p className="rounded-xl border border-gold/50 bg-gold/10 p-3 text-sm">
           {drafts.length === 1 ? "Hay 1 borrador" : `Hay ${drafts.length} borradores`} por emitir (
@@ -182,6 +203,9 @@ export function BillingTab() {
                 <RefreshCw className="h-4 w-4" aria-hidden="true" />
               )}{" "}
               Generar cuotas pendientes
+            </button>
+            <button type="button" onClick={() => setEditingIssuer(true)} className={BTN_OUTLINE}>
+              <Settings className="h-4 w-4" aria-hidden="true" /> Datos del emisor
             </button>
             <button type="button" onClick={() => setAdding((a) => !a)} className={BTN_OUTLINE}>
               <Plus className="h-4 w-4" aria-hidden="true" /> Factura manual
@@ -238,7 +262,18 @@ export function BillingTab() {
                   return (
                     <tr key={r.id} className="border-b align-top last:border-0">
                       <td className="px-3 py-2 whitespace-nowrap tabular-nums">
-                        {r.number ?? <span className="text-muted-foreground">borrador</span>}
+                        <button
+                          type="button"
+                          onClick={() => setViewing(r)}
+                          className="inline-flex items-center gap-1 hover:underline"
+                          title="Ver la factura"
+                        >
+                          <FileText
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                          {r.number ?? <span className="text-muted-foreground">borrador</span>}
+                        </button>
                         {r.issued_on && (
                           <span className="block text-xs text-muted-foreground">
                             {day(r.issued_on)}
@@ -350,11 +385,30 @@ export function BillingTab() {
           </div>
         )}
         <p className="border-t px-4 py-2 text-xs text-muted-foreground">
-          Registro de lo que facturamos y cobramos. Una factura emitida no se modifica: si hay un
-          error, se anula y se hace otra. Cuando Melend/OS facture como empresa, las facturas
-          legales tendrán que salir de un sistema VERI*FACTU.
+          Pulsa el número de una factura para verla con la imagen de Melend/OS e imprimirla o
+          guardarla en PDF. Registro de lo que facturamos y cobramos. Una factura emitida no se
+          modifica: si hay un error, se anula y se hace otra. Cuando Melend/OS facture como empresa,
+          las facturas legales tendrán que salir de un sistema VERI*FACTU.
         </p>
       </section>
+      {viewing && (
+        <InvoiceDocument
+          invoice={viewing}
+          client={clients.find((c) => c.id === viewing.client_id)}
+          issuer={issuer}
+          onClose={() => setViewing(null)}
+        />
+      )}
+      {editingIssuer && issuer && (
+        <IssuerDrawer
+          initial={issuer}
+          onClose={() => setEditingIssuer(false)}
+          onSaved={(v) => {
+            setIssuer(v);
+            setEditingIssuer(false);
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -482,4 +536,123 @@ function downloadCsv(rows: Row[]) {
   a.download = `facturas-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function IssuerDrawer({
+  initial,
+  onClose,
+  onSaved,
+}: {
+  initial: Issuer;
+  onClose: () => void;
+  onSaved: (v: Issuer) => void;
+}) {
+  const [v, setV] = useState<Issuer>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const set = (k: keyof Issuer) => (e: { target: { value: string } }) =>
+    setV((x) => ({
+      ...x,
+      [k]: k === "payment_days" ? Number(e.target.value) : e.target.value || null,
+    }));
+  const save = async () => {
+    const { data, error } = await sales()
+      .from("sales_settings")
+      .update({
+        issuer_name: v.issuer_name,
+        issuer_tax_id: v.issuer_tax_id,
+        issuer_address: v.issuer_address,
+        issuer_email: v.issuer_email,
+        issuer_phone: v.issuer_phone,
+        iban: v.iban,
+        payment_days: v.payment_days,
+        invoice_note: v.invoice_note,
+      })
+      .eq("id", true)
+      .select()
+      .single();
+    if (error) return setError(error.message);
+    onSaved(data as Issuer);
+  };
+  return (
+    <Drawer
+      title="Datos del emisor"
+      subtitle="Salen en cada factura que se emita"
+      onClose={onClose}
+    >
+      <div className="space-y-3 p-5">
+        <Field label="Razón social o nombre">
+          <input
+            className={`${FIELD} w-full`}
+            value={v.issuer_name ?? ""}
+            onChange={set("issuer_name")}
+          />
+        </Field>
+        <Field label="NIF">
+          <input
+            className={`${FIELD} w-full`}
+            value={v.issuer_tax_id ?? ""}
+            onChange={set("issuer_tax_id")}
+          />
+        </Field>
+        <Field label="Dirección fiscal">
+          <textarea
+            rows={2}
+            className={`${FIELD} h-auto w-full py-2`}
+            value={v.issuer_address ?? ""}
+            onChange={set("issuer_address")}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Email">
+            <input
+              className={`${FIELD} w-full`}
+              value={v.issuer_email ?? ""}
+              onChange={set("issuer_email")}
+            />
+          </Field>
+          <Field label="Teléfono">
+            <input
+              className={`${FIELD} w-full`}
+              value={v.issuer_phone ?? ""}
+              onChange={set("issuer_phone")}
+            />
+          </Field>
+        </div>
+        <Field label="IBAN para transferencias">
+          <input
+            className={`${FIELD} w-full font-mono`}
+            value={v.iban ?? ""}
+            onChange={set("iban")}
+          />
+        </Field>
+        <Field label="Días para pagar">
+          <input
+            type="number"
+            min={0}
+            max={120}
+            className={`${FIELD} w-32`}
+            value={v.payment_days}
+            onChange={set("payment_days")}
+          />
+        </Field>
+        <Field label="Nota al pie (opcional)">
+          <textarea
+            rows={2}
+            className={`${FIELD} h-auto w-full py-2`}
+            value={v.invoice_note ?? ""}
+            onChange={set("invoice_note")}
+          />
+        </Field>
+        <p className="text-xs text-muted-foreground">
+          Cada factura guarda estos datos al emitirse: cambiarlos después no altera las ya emitidas.
+        </p>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={save} className={BTN_PRIMARY}>
+            Guardar
+          </button>
+          {error && <span className="text-sm text-destructive">{error}</span>}
+        </div>
+      </div>
+    </Drawer>
+  );
 }

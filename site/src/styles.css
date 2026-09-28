@@ -484,3 +484,25 @@ h2 em {
     display: none;
   }
 }
+
+/* Invoice document of the management panel: print only the sheet, on A4. */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html.printing-invoice body * {
+    visibility: hidden;
+  }
+  html.printing-invoice .invoice-sheet,
+  html.printing-invoice .invoice-sheet * {
+    visibility: visible;
+  }
+  html.printing-invoice .invoice-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    max-width: none;
+  }
+}
