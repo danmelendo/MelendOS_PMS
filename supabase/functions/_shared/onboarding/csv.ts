@@ -83,7 +83,7 @@ export function roomsFromCsv(text: string): {
   problems: string[];
 } {
   const lines = text
-    .replace(/^﻿/, "")
+    .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
     .filter((l) => l.trim());
   const problems: string[] = [];
