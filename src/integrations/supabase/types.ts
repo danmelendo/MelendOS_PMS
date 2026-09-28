@@ -3573,6 +3573,7 @@ export type Database = {
         Args: { p_tenant: string }
         Returns: number
       }
+      hotel_legal: { Args: { p_tenant: string }; Returns: Json }
       hotel_media_tenant: { Args: { p_name: string }; Returns: string }
       hotel_offers: { Args: { p_tenant: string }; Returns: Json }
       invoice_breakdown: { Args: { p_lines: Json }; Returns: Json }

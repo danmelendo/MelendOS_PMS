@@ -3123,4 +3123,58 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(lookup.ok).toBe(false);
     });
   });
+
+  describe("legal pages of the hotel's web", () => {
+    it("give anyone the hotel's legal identity and policies, and nothing else", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        `insert into public.fiscal_settings (tenant_id, issuer_nif, issuer_name, issuer_address)
+         values ($1, 'B12345678', 'Lumen Pruebas SL', 'Calle Prueba 1')
+         on conflict (tenant_id) do update set issuer_nif = excluded.issuer_nif,
+           issuer_name = excluded.issuer_name, issuer_address = excluded.issuer_address`,
+        [ids.lumen],
+      );
+      const seen = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.hotel_legal($1) as l", [ids.lumen])).rows[0].l,
+      );
+      await client.query("update public.tenants set status = 'suspended' where id = $1", [
+        ids.lumen,
+      ]);
+      const suspended = await attempt(
+        "anon",
+        undefined,
+        async () =>
+          (await client.query("select public.hotel_legal($1) as l", [ids.lumen])).rows[0].l,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(seen.ok && seen.value).toMatchObject({
+        legal_name: "Lumen Pruebas SL",
+        nif: "B12345678",
+        address: "Calle Prueba 1",
+        checkin_hour: expect.any(Number),
+      });
+      expect(Object.keys(seen.ok ? seen.value : {}).sort()).toEqual(
+        [
+          "address",
+          "assistant",
+          "cancellation",
+          "checkin_hour",
+          "checkout_hour",
+          "domain",
+          "email",
+          "legal_name",
+          "loyalty",
+          "name",
+          "nif",
+          "payment",
+          "phone",
+        ].sort(),
+      );
+      expect(suspended).toEqual({ ok: true, value: null });
+    });
+  });
 });

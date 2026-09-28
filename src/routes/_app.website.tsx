@@ -17,6 +17,7 @@ import { EmbedSnippet } from "@/components/EmbedSnippet";
 import { WebTemplateEditor } from "@/components/WebTemplateEditor";
 import { useStaffHotelModules } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
+import { LEGAL_PAGES, type LegalPage } from "@/lib/legal-texts";
 import {
   checkCname,
   PLATFORM_CNAME,
@@ -74,6 +75,32 @@ function WebsitePage() {
       {data && hotel && <DomainCard key={hotel} tenantId={hotel} data={data} />}
       {data && hotel && <WebTemplateEditor key={`tpl-${hotel}`} tenantId={hotel} data={data} />}
       {data && <EmbedSnippet key={`embed-${hotel}`} data={data} />}
+      {data && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Textos legales de tu web</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Tu web muestra en el pie el aviso legal, la política de privacidad, la de cookies y
+              las condiciones de reserva. Se rellenan solos con tus datos fiscales (Facturación →
+              Datos fiscales) y tus políticas de pago y cancelación. Son una plantilla: revísalos
+              con tu asesoría.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {(Object.keys(LEGAL_PAGES) as LegalPage[]).map((p) => (
+              <a
+                key={p}
+                href={`${data.url ?? ""}/web/legal/${p}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
+              >
+                {LEGAL_PAGES[p]} <ExternalLink className="h-3 w-3" />
+              </a>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

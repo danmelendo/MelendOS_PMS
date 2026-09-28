@@ -45,6 +45,7 @@ import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
 import { Route as WebUploadBookingIdRouteImport } from './routes/web.upload.$bookingId'
 import { Route as WebSignBookingIdRouteImport } from './routes/web.sign.$bookingId'
 import { Route as WebRoomRoomIdRouteImport } from './routes/web.room.$roomId'
+import { Route as WebLegalPageRouteImport } from './routes/web.legal.$page'
 import { Route as WebHotelHotelIdRouteImport } from './routes/web.hotel.$hotelId'
 import { Route as WebCheckoutBookingIdRouteImport } from './routes/web.checkout.$bookingId'
 import { Route as WebCheckinBookingIdRouteImport } from './routes/web.checkin.$bookingId'
@@ -233,6 +234,11 @@ const WebRoomRoomIdRoute = WebRoomRoomIdRouteImport.update({
   path: '/room/$roomId',
   getParentRoute: () => WebRoute,
 } as any)
+const WebLegalPageRoute = WebLegalPageRouteImport.update({
+  id: '/legal/$page',
+  path: '/legal/$page',
+  getParentRoute: () => WebRoute,
+} as any)
 const WebHotelHotelIdRoute = WebHotelHotelIdRouteImport.update({
   id: '/hotel/$hotelId',
   path: '/hotel/$hotelId',
@@ -315,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/web/checkin/$bookingId': typeof WebCheckinBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
+  '/web/legal/$page': typeof WebLegalPageRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
   '/web/upload/$bookingId': typeof WebUploadBookingIdRoute
@@ -359,6 +366,7 @@ export interface FileRoutesByTo {
   '/web/checkin/$bookingId': typeof WebCheckinBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
+  '/web/legal/$page': typeof WebLegalPageRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
   '/web/upload/$bookingId': typeof WebUploadBookingIdRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/web/checkin/$bookingId': typeof WebCheckinBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
+  '/web/legal/$page': typeof WebLegalPageRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
   '/web/sign/$bookingId': typeof WebSignBookingIdRoute
   '/web/upload/$bookingId': typeof WebUploadBookingIdRoute
@@ -453,6 +462,7 @@ export interface FileRouteTypes {
     | '/web/checkin/$bookingId'
     | '/web/checkout/$bookingId'
     | '/web/hotel/$hotelId'
+    | '/web/legal/$page'
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
     | '/web/upload/$bookingId'
@@ -497,6 +507,7 @@ export interface FileRouteTypes {
     | '/web/checkin/$bookingId'
     | '/web/checkout/$bookingId'
     | '/web/hotel/$hotelId'
+    | '/web/legal/$page'
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
     | '/web/upload/$bookingId'
@@ -543,6 +554,7 @@ export interface FileRouteTypes {
     | '/web/checkin/$bookingId'
     | '/web/checkout/$bookingId'
     | '/web/hotel/$hotelId'
+    | '/web/legal/$page'
     | '/web/room/$roomId'
     | '/web/sign/$bookingId'
     | '/web/upload/$bookingId'
@@ -817,6 +829,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebRoomRoomIdRouteImport
       parentRoute: typeof WebRoute
     }
+    '/web/legal/$page': {
+      id: '/web/legal/$page'
+      path: '/legal/$page'
+      fullPath: '/web/legal/$page'
+      preLoaderRoute: typeof WebLegalPageRouteImport
+      parentRoute: typeof WebRoute
+    }
     '/web/hotel/$hotelId': {
       id: '/web/hotel/$hotelId'
       path: '/hotel/$hotelId'
@@ -934,6 +953,7 @@ interface WebRouteChildren {
   WebCheckinBookingIdRoute: typeof WebCheckinBookingIdRoute
   WebCheckoutBookingIdRoute: typeof WebCheckoutBookingIdRoute
   WebHotelHotelIdRoute: typeof WebHotelHotelIdRoute
+  WebLegalPageRoute: typeof WebLegalPageRoute
   WebRoomRoomIdRoute: typeof WebRoomRoomIdRoute
   WebSignBookingIdRoute: typeof WebSignBookingIdRoute
   WebUploadBookingIdRoute: typeof WebUploadBookingIdRoute
@@ -950,6 +970,7 @@ const WebRouteChildren: WebRouteChildren = {
   WebCheckinBookingIdRoute: WebCheckinBookingIdRoute,
   WebCheckoutBookingIdRoute: WebCheckoutBookingIdRoute,
   WebHotelHotelIdRoute: WebHotelHotelIdRoute,
+  WebLegalPageRoute: WebLegalPageRoute,
   WebRoomRoomIdRoute: WebRoomRoomIdRoute,
   WebSignBookingIdRoute: WebSignBookingIdRoute,
   WebUploadBookingIdRoute: WebUploadBookingIdRoute,
