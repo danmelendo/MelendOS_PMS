@@ -3187,6 +3187,7 @@ export type Database = {
         Returns: string
       }
       archive_expired_promo_codes: { Args: never; Returns: number }
+      auth_user_id: { Args: { p_email: string }; Returns: string }
       cancel_booking_as_guest: {
         Args: {
           p_actor: string
@@ -3595,6 +3596,16 @@ export type Database = {
       }
       lake_tenants: { Args: never; Returns: string[] }
       list_mcp_tokens: { Args: { p_tenant: string }; Returns: Json }
+      list_staff: {
+        Args: { p_tenant: string }
+        Returns: {
+          created_at: string
+          email: string
+          last_sign_in_at: string
+          role: string
+          user_id: string
+        }[]
+      }
       list_stay_travellers: {
         Args: { p_reservation: string }
         Returns: {

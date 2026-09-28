@@ -26,6 +26,7 @@ import { Route as EmbedAssistantRouteImport } from './routes/embed.assistant'
 import { Route as AppWebsiteRouteImport } from './routes/_app.website'
 import { Route as AppTravellersRouteImport } from './routes/_app.travellers'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppReviewsRouteImport } from './routes/_app.reviews'
 import { Route as AppReservationsRouteImport } from './routes/_app.reservations'
@@ -135,6 +136,11 @@ const AppTravellersRoute = AppTravellersRouteImport.update({
 const AppTodayRoute = AppTodayRouteImport.update({
   id: '/today',
   path: '/today',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRoomsRoute = AppRoomsRouteImport.update({
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/reservations': typeof AppReservationsRoute
   '/reviews': typeof AppReviewsRoute
   '/rooms': typeof AppRoomsRoute
+  '/team': typeof AppTeamRoute
   '/today': typeof AppTodayRoute
   '/travellers': typeof AppTravellersRoute
   '/website': typeof AppWebsiteRoute
@@ -335,6 +342,7 @@ export interface FileRoutesByTo {
   '/reservations': typeof AppReservationsRoute
   '/reviews': typeof AppReviewsRoute
   '/rooms': typeof AppRoomsRoute
+  '/team': typeof AppTeamRoute
   '/today': typeof AppTodayRoute
   '/travellers': typeof AppTravellersRoute
   '/website': typeof AppWebsiteRoute
@@ -381,6 +389,7 @@ export interface FileRoutesById {
   '/_app/reservations': typeof AppReservationsRoute
   '/_app/reviews': typeof AppReviewsRoute
   '/_app/rooms': typeof AppRoomsRoute
+  '/_app/team': typeof AppTeamRoute
   '/_app/today': typeof AppTodayRoute
   '/_app/travellers': typeof AppTravellersRoute
   '/_app/website': typeof AppWebsiteRoute
@@ -427,6 +436,7 @@ export interface FileRouteTypes {
     | '/reservations'
     | '/reviews'
     | '/rooms'
+    | '/team'
     | '/today'
     | '/travellers'
     | '/website'
@@ -470,6 +480,7 @@ export interface FileRouteTypes {
     | '/reservations'
     | '/reviews'
     | '/rooms'
+    | '/team'
     | '/today'
     | '/travellers'
     | '/website'
@@ -515,6 +526,7 @@ export interface FileRouteTypes {
     | '/_app/reservations'
     | '/_app/reviews'
     | '/_app/rooms'
+    | '/_app/team'
     | '/_app/today'
     | '/_app/travellers'
     | '/_app/website'
@@ -670,6 +682,13 @@ declare module '@tanstack/react-router' {
       path: '/today'
       fullPath: '/today'
       preLoaderRoute: typeof AppTodayRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/rooms': {
@@ -873,6 +892,7 @@ interface AppRouteChildren {
   AppReservationsRoute: typeof AppReservationsRoute
   AppReviewsRoute: typeof AppReviewsRoute
   AppRoomsRoute: typeof AppRoomsRoute
+  AppTeamRoute: typeof AppTeamRoute
   AppTodayRoute: typeof AppTodayRoute
   AppTravellersRoute: typeof AppTravellersRoute
   AppWebsiteRoute: typeof AppWebsiteRoute
@@ -895,6 +915,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReservationsRoute: AppReservationsRoute,
   AppReviewsRoute: AppReviewsRoute,
   AppRoomsRoute: AppRoomsRoute,
+  AppTeamRoute: AppTeamRoute,
   AppTodayRoute: AppTodayRoute,
   AppTravellersRoute: AppTravellersRoute,
   AppWebsiteRoute: AppWebsiteRoute,

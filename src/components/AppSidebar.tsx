@@ -31,6 +31,7 @@ import {
   BookOpenCheck,
   PlugZap,
   Boxes,
+  UsersRound,
   Network,
   ShieldCheck,
   Receipt,
@@ -74,6 +75,7 @@ const adminItems: NavItem[] = [
   { to: "/website", label: "Web y dominio", icon: Globe },
   { to: "/channels", label: "Canales", icon: Network, feature: "channels" },
   { to: "/integrations", label: "Integraciones IA", icon: PlugZap, feature: "mcp" },
+  { to: "/team", label: "Equipo", icon: UsersRound },
   { to: "/plan", label: "Plan y módulos", icon: Boxes },
 ];
 

@@ -3053,4 +3053,74 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(direct.ok).toBe(false);
     });
   });
+
+  describe("the hotel's team", () => {
+    it("lets management list, promote and remove staff, never touch group roles or leave no admin", async () => {
+      await client.query("savepoint setup");
+      const list = (who: string, tenant: string) =>
+        attempt("authenticated", who, async () =>
+          (await client.query("select * from public.list_staff($1)", [tenant])).rows.map(
+            (r) => r.user_id,
+          ),
+        );
+      const asAdmin = await list(users.lumenAdmin, ids.lumen);
+      const asReception = await list(users.lumenReception, ids.lumen);
+      const otherHotel = await list(users.alboraAdmin, ids.lumen);
+      const setRole = (who: string, user: string, role: string) =>
+        attempt(
+          "authenticated",
+          who,
+          async () =>
+            (
+              await client.query(
+                "update public.tenant_members set role = $3 where tenant_id = $1 and user_id = $2",
+                [ids.lumen, user, role],
+              )
+            ).rowCount,
+        );
+      const promote = await setRole(users.lumenAdmin, users.lumenReception, "admin");
+      const toGroup = await setRole(users.lumenAdmin, users.lumenReception, "group");
+      const byReception = await setRole(users.lumenReception, users.lumenReception, "admin");
+      // Alone in management, the admin cannot step down nor be removed.
+      await client.query(
+        "delete from public.tenant_members where tenant_id = $1 and role = 'admin' and user_id <> $2",
+        [ids.lumen, users.lumenAdmin],
+      );
+      const stepDown = await setRole(users.lumenAdmin, users.lumenAdmin, "reception");
+      const removeLast = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("delete from public.tenant_members where tenant_id = $1 and user_id = $2", [
+          ids.lumen,
+          users.lumenAdmin,
+        ]),
+      );
+      const removeReception = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "delete from public.tenant_members where tenant_id = $1 and user_id = $2",
+              [ids.lumen, users.lumenReception],
+            )
+          ).rowCount,
+      );
+      const lookup = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.auth_user_id('x@example.com')"),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(asAdmin.ok && asAdmin.value).toEqual(
+        expect.arrayContaining([users.lumenAdmin, users.lumenReception]),
+      );
+      expect(asReception.ok).toBe(false);
+      expect(otherHotel.ok).toBe(false);
+      expect(promote).toEqual({ ok: true, value: 1 });
+      expect(toGroup.ok).toBe(false);
+      expect(byReception).toEqual({ ok: true, value: 0 });
+      expect(stepDown.ok).toBe(false);
+      expect(removeLast.ok).toBe(false);
+      expect(removeReception).toEqual({ ok: true, value: 1 });
+      expect(lookup.ok).toBe(false);
+    });
+  });
 });
