@@ -3,7 +3,9 @@
 // Sends the queued availability changes (channel_outbox) to each channel
 // through its provider's adapter: one ARI message per channel covering the
 // dates that changed. Called by staff from the panel ("Enviar ahora", their
-// hotel only) or by a scheduled job with the service key (every hotel).
+// hotel only) or every minute by the database while something is pending
+// (channels_tick, with its own key CHANNELS_CRON_KEY; set up by
+// scripts/channels-setup.mjs), or with the service key (every hotel).
 import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { adapterFor, buildAri, outboxRange } from "../_shared/channels/outbound.ts";
 import { supabaseChannelStore } from "../_shared/channels/supabase-store.ts";
@@ -22,7 +24,10 @@ Deno.serve(async (req) => {
 
   const db = adminClient();
   const bearer = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const service = bearer && bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const cronKey = Deno.env.get("CHANNELS_CRON_KEY");
+  const service =
+    !!bearer &&
+    (bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || (!!cronKey && bearer === cronKey));
   let tenantId: string | null = body.tenant_id ?? null;
   if (!service) {
     const { data: auth } =
