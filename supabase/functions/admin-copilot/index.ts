@@ -6,7 +6,7 @@
 // member's own session, so row level security applies on top of the hotel the
 // server fixes. Same model settings and loop as the booking agent.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { openAiCompatible, type ChatMessage } from "../_shared/agent/llm.ts";
 import { runAgentTurn } from "../_shared/agent/loop.ts";
 import { ymdInZone } from "../_shared/domain/dates.ts";
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
   // Who asks: a member of the hotel's staff, with their own session.
   const db = adminClient();
   const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const { data: auth } = jwt.split(".").length === 3 ? await db.auth.getUser(jwt) : { data: null };
+  const { data: auth } = jwt.split(".").length === 3 ? await verifiedUser(db, jwt) : { data: null };
   const userId = auth?.user?.id;
   if (!userId) return json({ error: "Inicia sesión" }, 401);
   const { data: member } = await db

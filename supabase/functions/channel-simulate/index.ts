@@ -4,7 +4,7 @@
 // plausible booking with fictitious data for one of the mapped room types and
 // posts it, signed, to channel-webhook, exactly as an OTA would. Caller: an
 // admin of the channel's hotel.
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { signBody } from "../_shared/channels/contract.ts";
 import { supabaseChannelStore } from "../_shared/channels/supabase-store.ts";
 import { addDays, ymdInZone } from "../_shared/domain/dates.ts";
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   if (!channel) return json({ error: "Canal no encontrado" }, 404);
 
   const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const { data: auth } = jwt.split(".").length === 3 ? await db.auth.getUser(jwt) : { data: null };
+  const { data: auth } = jwt.split(".").length === 3 ? await verifiedUser(db, jwt) : { data: null };
   const { data: member } = auth?.user
     ? await db
         .from("tenant_members")

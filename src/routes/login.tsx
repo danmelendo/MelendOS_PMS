@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { DemoAccountPicker } from "@/components/DemoAccountPicker";
 import { DEMO_ACCESS } from "@/lib/demo-access";
+import { useAssurance, useRefreshMfa } from "@/lib/mfa";
+import { MfaCodeForm } from "@/components/MfaCodeForm";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/login")({
@@ -15,7 +17,9 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { session, loading, signIn } = useAuth();
+  const { session, loading, signIn, signOut } = useAuth();
+  const aal = useAssurance(!!session);
+  const refreshMfa = useRefreshMfa();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +27,10 @@ function LoginPage() {
   const [forgot, setForgot] = useState(false);
   const [sent, setSent] = useState(false);
 
-  if (loading) return null;
-  if (session) return <Navigate to="/today" />;
+  if (loading || (session && aal.isLoading)) return null;
+  // Signed in with the password but with two-step verification on: the code.
+  const needsCode = !!session && !!aal.data?.needsCode;
+  if (session && !needsCode) return <Navigate to="/today" />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +40,8 @@ function LoginPage() {
     if (error) {
       toast.error(error);
     } else {
-      navigate({ to: "/today" });
+      // The session decides: straight to the panel, or the code first.
+      refreshMfa();
     }
   };
 
@@ -58,7 +65,15 @@ function LoginPage() {
           <CardDescription>Accede al panel interno</CardDescription>
         </CardHeader>
         <CardContent>
-          {DEMO_ACCESS ? (
+          {needsCode ? (
+            <MfaCodeForm
+              onVerified={() => {
+                refreshMfa();
+                navigate({ to: "/today" });
+              }}
+              onCancel={() => void signOut()}
+            />
+          ) : DEMO_ACCESS ? (
             <DemoAccountPicker
               kind="staff"
               tone="panel"

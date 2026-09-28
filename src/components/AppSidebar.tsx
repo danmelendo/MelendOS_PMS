@@ -230,12 +230,13 @@ export function AppSidebar() {
           </label>
         )}
         <div className="px-2 pb-1 flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-          <span
-            className="text-xs text-sidebar-foreground/60 truncate flex-1"
-            title={user?.email ?? ""}
+          <Link
+            to="/account"
+            className="text-xs text-sidebar-foreground/60 truncate flex-1 hover:text-sidebar-foreground hover:underline"
+            title="Mi cuenta"
           >
             {user?.email}
-          </span>
+          </Link>
           {isAdmin && (
             <Badge
               variant="outline"

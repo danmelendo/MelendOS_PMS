@@ -6,7 +6,7 @@
 // In the demo (DEMO_ACCESS=true) no email is sent: the account is created
 // without one, since the demo's visitors are all management.
 // Caller: management of that hotel (Authorization: Bearer <user JWT>).
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 
 const ROLES = ["admin", "reception"] as const;
 
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
   const db = adminClient();
   const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const { data: auth } = jwt.split(".").length === 3 ? await db.auth.getUser(jwt) : { data: null };
+  const { data: auth } = jwt.split(".").length === 3 ? await verifiedUser(db, jwt) : { data: null };
   const callerId = auth?.user?.id;
   const { data: caller } = callerId
     ? await db

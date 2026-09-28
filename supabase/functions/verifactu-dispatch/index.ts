@@ -7,7 +7,7 @@
 // The invoicing system identifies its producer with the secrets
 // VERIFACTU_PRODUCER_NAME and VERIFACTU_PRODUCER_NIF (required outside the
 // simulated environment).
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { dispatchTenant, type DispatchReport } from "../_shared/verifactu/dispatch.ts";
 import { supabaseVerifactuStore } from "../_shared/verifactu/supabase-store.ts";
 import { transportFor } from "../_shared/verifactu/transport.ts";
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   const tenantId = body.tenant_id ?? null;
   if (!service) {
     const { data: auth } =
-      bearer.split(".").length === 3 ? await db.auth.getUser(bearer) : { data: null };
+      bearer.split(".").length === 3 ? await verifiedUser(db, bearer) : { data: null };
     const { data: member } =
       auth?.user && tenantId
         ? await db
