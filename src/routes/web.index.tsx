@@ -1,18 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Star, MapPin, ArrowRight, Sparkles, Phone, Mail } from "lucide-react";
+import { Star, MapPin, ArrowRight, Phone, Mail } from "lucide-react";
 import { pms } from "@/integrations/pms";
-import { cms } from "@/integrations/cms";
 import { useBrand } from "@/lib/brand";
-import { useFeatures } from "@/lib/features";
 import { HotelCoverArt } from "@/components/cover-art";
-import {
-  accentGradient,
-  eur0,
-  priceBand,
-  EVENT_CATEGORY_LABELS,
-  AMENITY_LABELS,
-} from "@/lib/stays";
+import { accentGradient, eur0, priceBand, AMENITY_LABELS } from "@/lib/stays";
 
 export const Route = createFileRoute("/web/")({
   component: WebHome,
@@ -20,18 +12,11 @@ export const Route = createFileRoute("/web/")({
 
 function WebHome() {
   const { brand, brandId, tenantId } = useBrand();
-  const features = useFeatures();
   const { data: hotels } = useQuery({
     queryKey: ["pms", "properties-web", brandId],
     enabled: !!tenantId,
     queryFn: () => pms.listProperties({ tenantId: tenantId ?? undefined }),
   });
-  const { data: events } = useQuery({
-    queryKey: ["cms", "events-web"],
-    queryFn: () => cms.listEvents({ upcomingOnly: true }),
-  });
-  const hotelIds = new Set((hotels ?? []).map((h) => h.id));
-  const brandEvents = (events ?? []).filter((e) => hotelIds.has(e.hotelId));
   const main = hotels?.[0];
 
   return (
@@ -211,45 +196,6 @@ function WebHome() {
                 <MapPin className="h-4 w-4" /> Cómo llegar
               </a>
             )}
-          </div>
-        </section>
-      )}
-
-      {/* Experiences (only when the hotel has any) */}
-      {features.experiences && brandEvents.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 py-14">
-          <div className="flex items-end justify-between">
-            <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-              <Sparkles className="h-6 w-6 text-[var(--brand)]" /> Próximas experiencias
-            </h2>
-            <Link to="/web/events" className="text-sm font-medium text-[var(--brand)]">
-              Ver agenda
-            </Link>
-          </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {brandEvents.slice(0, 4).map((e) => (
-              <Link
-                key={e.id}
-                to="/web/event/$eventId"
-                params={{ eventId: e.id }}
-                className="overflow-hidden bg-white shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
-              >
-                <div className="h-20" style={{ background: accentGradient(e.accent) }} />
-                <div className="p-4">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand)]">
-                    {EVENT_CATEGORY_LABELS[e.category]}
-                  </span>
-                  <h3 className="mt-1 font-semibold leading-tight">{e.title}</h3>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {new Date(e.startsAt).toLocaleDateString("es-ES", {
-                      day: "numeric",
-                      month: "short",
-                    })}{" "}
-                    · {e.location}
-                  </p>
-                </div>
-              </Link>
-            ))}
           </div>
         </section>
       )}

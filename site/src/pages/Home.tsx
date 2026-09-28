@@ -66,8 +66,8 @@ const SHOWCASE: {
   },
   {
     id: "guest",
-    label: "App del huésped",
-    title: "La estancia, sin llamadas ni papeles",
+    label: "Mi reserva",
+    title: "La estancia, sin llamadas ni papeles, desde tu propia web",
     points: [
       "Check-in online con registro de viajeros y firma",
       "Chat con recepción: toallas, room service, late checkout…",

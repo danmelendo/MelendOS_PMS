@@ -6,7 +6,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Star, Users, ArrowRight, Sparkles, CalendarDays } from "lucide-react";
 import { pms } from "@/integrations/pms";
-import { cms } from "@/integrations/cms";
+import { HotelOffers } from "@/components/HotelOffers";
+import { useBrand } from "@/lib/brand";
 import {
   accentGradient,
   dateOffset,
@@ -14,7 +15,6 @@ import {
   ASSET_TYPE_LABELS,
   ASSET_TYPE_SHORT,
   FEATURE_LABELS,
-  EVENT_CATEGORY_LABELS,
   eur0,
 } from "@/lib/stays";
 import { HotelCoverArt } from "@/components/cover-art";
@@ -28,10 +28,11 @@ export const Route = createFileRoute("/web/hotel/$hotelId")({
   // Dates and guests can come in the link (the embedded search widget).
   validateSearch: (
     s: Record<string, unknown>,
-  ): { checkIn?: string; checkOut?: string; guests?: number } => ({
+  ): { checkIn?: string; checkOut?: string; guests?: number; promo?: string } => ({
     checkIn: isYmd(s.checkIn) ? s.checkIn : undefined,
     checkOut: isYmd(s.checkOut) ? s.checkOut : undefined,
     guests: Number(s.guests) >= 1 && Number(s.guests) <= 12 ? Number(s.guests) : undefined,
+    promo: typeof s.promo === "string" && s.promo ? s.promo.slice(0, 40) : undefined,
   }),
 });
 
@@ -50,6 +51,8 @@ function WebHotelDetail() {
   const [checkOut, setCheckOut] = useState(valid ? search.checkOut! : dateOffset(10));
   const guests = search.guests ?? 1;
   const [assetType, setAssetType] = useState<AssetType | null>(null);
+  const [promo, setPromo] = useState(search.promo);
+  const { tenantId } = useBrand();
 
   const { data: hotel } = useQuery({
     queryKey: ["pms", "property", hotelId],
@@ -58,10 +61,6 @@ function WebHotelDetail() {
   const { data: offers } = useQuery({
     queryKey: ["pms", "availability", hotelId, checkIn, checkOut, guests],
     queryFn: () => pms.searchAvailability({ propertyId: hotelId, checkIn, checkOut, guests }),
-  });
-  const { data: events } = useQuery({
-    queryKey: ["cms", "events", hotelId],
-    queryFn: () => cms.listEvents({ hotelId, upcomingOnly: true }),
   });
 
   const filteredOffers = (offers ?? []).filter(
@@ -145,20 +144,25 @@ function WebHotelDetail() {
 
         <div className="mt-8 grid gap-10 lg:grid-cols-3">
           {/* Assets */}
-          <div className="lg:col-span-2">
+          <div id="rooms" className="scroll-mt-24 lg:col-span-2">
             <h2 className="text-xl font-bold tracking-tight">Habitaciones</h2>
             <p className="text-sm text-neutral-500">
               {assetType
                 ? ASSET_TYPE_LABELS[assetType]
                 : "Precio total para tus fechas, impuestos incluidos."}
             </p>
+            {promo && (
+              <p className="mt-1 text-xs font-medium text-emerald-700">
+                Código {promo} aplicado: se descuenta de la habitación al confirmar la reserva.
+              </p>
+            )}
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {filteredOffers.map((o) => (
                 <Link
                   key={o.room.id}
                   to="/web/room/$roomId"
                   params={{ roomId: o.room.id }}
-                  search={{ hotelId, checkIn, checkOut }}
+                  search={{ hotelId, checkIn, checkOut, ...(promo ? { promo } : {}) }}
                   className="group overflow-hidden  bg-white shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
                 >
                   <div className="relative h-36 overflow-hidden bg-neutral-100">
@@ -231,50 +235,19 @@ function WebHotelDetail() {
             </div>
           </div>
 
-          {/* Hotel experiences */}
-          <div>
-            <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
-              <Sparkles className="h-5 w-5 text-[var(--brand)]" /> Experiencias
-            </h2>
-            <p className="text-sm text-neutral-500">Agenda servida por {cms.cmsName}.</p>
-            <div className="mt-5 space-y-3">
-              {(events ?? []).map((e) => (
-                <Link
-                  key={e.id}
-                  to="/web/event/$eventId"
-                  params={{ eventId: e.id }}
-                  className=" block bg-white p-4 shadow-sm ring-1 ring-neutral-100 transition hover:shadow-md"
-                >
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand)]">
-                    {EVENT_CATEGORY_LABELS[e.category]}
-                  </span>
-                  <h3 className="mt-0.5 font-semibold leading-tight">{e.title}</h3>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-neutral-500">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {new Date(e.startsAt).toLocaleString("es-ES", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    {e.attending}/{e.capacity} plazas ocupadas
-                  </p>
-                </Link>
-              ))}
-              {events && events.length === 0 && (
-                <p className="text-sm text-neutral-400">Sin experiencias próximas.</p>
-              )}
-              <Link
-                to="/web/events"
-                className="inline-flex items-center gap-1 text-sm font-medium text-[var(--brand)]"
-              >
-                Ver toda la agenda <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
+          {/* Offers: date sales and published promo codes (replaces the experiences) */}
+          <HotelOffers
+            tenantId={tenantId}
+            propertyId={hotelId}
+            guests={guests}
+            activePromo={promo}
+            onPickPromo={setPromo}
+            onPickDates={(ci, co) => {
+              setCheckIn(ci);
+              setCheckOut(co);
+              document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
         </div>
 
         <HotelReviews propertyId={hotelId} hotelName={hotel?.name} />

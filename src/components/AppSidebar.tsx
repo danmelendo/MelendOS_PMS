@@ -29,7 +29,6 @@ import {
   Wand2,
   Globe,
   BookOpenCheck,
-  Smartphone,
   PlugZap,
   Boxes,
   Network,
@@ -191,19 +190,6 @@ export function AppSidebar() {
                     >
                       <Globe className="h-4 w-4" />
                       <span>Web pública</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="App del huésped">
-                    <a
-                      href="/stays"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2"
-                    >
-                      <Smartphone className="h-4 w-4" />
-                      <span>App del huésped</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

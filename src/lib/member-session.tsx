@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./auth";
 import { useBrand } from "./brand";
 
-// Guest identity for the guest app (/stays): the signed-in user's guest account
+// Guest identity on the booking web ("Mi reserva"): the signed-in user's guest account
 // in the active hotel (members.user_id = auth user, one account per hotel).
 // Without a session the app asks the guest to sign in.
 

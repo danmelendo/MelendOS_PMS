@@ -1,14 +1,4 @@
-import {
-  UtensilsCrossed,
-  HeartPulse,
-  Landmark,
-  Sailboat,
-  Baby,
-  type LucideIcon,
-} from "lucide-react";
-import type { EventCategory } from "@/integrations/cms";
-
-// Decorative cover art so hotel and experience cards aren't just a flat colour band.
+// Decorative cover art so hotel cards aren't just a flat colour band.
 // Rendered as translucent white SVG over the existing accent gradient, so it
 // adapts to every hotel/category accent without extra image assets.
 
@@ -74,26 +64,5 @@ export function HotelCoverArt() {
         <polygon points="200,36 222,42 200,48" />
       </g>
     </svg>
-  );
-}
-
-const EVENT_ICON: Record<EventCategory, LucideIcon> = {
-  gastronomy: UtensilsCrossed,
-  wellness: HeartPulse,
-  culture: Landmark,
-  outdoor: Sailboat,
-  family: Baby,
-};
-
-/** Large translucent category motif for event covers. */
-export function EventCoverArt({ category }: { category: EventCategory }) {
-  const Icon = EVENT_ICON[category];
-  return (
-    <Icon
-      className="pointer-events-none absolute -bottom-3 -right-2 h-24 w-24 text-white"
-      style={{ opacity: 0.22 }}
-      strokeWidth={1.25}
-      aria-hidden="true"
-    />
   );
 }

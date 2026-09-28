@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
-import { Smartphone, Globe } from "lucide-react";
+import { Globe } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -36,13 +36,6 @@ function AppLayout() {
           <header className="h-12 flex items-center border-b px-2 gap-2 bg-background sticky top-0 z-10">
             <SidebarTrigger />
             <div className="ml-auto flex items-center gap-1">
-              <a
-                href="/stays"
-                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent"
-                title="Ir a la app móvil Stays"
-              >
-                <Smartphone className="h-3.5 w-3.5" /> App
-              </a>
               <a
                 href="/web"
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent"

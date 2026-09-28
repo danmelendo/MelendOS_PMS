@@ -10,8 +10,13 @@ import {
 const NOW = new Date("2026-09-25T10:00:00Z");
 
 function fakeStore(
-  over: Partial<{ busy: { room_id: string; start_at: string; end_at: string }[] }> = {},
+  over: Partial<{
+    busy: { room_id: string; start_at: string; end_at: string }[];
+    /** Uses left of the promo code "OTONO15" (15 %); undefined = no code. */
+    promoUses: number;
+  }> = {},
 ) {
+  let promoUses = over.promoUses;
   const inserted: NewReservation[] = [];
   const extras: { reservationId: string; rows: unknown[] }[] = [];
   const store: BookingStore = {
@@ -59,6 +64,16 @@ function fakeStore(
     },
     async findOrCreateCustomer() {
       return "c1";
+    },
+    async findPromoCode(_t, code) {
+      return code.toUpperCase() === "OTONO15" && (promoUses ?? 0) > 0
+        ? { id: "promo-1", code: "OTONO15", discount_type: "percent", discount_value: 15 }
+        : null;
+    },
+    async claimPromoCode() {
+      if (!promoUses) return false;
+      promoUses -= 1;
+      return true;
     },
     async insertReservation(r) {
       inserted.push(r);
@@ -220,5 +235,43 @@ describe("createBookingDraft", () => {
     });
     await createBookingDraft(store, base, { userId: null, channel: "public", now: NOW });
     expect(inserted).toHaveLength(1);
+  });
+
+  it("applies a promo code to the room price only and counts one use", async () => {
+    const { store, inserted } = fakeStore({ promoUses: 1 });
+    const draft = await createBookingDraft(
+      store,
+      { ...base, promo_code: "otono15", extras: [{ extra_id: "breakfast", qty: 1 }] },
+      { userId: null, channel: "public", now: NOW },
+    );
+    // 15 % of the 360 of the room; the 18 of breakfast is not discounted.
+    expect(draft.breakdown).toMatchObject({ discount: 54, promoCode: "OTONO15", total: 324 });
+    expect(draft.amount_due_now).toBe(324);
+    expect(inserted[0]).toMatchObject({
+      discount_amount: 54,
+      promo_code_id: "promo-1",
+      total: 324,
+    });
+    // Used up: the next booking with it is refused, and nothing is created.
+    await expect(
+      createBookingDraft(
+        store,
+        { ...base, promo_code: "OTONO15" },
+        { userId: null, channel: "public", now: NOW },
+      ),
+    ).rejects.toMatchObject({ code: "invalid" });
+    expect(inserted).toHaveLength(1);
+  });
+
+  it("refuses an unknown promo code instead of booking at full price", async () => {
+    const { store, inserted } = fakeStore();
+    await expect(
+      createBookingDraft(
+        store,
+        { ...base, promo_code: "NOEXISTE" },
+        { userId: null, channel: "public", now: NOW },
+      ),
+    ).rejects.toMatchObject({ code: "invalid", message: expect.stringMatching(/código/) });
+    expect(inserted).toHaveLength(0);
   });
 });

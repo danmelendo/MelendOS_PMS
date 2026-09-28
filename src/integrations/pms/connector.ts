@@ -51,6 +51,8 @@ export interface CreatePrebookingInput {
   /** Pay the whole stay online now, or at the hotel (default: the hotel's). */
   paymentMode?: "prepay" | "at_hotel";
   extras?: { extra_id: string; qty: number }[];
+  /** Promo code the guest typed; the server checks it and applies the discount. */
+  promoCode?: string;
 }
 
 export interface CreateWatchInput {

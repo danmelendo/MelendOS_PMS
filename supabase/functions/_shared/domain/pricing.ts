@@ -49,7 +49,24 @@ export interface PriceBreakdown {
   dynamicReason: string | null;
   extrasTotal: number;
   giftedExtraIds: string[];
+  /** Promo code discount on the room price (never on extras), already in `total`. */
+  discount?: number;
+  promoCode?: string | null;
   total: number;
+}
+
+export interface PromoTerms {
+  discountType: "percent" | "fixed";
+  discountValue: number;
+}
+
+/** Discount of a promo code on the room price (base + dynamic); extras are excluded. */
+export function promoDiscount(p: PromoTerms, roomSubtotal: number): number {
+  const raw =
+    p.discountType === "percent"
+      ? (roomSubtotal * p.discountValue) / 100
+      : Math.min(p.discountValue, roomSubtotal); // a fixed amount can't exceed the room price
+  return round2(Math.max(0, Math.min(raw, roomSubtotal)));
 }
 
 export function round2(n: number): number {

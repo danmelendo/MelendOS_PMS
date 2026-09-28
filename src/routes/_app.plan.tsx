@@ -203,7 +203,7 @@ function PlanPage() {
 
           <p className="text-xs text-muted-foreground">
             {DEMO_ACCESS
-              ? "Demo: activa o desactiva paquetes para ver cómo cambian el panel, la web y la app del huésped. En producción los paquetes se contratan con ventas."
+              ? "Demo: activa o desactiva paquetes para ver cómo cambian el panel y la web de reservas. En producción los paquetes se contratan con ventas."
               : "Para contratar un paquete o darlo de baja, contacta con ventas."}
           </p>
         </>

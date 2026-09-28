@@ -10,6 +10,8 @@ interface RoomSearch {
   hotelId?: string;
   checkIn?: string;
   checkOut?: string;
+  /** Promo code chosen in "Habitaciones en oferta", carried to the booking form. */
+  promo?: string;
 }
 
 export const Route = createFileRoute("/web/room/$roomId")({
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/web/room/$roomId")({
     hotelId: s.hotelId ? String(s.hotelId) : undefined,
     checkIn: s.checkIn ? String(s.checkIn) : undefined,
     checkOut: s.checkOut ? String(s.checkOut) : undefined,
+    promo: typeof s.promo === "string" && s.promo ? s.promo.slice(0, 40) : undefined,
   }),
 });
 
@@ -32,7 +35,7 @@ async function findPropertyForRoom(roomId: string): Promise<string | null> {
 
 function WebRoomDetail() {
   const { roomId } = Route.useParams();
-  const { hotelId, checkIn: initCheckIn, checkOut: initCheckOut } = Route.useSearch();
+  const { hotelId, checkIn: initCheckIn, checkOut: initCheckOut, promo } = Route.useSearch();
   const navigate = useNavigate();
 
   const [checkIn, setCheckIn] = useState(initCheckIn ?? dateOffset(7));
@@ -210,7 +213,12 @@ function WebRoomDetail() {
                   navigate({
                     to: "/web/book/$roomId",
                     params: { roomId },
-                    search: { checkIn, checkOut, guests: Math.min(2, room?.capacity ?? 2) },
+                    search: {
+                      checkIn,
+                      checkOut,
+                      guests: Math.min(2, room?.capacity ?? 2),
+                      ...(promo ? { promo } : {}),
+                    },
                   })
                 }
                 className="mt-4 w-full  bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-40"
