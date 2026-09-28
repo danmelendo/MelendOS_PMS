@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EmbedSnippet } from "@/components/EmbedSnippet";
 import { WebTemplateEditor } from "@/components/WebTemplateEditor";
 import { useStaffHotelModules } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
@@ -72,6 +73,7 @@ function WebsitePage() {
       </div>
       {data && hotel && <DomainCard key={hotel} tenantId={hotel} data={data} />}
       {data && hotel && <WebTemplateEditor key={`tpl-${hotel}`} tenantId={hotel} data={data} />}
+      {data && <EmbedSnippet key={`embed-${hotel}`} data={data} />}
     </div>
   );
 }

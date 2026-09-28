@@ -249,12 +249,20 @@ interface Line {
 const GREETING =
   "¡Hola! Soy el asistente de reservas. Dime fechas y cuántas personas sois y te digo qué habitaciones hay libres y a qué precio.";
 
-export function AgentChat() {
+/**
+ * The booking assistant. On the hotel's web it is a floating button that opens
+ * a panel; `embedded` is the version inside the widget's iframe on the hotel's
+ * own website (/embed/assistant): always open, filling the frame, closing
+ * through the host page and opening booking and payment links outside it.
+ */
+export function AgentChat({ embedded = false }: { embedded?: boolean } = {}) {
   const { brandId } = useBrand();
   const { data: tenant } = useBrandTenant();
   const features = useFeatures();
   const storageKey = `agent-chat-${brandId}`;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(embedded);
+  const close = () =>
+    embedded ? window.parent.postMessage({ type: "melendos:close" }, "*") : setOpen(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -343,7 +351,11 @@ export function AgentChat() {
         <div
           role="dialog"
           aria-label="Asistente de reservas"
-          className="fixed inset-0 z-50 flex flex-col bg-[#f4f6f9] shadow-2xl sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[600px] sm:max-h-[calc(100svh-2.5rem)] sm:w-[400px] sm:ring-1 sm:ring-neutral-200"
+          className={
+            embedded
+              ? "fixed inset-0 z-50 flex flex-col bg-[#f4f6f9]"
+              : "fixed inset-0 z-50 flex flex-col bg-[#f4f6f9] shadow-2xl sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[600px] sm:max-h-[calc(100svh-2.5rem)] sm:w-[400px] sm:ring-1 sm:ring-neutral-200"
+          }
         >
           <div className="flex items-center justify-between bg-[var(--brand)] px-4 py-3 text-white">
             <div className="flex items-center gap-2">
@@ -353,7 +365,7 @@ export function AgentChat() {
                 <p className="text-[11px] opacity-80">Precios y disponibilidad en tiempo real</p>
               </div>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar">
+            <button type="button" onClick={close} aria-label="Cerrar">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -389,6 +401,8 @@ export function AgentChat() {
                       <a
                         key={a.url}
                         href={a.url}
+                        // Payments and the booking page leave the widget's frame.
+                        target={embedded ? "_top" : undefined}
                         className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold ${
                           a.kind === "payment"
                             ? "bg-[var(--brand)] text-white"

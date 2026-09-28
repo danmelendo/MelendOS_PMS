@@ -21,8 +21,18 @@ import { HotelCoverArt } from "@/components/cover-art";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import type { AssetType } from "@/integrations/pms";
 
+const isYmd = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
 export const Route = createFileRoute("/web/hotel/$hotelId")({
   component: WebHotelDetail,
+  // Dates and guests can come in the link (the embedded search widget).
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { checkIn?: string; checkOut?: string; guests?: number } => ({
+    checkIn: isYmd(s.checkIn) ? s.checkIn : undefined,
+    checkOut: isYmd(s.checkOut) ? s.checkOut : undefined,
+    guests: Number(s.guests) >= 1 && Number(s.guests) <= 12 ? Number(s.guests) : undefined,
+  }),
 });
 
 const ASSET_FILTERS: { label: string; value: AssetType | null }[] = [
@@ -34,8 +44,11 @@ const ASSET_FILTERS: { label: string; value: AssetType | null }[] = [
 
 function WebHotelDetail() {
   const { hotelId } = Route.useParams();
-  const [checkIn, setCheckIn] = useState(dateOffset(7));
-  const [checkOut, setCheckOut] = useState(dateOffset(10));
+  const search = Route.useSearch();
+  const valid = !!search.checkIn && !!search.checkOut && search.checkIn < search.checkOut;
+  const [checkIn, setCheckIn] = useState(valid ? search.checkIn! : dateOffset(7));
+  const [checkOut, setCheckOut] = useState(valid ? search.checkOut! : dateOffset(10));
+  const guests = search.guests ?? 1;
   const [assetType, setAssetType] = useState<AssetType | null>(null);
 
   const { data: hotel } = useQuery({
@@ -43,8 +56,8 @@ function WebHotelDetail() {
     queryFn: () => pms.getProperty(hotelId),
   });
   const { data: offers } = useQuery({
-    queryKey: ["pms", "availability", hotelId, checkIn, checkOut],
-    queryFn: () => pms.searchAvailability({ propertyId: hotelId, checkIn, checkOut, guests: 1 }),
+    queryKey: ["pms", "availability", hotelId, checkIn, checkOut, guests],
+    queryFn: () => pms.searchAvailability({ propertyId: hotelId, checkIn, checkOut, guests }),
   });
   const { data: events } = useQuery({
     queryKey: ["cms", "events", hotelId],

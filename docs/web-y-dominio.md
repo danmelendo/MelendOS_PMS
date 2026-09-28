@@ -23,6 +23,21 @@ Incluida en todos los planes. Es la misma `/web` para todos los hoteles, rellena
 
 Las fotos se reducen en el navegador (lado mayor de 2.000 px, WebP) y se guardan en el bucket público `hotel-media`, en la carpeta del hotel. Solo su dirección puede subir, cambiar o borrar ahí (políticas de Storage con `hotel_media_tenant()`). En el dominio de un hotel no se ven los enlaces de la demo («Panel de gestión», «App del huésped»). Diseño a medida no: si hace falta, es un servicio aparte.
 
+## El widget para la web que ya tiene el hotel
+
+Para el hotel que ya tiene su web (WordPress, Wix…): Admin → Web y dominio → «Añadir a tu web actual» da el fragmento, con opciones.
+
+```html
+<div id="melendos-booking"></div>
+<script src="https://reservas.suhotel.com/embed.js" data-hotel="hostal-sol" async></script>
+```
+
+- `public/embed.js` (JS sin dependencias) pone el **buscador** (iframe `/embed/search`: fechas con precios medios y personas) en el `div`, y un botón flotante que abre el **asistente** (iframe `/embed/assistant`, el mismo `AgentChat` en modo `embedded`).
+- Al pulsar «Buscar», el huésped pasa a la ficha del hotel en el motor (`/web/hotel/<id>?checkIn=&checkOut=&guests=&hotel=<slug>`). El pago y la reserva se hacen siempre en el dominio del motor.
+- Los iframes hablan con la página del hotel por `postMessage` (`melendos:height`, `melendos:navigate`, `melendos:close`). El script solo acepta mensajes de su propio origen y solo navega a URLs de ese origen.
+- Opciones: `data-search="false"`, `data-assistant="false"`, `data-color` y `data-label`.
+- Página de ejemplo para demos de venta: `/ejemplo-web?hotel=<slug>`, una web «de otra agencia» con el widget pegado.
+
 ## Quién la cambia
 
 - Solo dirección, desde el panel en **Admin → Web y dominio**, con `save_hotel_web()`. La función valida el formato (color `#RRGGBB`, URLs http(s), longitudes y dominio) y comprueba que el dominio no lo use otro hotel. Cada cambio queda en `audit_log`.

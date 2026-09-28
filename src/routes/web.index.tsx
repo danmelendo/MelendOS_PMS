@@ -185,7 +185,7 @@ function WebHome() {
               <div className="mt-3 flex flex-wrap gap-4 text-sm">
                 {brand.phone && (
                   <a
-                    href={`tel:${brand.phone.replace(/s/g, "")}`}
+                    href={`tel:${brand.phone.replace(/\s/g, "")}`}
                     className="flex items-center gap-1.5 text-[var(--brand)]"
                   >
                     <Phone className="h-4 w-4" /> {brand.phone}

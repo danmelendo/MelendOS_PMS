@@ -14,6 +14,7 @@ import { Route as StaysRouteImport } from './routes/stays'
 import { Route as ReservarOkRouteImport } from './routes/reservar-ok'
 import { Route as ReservarRouteImport } from './routes/reservar'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as EjemploWebRouteImport } from './routes/ejemplo-web'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WebIndexRouteImport } from './routes/web.index'
@@ -29,6 +30,8 @@ import { Route as StaysIncidentsRouteImport } from './routes/stays.incidents'
 import { Route as StaysExperiencesRouteImport } from './routes/stays.experiences'
 import { Route as StaysAccountRouteImport } from './routes/stays.account'
 import { Route as InvoiceInvoiceIdRouteImport } from './routes/invoice.$invoiceId'
+import { Route as EmbedSearchRouteImport } from './routes/embed.search'
+import { Route as EmbedAssistantRouteImport } from './routes/embed.assistant'
 import { Route as AppWebsiteRouteImport } from './routes/_app.website'
 import { Route as AppTravellersRouteImport } from './routes/_app.travellers'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
@@ -89,6 +92,11 @@ const ReservarRoute = ReservarRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EjemploWebRoute = EjemploWebRouteImport.update({
+  id: '/ejemplo-web',
+  path: '/ejemplo-web',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -163,6 +171,16 @@ const StaysAccountRoute = StaysAccountRouteImport.update({
 const InvoiceInvoiceIdRoute = InvoiceInvoiceIdRouteImport.update({
   id: '/invoice/$invoiceId',
   path: '/invoice/$invoiceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedSearchRoute = EmbedSearchRouteImport.update({
+  id: '/embed/search',
+  path: '/embed/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedAssistantRoute = EmbedAssistantRouteImport.update({
+  id: '/embed/assistant',
+  path: '/embed/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppWebsiteRoute = AppWebsiteRouteImport.update({
@@ -349,6 +367,7 @@ const WebInvoiceBookingIdInvoiceIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ejemplo-web': typeof EjemploWebRoute
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
@@ -372,6 +391,8 @@ export interface FileRoutesByFullPath {
   '/today': typeof AppTodayRoute
   '/travellers': typeof AppTravellersRoute
   '/website': typeof AppWebsiteRoute
+  '/embed/assistant': typeof EmbedAssistantRoute
+  '/embed/search': typeof EmbedSearchRoute
   '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
@@ -406,6 +427,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ejemplo-web': typeof EjemploWebRoute
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
@@ -427,6 +449,8 @@ export interface FileRoutesByTo {
   '/today': typeof AppTodayRoute
   '/travellers': typeof AppTravellersRoute
   '/website': typeof AppWebsiteRoute
+  '/embed/assistant': typeof EmbedAssistantRoute
+  '/embed/search': typeof EmbedSearchRoute
   '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
@@ -463,6 +487,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/ejemplo-web': typeof EjemploWebRoute
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
@@ -486,6 +511,8 @@ export interface FileRoutesById {
   '/_app/today': typeof AppTodayRoute
   '/_app/travellers': typeof AppTravellersRoute
   '/_app/website': typeof AppWebsiteRoute
+  '/embed/assistant': typeof EmbedAssistantRoute
+  '/embed/search': typeof EmbedSearchRoute
   '/invoice/$invoiceId': typeof InvoiceInvoiceIdRoute
   '/stays/account': typeof StaysAccountRoute
   '/stays/experiences': typeof StaysExperiencesRoute
@@ -522,6 +549,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ejemplo-web'
     | '/login'
     | '/reservar'
     | '/reservar-ok'
@@ -545,6 +573,8 @@ export interface FileRouteTypes {
     | '/today'
     | '/travellers'
     | '/website'
+    | '/embed/assistant'
+    | '/embed/search'
     | '/invoice/$invoiceId'
     | '/stays/account'
     | '/stays/experiences'
@@ -579,6 +609,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ejemplo-web'
     | '/login'
     | '/reservar'
     | '/reservar-ok'
@@ -600,6 +631,8 @@ export interface FileRouteTypes {
     | '/today'
     | '/travellers'
     | '/website'
+    | '/embed/assistant'
+    | '/embed/search'
     | '/invoice/$invoiceId'
     | '/stays/account'
     | '/stays/experiences'
@@ -635,6 +668,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/ejemplo-web'
     | '/login'
     | '/reservar'
     | '/reservar-ok'
@@ -658,6 +692,8 @@ export interface FileRouteTypes {
     | '/_app/today'
     | '/_app/travellers'
     | '/_app/website'
+    | '/embed/assistant'
+    | '/embed/search'
     | '/invoice/$invoiceId'
     | '/stays/account'
     | '/stays/experiences'
@@ -694,11 +730,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  EjemploWebRoute: typeof EjemploWebRoute
   LoginRoute: typeof LoginRoute
   ReservarRoute: typeof ReservarRoute
   ReservarOkRoute: typeof ReservarOkRoute
   StaysRoute: typeof StaysRouteWithChildren
   WebRoute: typeof WebRouteWithChildren
+  EmbedAssistantRoute: typeof EmbedAssistantRoute
+  EmbedSearchRoute: typeof EmbedSearchRoute
   InvoiceInvoiceIdRoute: typeof InvoiceInvoiceIdRoute
 }
 
@@ -737,6 +776,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ejemplo-web': {
+      id: '/ejemplo-web'
+      path: '/ejemplo-web'
+      fullPath: '/ejemplo-web'
+      preLoaderRoute: typeof EjemploWebRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -842,6 +888,20 @@ declare module '@tanstack/react-router' {
       path: '/invoice/$invoiceId'
       fullPath: '/invoice/$invoiceId'
       preLoaderRoute: typeof InvoiceInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/search': {
+      id: '/embed/search'
+      path: '/embed/search'
+      fullPath: '/embed/search'
+      preLoaderRoute: typeof EmbedSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/assistant': {
+      id: '/embed/assistant'
+      path: '/embed/assistant'
+      fullPath: '/embed/assistant'
+      preLoaderRoute: typeof EmbedAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/website': {
@@ -1222,11 +1282,14 @@ const WebRouteWithChildren = WebRoute._addFileChildren(WebRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  EjemploWebRoute: EjemploWebRoute,
   LoginRoute: LoginRoute,
   ReservarRoute: ReservarRoute,
   ReservarOkRoute: ReservarOkRoute,
   StaysRoute: StaysRouteWithChildren,
   WebRoute: WebRouteWithChildren,
+  EmbedAssistantRoute: EmbedAssistantRoute,
+  EmbedSearchRoute: EmbedSearchRoute,
   InvoiceInvoiceIdRoute: InvoiceInvoiceIdRoute,
 }
 export const routeTree = rootRouteImport

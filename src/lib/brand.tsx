@@ -52,6 +52,10 @@ const COLUMNS = "id, slug, name, domain, brand, settings";
 
 function readSaved(): string | null {
   if (typeof window === "undefined") return null;
+  // ?hotel=<slug> picks the hotel (links from the embedded widget, demos);
+  // a hotel's own domain still wins.
+  const param = new URLSearchParams(window.location.search).get("hotel");
+  if (param && /^[a-z0-9-]{3,40}$/.test(param)) return param;
   try {
     const v = window.localStorage.getItem(KEY);
     return v ? (LEGACY[v] ?? v) : null;

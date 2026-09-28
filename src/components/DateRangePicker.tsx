@@ -88,6 +88,7 @@ export function DateRangePicker({
   onChange,
   pricing,
   className = "",
+  onOpenChange,
 }: {
   checkIn: string;
   checkOut: string;
@@ -95,8 +96,14 @@ export function DateRangePicker({
   /** Show the average nightly price under each date. */
   pricing?: PickerPricing;
   className?: string;
+  /** Told when the calendar opens or closes (the embedded widget resizes its frame). */
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const [draft, setDraft] = useState<DateRange | undefined>(undefined);
   const [hover, setHover] = useState<Date | null>(null);
   const [month, setMonth] = useState<Date>(() => (checkIn ? parseISO(checkIn) : new Date()));

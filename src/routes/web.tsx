@@ -133,7 +133,10 @@ function WebLayout() {
             {brand.address && <p>{brand.address}</p>}
             <p className="flex flex-wrap gap-x-3">
               {brand.phone && (
-                <a href={`tel:${brand.phone.replace(/s/g, "")}`} className="hover:text-neutral-900">
+                <a
+                  href={`tel:${brand.phone.replace(/\s/g, "")}`}
+                  className="hover:text-neutral-900"
+                >
                   {brand.phone}
                 </a>
               )}
