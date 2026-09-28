@@ -49,7 +49,7 @@ Flujo: rama desde `main` → PR → CI en verde → squash merge (permisos ya co
 ```
 src/                                Frontend (TanStack Start/Router, React 19, Tailwind v4, shadcn, TanStack Query)
   routes/_app.*.tsx                 Panel: today, calendar, reservations, customers, messages, reports, reviews,
-                                    rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos),
+                                    rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos), team,
                                     travellers (registro de viajeros SES.HOSPEDAJES), invoices (VERI*FACTU)
   routes/web.*.tsx                  Web pública: hoteles, habitación, reservar, checkout, mi-reserva, chat, firma
   routes/embed.*.tsx                Widget incrustable (búsqueda y asistente) que carga public/embed.js
@@ -105,6 +105,7 @@ site/                               Web comercial de Melend/OS (landing, hostale
 | Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                                                                |
 | Ofertas en la web (rebajas y códigos)         | `hotel_offers()` (reglas de fecha en negativo + `promo_codes.published`), `HotelOffers.tsx`; canje en el motor (`validate_/claim_promo_code`)                                     |
 | Check-in online (registro de viajeros)        | `/web/checkin/$id` → `guest_save_traveller`/`guest_list_travellers` (misma escritura que recepción: `stay_traveller_write`) → firma `/web/sign`                                   |
+| Equipo (personal del hotel)                   | `routes/_app.team.tsx`, `list_staff()`, función `staff-invite`, trigger `guard_staff_changes`                                                                                     |
 | Estado del producto y despliegue              | `docs/estado-producto.md`, `DEPLOY.md`                                                                                                                                            |
 | Emails al huésped                             | Cola `guest_emails` (trigger en reservas) → `guest-emails-dispatch` (Resend con `RESEND_API_KEY` + `EMAIL_FROM`, si no simulado) · `_shared/email`; `scripts/emails-setup.mjs`    |
 | Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                                                                |
