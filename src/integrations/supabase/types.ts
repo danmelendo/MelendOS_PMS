@@ -3476,6 +3476,31 @@ export type Database = {
         }
       }
       guest_emails_tick: { Args: never; Returns: undefined }
+      guest_list_travellers: {
+        Args: { p_reservation: string; p_token: string }
+        Returns: {
+          document_hint: string
+          document_type: string
+          first_name: string
+          id: string
+          is_holder: boolean
+          is_minor: boolean
+          kinship: string
+          last_name1: string
+          last_name2: string
+          missing: string[]
+          nationality: string
+        }[]
+      }
+      guest_save_traveller: {
+        Args: {
+          p_data: Json
+          p_id?: string
+          p_reservation: string
+          p_token: string
+        }
+        Returns: string
+      }
       guest_stay: {
         Args: { p_id: string; p_token: string }
         Returns: {
@@ -3711,6 +3736,16 @@ export type Database = {
           p_token: string
         }
         Returns: undefined
+      }
+      stay_traveller_write: {
+        Args: {
+          p_by: string
+          p_data: Json
+          p_id: string
+          p_reservation: string
+          v_tenant: string
+        }
+        Returns: string
       }
       submit_review: {
         Args: {

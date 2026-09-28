@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebRouteImport } from './routes/web'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReservarOkRouteImport } from './routes/reservar-ok'
 import { Route as ReservarRouteImport } from './routes/reservar'
 import { Route as LoginRouteImport } from './routes/login'
@@ -45,6 +46,7 @@ import { Route as WebSignBookingIdRouteImport } from './routes/web.sign.$booking
 import { Route as WebRoomRoomIdRouteImport } from './routes/web.room.$roomId'
 import { Route as WebHotelHotelIdRouteImport } from './routes/web.hotel.$hotelId'
 import { Route as WebCheckoutBookingIdRouteImport } from './routes/web.checkout.$bookingId'
+import { Route as WebCheckinBookingIdRouteImport } from './routes/web.checkin.$bookingId'
 import { Route as WebChatBookingIdRouteImport } from './routes/web.chat.$bookingId'
 import { Route as WebBookingBookingIdRouteImport } from './routes/web.booking.$bookingId'
 import { Route as WebBookRoomIdRouteImport } from './routes/web.book.$roomId'
@@ -54,6 +56,11 @@ import { Route as WebInvoiceBookingIdInvoiceIdRouteImport } from './routes/web.i
 const WebRoute = WebRouteImport.update({
   id: '/web',
   path: '/web',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReservarOkRoute = ReservarOkRouteImport.update({
@@ -230,6 +237,11 @@ const WebCheckoutBookingIdRoute = WebCheckoutBookingIdRouteImport.update({
   path: '/checkout/$bookingId',
   getParentRoute: () => WebRoute,
 } as any)
+const WebCheckinBookingIdRoute = WebCheckinBookingIdRouteImport.update({
+  id: '/checkin/$bookingId',
+  path: '/checkin/$bookingId',
+  getParentRoute: () => WebRoute,
+} as any)
 const WebChatBookingIdRoute = WebChatBookingIdRouteImport.update({
   id: '/chat/$bookingId',
   path: '/chat/$bookingId',
@@ -263,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/web': typeof WebRouteWithChildren
   '/calendar': typeof AppCalendarRoute
   '/channels': typeof AppChannelsRoute
@@ -292,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
+  '/web/checkin/$bookingId': typeof WebCheckinBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
@@ -305,6 +319,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/calendar': typeof AppCalendarRoute
   '/channels': typeof AppChannelsRoute
   '/customers': typeof AppCustomersRoute
@@ -333,6 +348,7 @@ export interface FileRoutesByTo {
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
+  '/web/checkin/$bookingId': typeof WebCheckinBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
@@ -348,6 +364,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/web': typeof WebRouteWithChildren
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/channels': typeof AppChannelsRoute
@@ -377,6 +394,7 @@ export interface FileRoutesById {
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
+  '/web/checkin/$bookingId': typeof WebCheckinBookingIdRoute
   '/web/checkout/$bookingId': typeof WebCheckoutBookingIdRoute
   '/web/hotel/$hotelId': typeof WebHotelHotelIdRoute
   '/web/room/$roomId': typeof WebRoomRoomIdRoute
@@ -392,6 +410,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reservar'
     | '/reservar-ok'
+    | '/reset-password'
     | '/web'
     | '/calendar'
     | '/channels'
@@ -421,6 +440,7 @@ export interface FileRouteTypes {
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
+    | '/web/checkin/$bookingId'
     | '/web/checkout/$bookingId'
     | '/web/hotel/$hotelId'
     | '/web/room/$roomId'
@@ -434,6 +454,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reservar'
     | '/reservar-ok'
+    | '/reset-password'
     | '/calendar'
     | '/channels'
     | '/customers'
@@ -462,6 +483,7 @@ export interface FileRouteTypes {
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
+    | '/web/checkin/$bookingId'
     | '/web/checkout/$bookingId'
     | '/web/hotel/$hotelId'
     | '/web/room/$roomId'
@@ -476,6 +498,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reservar'
     | '/reservar-ok'
+    | '/reset-password'
     | '/web'
     | '/_app/calendar'
     | '/_app/channels'
@@ -505,6 +528,7 @@ export interface FileRouteTypes {
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
+    | '/web/checkin/$bookingId'
     | '/web/checkout/$bookingId'
     | '/web/hotel/$hotelId'
     | '/web/room/$roomId'
@@ -520,6 +544,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ReservarRoute: typeof ReservarRoute
   ReservarOkRoute: typeof ReservarOkRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   WebRoute: typeof WebRouteWithChildren
   EmbedAssistantRoute: typeof EmbedAssistantRoute
   EmbedSearchRoute: typeof EmbedSearchRoute
@@ -533,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/web'
       fullPath: '/web'
       preLoaderRoute: typeof WebRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reservar-ok': {
@@ -780,6 +812,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebCheckoutBookingIdRouteImport
       parentRoute: typeof WebRoute
     }
+    '/web/checkin/$bookingId': {
+      id: '/web/checkin/$bookingId'
+      path: '/checkin/$bookingId'
+      fullPath: '/web/checkin/$bookingId'
+      preLoaderRoute: typeof WebCheckinBookingIdRouteImport
+      parentRoute: typeof WebRoute
+    }
     '/web/chat/$bookingId': {
       id: '/web/chat/$bookingId'
       path: '/chat/$bookingId'
@@ -871,6 +910,7 @@ interface WebRouteChildren {
   WebBookRoomIdRoute: typeof WebBookRoomIdRoute
   WebBookingBookingIdRoute: typeof WebBookingBookingIdRoute
   WebChatBookingIdRoute: typeof WebChatBookingIdRoute
+  WebCheckinBookingIdRoute: typeof WebCheckinBookingIdRoute
   WebCheckoutBookingIdRoute: typeof WebCheckoutBookingIdRoute
   WebHotelHotelIdRoute: typeof WebHotelHotelIdRoute
   WebRoomRoomIdRoute: typeof WebRoomRoomIdRoute
@@ -886,6 +926,7 @@ const WebRouteChildren: WebRouteChildren = {
   WebBookRoomIdRoute: WebBookRoomIdRoute,
   WebBookingBookingIdRoute: WebBookingBookingIdRoute,
   WebChatBookingIdRoute: WebChatBookingIdRoute,
+  WebCheckinBookingIdRoute: WebCheckinBookingIdRoute,
   WebCheckoutBookingIdRoute: WebCheckoutBookingIdRoute,
   WebHotelHotelIdRoute: WebHotelHotelIdRoute,
   WebRoomRoomIdRoute: WebRoomRoomIdRoute,
@@ -903,6 +944,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ReservarRoute: ReservarRoute,
   ReservarOkRoute: ReservarOkRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   WebRoute: WebRouteWithChildren,
   EmbedAssistantRoute: EmbedAssistantRoute,
   EmbedSearchRoute: EmbedSearchRoute,

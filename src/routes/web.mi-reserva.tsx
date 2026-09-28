@@ -288,6 +288,20 @@ function PasswordSignIn() {
       >
         <LogIn className="h-4 w-4" /> {busy ? "Entrando…" : "Entrar"}
       </button>
+      <button
+        type="button"
+        className="w-full text-center text-xs text-neutral-500 underline-offset-4 hover:underline"
+        onClick={async () => {
+          if (!/^\S+@\S+\.\S+$/.test(email.trim())) return toast.error("Escribe primero tu email");
+          await supabase.auth.resetPasswordForEmail(email.trim(), {
+            redirectTo: `${window.location.origin}/reset-password?next=/web/mi-reserva`,
+          });
+          // Same answer whether the account exists or not.
+          toast.success("Si tienes cuenta, te llegará un email para elegir una contraseña nueva");
+        }}
+      >
+        ¿Has olvidado la contraseña?
+      </button>
     </form>
   );
 }
