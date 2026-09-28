@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   CalendarClock,
@@ -20,13 +28,15 @@ import { BTN, FIELD, Stat } from "./admin-ui";
 import { ClientsTab, draftFromLead } from "./AdminClients";
 import { BillingTab } from "./AdminBilling";
 import { SecurityTab } from "./AdminSecurity";
+import { DeviceGate } from "./AdminDevice";
+import { checkDevice, sessionIdOf, type DeviceStatus } from "../lib/device";
 import { LEAD_STATUSES, sales, type Lead, type LeadStatus } from "../lib/supabase";
 import { PLANS, type PlanId } from "../../supabase/functions/_shared/plans.ts";
 import { DEMO_TIMEZONE } from "../../supabase/functions/_shared/slots.ts";
 
 // Sales admin panel: leads from the website, customers and what we bill them.
-// Access is checked in the database (sales_admins + RLS); this page only shows
-// what the server returns.
+// Access is checked in the database (sales_admins + RLS, and only from a
+// trusted device: lib/device.ts); this page only shows what the server returns.
 
 const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
   new Date(iso).toLocaleString("es-ES", { timeZone: DEMO_TIMEZONE, ...opts });
@@ -54,10 +64,20 @@ const STATUS_TONE: Record<LeadStatus, string> = {
   no_show: "bg-destructive/10 text-destructive",
 };
 
+// The trust of a session lasts 12 hours (device-session); check again well
+// before it runs out.
+const RECHECK_MS = 6 * 3600_000;
+
+type DeviceCheck =
+  | { device: { id: string; name: string; status: DeviceStatus }; problem: null }
+  | { device: null; problem: string };
+
 export function AdminPage() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  // ok, not_admin (no admin account) or ip_blocked (not from an allowed network).
-  const [access, setAccess] = useState<{ status: string; ip: string | null } | null>(null);
+  const [account, setAccount] = useState<boolean | null>(null);
+  const [check, setCheck] = useState<DeviceCheck | null>(null);
+  const sessionRef = useRef<Session | null>(null);
+  sessionRef.current = session ?? null;
 
   useEffect(() => {
     const db = sales();
@@ -66,53 +86,71 @@ export function AdminPage() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!session) return setAccess(null);
-    sales()
-      .rpc("sales_access")
-      .then(({ data }) =>
-        setAccess(
-          (data as { status: string; ip: string | null }[] | null)?.[0] ?? {
-            status: "not_admin",
-            ip: null,
-          },
-        ),
-      );
-  }, [session]);
+  // Token refreshes and the step to aal2 keep the session id: only a new
+  // sign-in (or signing out) starts the checks again.
+  const sessionId = session ? sessionIdOf(session) : null;
 
-  if (session === undefined || (session && access === null))
-    return (
-      <Shell>
-        <p className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Cargando…
-        </p>
-      </Shell>
-    );
+  const recheck = useCallback(async (): Promise<DeviceStatus | null> => {
+    const s = sessionRef.current;
+    if (!s) return null;
+    try {
+      const device = await checkDevice(s);
+      setCheck({ device, problem: null });
+      return device.status;
+    } catch (e) {
+      setCheck({ device: null, problem: (e as Error).message });
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    setAccount(null);
+    setCheck(null);
+    if (!sessionId) return;
+    let live = true;
+    sales()
+      .rpc("is_sales_account")
+      .then(({ data }) => {
+        if (!live) return;
+        setAccount(data === true);
+        if (data === true) recheck();
+      });
+    const timer = window.setInterval(recheck, RECHECK_MS);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+    };
+  }, [sessionId, recheck]);
+
+  const loading = (
+    <Shell>
+      <p className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Cargando…
+      </p>
+    </Shell>
+  );
+  if (session === undefined) return loading;
   if (!session) return <Login />;
-  if (access?.status !== "ok")
+  if (account === null) return loading;
+  if (!account)
     return (
       <Shell email={session.user.email}>
         <div className="mx-auto max-w-md p-10 text-center">
-          {access?.status === "ip_blocked" ? (
-            <>
-              <p className="font-semibold">No se puede entrar desde esta red.</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                El panel solo se abre desde las direcciones autorizadas. Tu IP:{" "}
-                <code>{access.ip ?? "desconocida"}</code>
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="font-semibold">Esta cuenta no tiene acceso al panel.</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Pide que la añadan a la lista de administradores.
-              </p>
-            </>
-          )}
+          <p className="font-semibold">Esta cuenta no tiene acceso al panel.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pide que la añadan a la lista de administradores.
+          </p>
         </div>
       </Shell>
     );
-  return <Workspace email={session.user.email} />;
+  if (check === null) return loading;
+  if (check.device?.status !== "trusted")
+    return (
+      <Shell email={session.user.email}>
+        <DeviceGate device={check.device} problem={check.problem} onRecheck={recheck} />
+      </Shell>
+    );
+  return <Workspace email={session.user.email} onDeviceChange={recheck} />;
 }
 
 const TABS = {
@@ -127,7 +165,13 @@ const tabFromHash = (): Tab => {
   return h in TABS ? (h as Tab) : "leads";
 };
 
-function Workspace({ email }: { email?: string }) {
+function Workspace({
+  email,
+  onDeviceChange,
+}: {
+  email?: string;
+  onDeviceChange: () => Promise<unknown>;
+}) {
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const [pending, setPending] = useState<ReturnType<typeof draftFromLead> | null>(null);
   useEffect(() => {
@@ -167,7 +211,7 @@ function Workspace({ email }: { email?: string }) {
       )}
       {tab === "clientes" && <ClientsTab pending={pending} onPendingUsed={clearPending} />}
       {tab === "facturacion" && <BillingTab />}
-      {tab === "seguridad" && <SecurityTab />}
+      {tab === "seguridad" && <SecurityTab onDeviceChange={onDeviceChange} />}
     </Shell>
   );
 }

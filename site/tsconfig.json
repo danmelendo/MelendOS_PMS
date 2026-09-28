@@ -12,5 +12,5 @@
     "isolatedModules": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "supabase/functions/_shared", "vite.config.ts", "middleware.ts"]
+  "include": ["src", "supabase/functions/_shared", "vite.config.ts"]
 }

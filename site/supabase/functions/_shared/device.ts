@@ -22,7 +22,7 @@ export function toBase64Url(bytes: ArrayBuffer | Uint8Array): string {
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-export function fromBase64Url(text: string): Uint8Array {
+export function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
   const b64 = text.replace(/-/g, "+").replace(/_/g, "/");
   const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));

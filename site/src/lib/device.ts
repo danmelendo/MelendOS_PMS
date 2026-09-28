@@ -65,10 +65,14 @@ async function register(d: Stored): Promise<Stored> {
   return saved;
 }
 
+/** The Supabase session id in the JWT: it survives token refreshes and aal2. */
+export function sessionIdOf(session: Session): string {
+  return JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")))
+    .session_id as string;
+}
+
 async function prove(d: Stored, session: Session): Promise<{ status: DeviceStatus; name?: string }> {
-  const sessionId = JSON.parse(
-    atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
-  ).session_id as string;
+  const sessionId = sessionIdOf(session);
   const timestamp = Date.now();
   const signature = await signDeviceMessage(
     d.keys.privateKey,
