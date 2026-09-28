@@ -70,42 +70,69 @@ export async function checkCname(domain: string, expected: string): Promise<DnsC
 
 export type HotelWebData = NonNullable<ReturnType<typeof useHotelWeb>["data"]>;
 
+/** Formats the hotel-media bucket accepts. */
+const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+const MAX_BYTES = 5 * 1024 * 1024;
+
+function canvasBlob(canvas: HTMLCanvasElement, type: string, quality?: number) {
+  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
 /**
- * Shrinks a photo in the browser (longest side ≤ 2000 px, WebP) so the web
- * stays fast, and uploads it to the hotel's folder of the public hotel-media
- * bucket. Returns its public URL.
+ * Shrinks a photo in the browser (longest side ≤ 2000 px) so the web stays
+ * fast. WebP when the browser can write it (Safari cannot: it silently gives
+ * PNG), otherwise JPEG, or PNG for images with transparency such as logos.
+ */
+async function shrink(file: File, keepAlpha: boolean): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close?.();
+  const webp = await canvasBlob(canvas, "image/webp", 0.85);
+  if (webp?.type === "image/webp") return webp;
+  const fallback = keepAlpha
+    ? await canvasBlob(canvas, "image/png")
+    : await canvasBlob(canvas, "image/jpeg", 0.85);
+  if (!fallback) throw new Error("No se pudo procesar la imagen");
+  return fallback;
+}
+
+/**
+ * Uploads a photo of the hotel's template web to its folder of the public
+ * hotel-media bucket (shrunk first) and returns its public URL.
  */
 export async function uploadHotelImage(
   tenantId: string,
   kind: string,
   file: File,
 ): Promise<string> {
-  if (!file.type.startsWith("image/")) throw new Error("Solo se pueden subir imágenes");
-  let body: Blob = file;
-  let ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  if (file.type !== "image/svg+xml") {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    body = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("No se pudo procesar la imagen"))),
-        "image/webp",
-        0.85,
-      ),
-    );
-    ext = "webp";
-  } else {
-    throw new Error("Sube el logo en PNG, JPG o WebP");
+  let body: Blob;
+  try {
+    body = await shrink(file, kind === "logo");
+  } catch {
+    // The browser cannot read it (e.g. HEIC photos from an iPhone on Windows):
+    // upload it as it is if the web can show it.
+    if (!ACCEPTED.includes(file.type))
+      throw new Error(
+        "Formato no admitido: usa JPG, PNG o WebP (las fotos HEIC del iPhone, expórtalas como JPG)",
+      );
+    body = file;
   }
-  if (body.size > 5 * 1024 * 1024) throw new Error("La imagen pesa más de 5 MB");
-  const path = `${tenantId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  if (!ACCEPTED.includes(body.type)) throw new Error("Formato no admitido: usa JPG, PNG o WebP");
+  if (body.size > MAX_BYTES) throw new Error("La imagen pesa más de 5 MB incluso reducida");
+  const path = `${tenantId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${EXT[body.type]}`;
   const { error } = await supabase.storage
     .from("hotel-media")
-    .upload(path, body, { contentType: "image/webp", upsert: false });
-  if (error) throw new Error(error.message);
+    .upload(path, body, { contentType: body.type, upsert: false });
+  if (error) throw new Error(`No se pudo subir la imagen: ${error.message}`);
   return supabase.storage.from("hotel-media").getPublicUrl(path).data.publicUrl;
 }

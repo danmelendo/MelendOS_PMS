@@ -31,6 +31,21 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
   });
   const [gallery, setGallery] = useState<string[]>(b.gallery);
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
+  // Photos are saved as soon as they are uploaded, removed or reordered: no
+  // "Guardar" to forget.
+  const persist = (brand: Record<string, unknown>, done: string) =>
+    save.mutate(
+      { brand },
+      { onSuccess: () => toast.success(done), onError: (e) => toast.error(e.message) },
+    );
+  const setImage = (k: "logo_url" | "hero_image_url") => (url: string) => {
+    set(k)(url);
+    persist({ [k]: url }, url ? "Imagen guardada" : "Imagen quitada");
+  };
+  const setPhotos = (next: string[]) => {
+    setGallery(next);
+    persist({ gallery: next }, "Galería guardada");
+  };
 
   const text = (k: keyof typeof f, label: string, max: number, placeholder = "") => (
     <div className="space-y-1">
@@ -69,7 +84,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
             value={f.logo_url}
             tenantId={tenantId}
             kind="logo"
-            onChange={set("logo_url")}
+            onChange={setImage("logo_url")}
           />
           <ImageField
             label="Foto de portada"
@@ -77,7 +92,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
             value={f.hero_image_url}
             tenantId={tenantId}
             kind="cover"
-            onChange={set("hero_image_url")}
+            onChange={setImage("hero_image_url")}
           />
         </section>
 
@@ -136,7 +151,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
           {text("facebook", "Facebook (URL)", 200, "https://facebook.com/tuhotel")}
         </section>
 
-        <GalleryField tenantId={tenantId} value={gallery} onChange={setGallery} />
+        <GalleryField tenantId={tenantId} value={gallery} onChange={setPhotos} />
 
         <Button
           disabled={save.isPending}
@@ -150,7 +165,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
             )
           }
         >
-          {save.isPending ? "Guardando…" : "Guardar la web"}
+          {save.isPending ? "Guardando…" : "Guardar textos y contacto"}
         </Button>
       </CardContent>
     </Card>
@@ -213,7 +228,8 @@ function ImageField({
         ref={input}
         type="file"
         accept="image/*"
-        className="hidden"
+        className="sr-only"
+        tabIndex={-1}
         onChange={async (e) => {
           const file = e.target.files?.[0];
           e.target.value = "";
@@ -309,7 +325,8 @@ function GalleryField({
         type="file"
         accept="image/*"
         multiple
-        className="hidden"
+        className="sr-only"
+        tabIndex={-1}
         onChange={async (e) => {
           const files = [...(e.target.files ?? [])].slice(0, MAX_GALLERY - value.length);
           e.target.value = "";
