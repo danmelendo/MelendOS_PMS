@@ -467,3 +467,6 @@ verify_jwt = false
 
 [functions.guest-emails-dispatch]
 verify_jwt = false
+
+[functions.staff-invite]
+verify_jwt = false
