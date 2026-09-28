@@ -3284,4 +3284,42 @@ describe.skipIf(!DB_URL)("RLS", () => {
       );
     });
   });
+
+  describe("bookings imported from the previous system", () => {
+    it("send no email nor SES booking report when created, but the check-in report does go", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        `insert into public.ses_settings (tenant_id, enabled) values ($1, true)
+         on conflict (tenant_id) do update set enabled = true`,
+        [ids.lumen],
+      );
+      const id = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, payment_mode)
+           values ($1, $2, now() + interval '3400 days', now() + interval '3401 days', 'confirmed', 100, 'import', 'at_hotel')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      const count = async (table: string, extra = "") =>
+        (
+          await client.query(
+            `select count(*)::int as n from public.${table} where reservation_id = $1 ${extra}`,
+            [id],
+          )
+        ).rows[0].n;
+      const onCreate = {
+        emails: await count("guest_emails"),
+        ses: await count("ses_communications"),
+      };
+      await client.query("update public.reservations set status = 'in_progress' where id = $1", [
+        id,
+      ]);
+      const checkIn = await count("ses_communications", "and kind = 'PV'");
+      await client.query("rollback to savepoint setup");
+
+      expect(onCreate).toEqual({ emails: 0, ses: 0 });
+      expect(checkIn).toBe(1);
+    });
+  });
 });

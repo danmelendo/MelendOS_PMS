@@ -306,5 +306,6 @@ export const CHANNEL_LABELS: Record<string, string> = {
   ota: "OTAs",
   tour_operator: "Touroperadores",
   member: "Club (app)",
+  import: "Importadas del sistema anterior",
   other: "Otros",
 };
