@@ -5,7 +5,7 @@
 // Called every 10 minutes by the database (ses_dispatch_tick, with its own key
 // SES_CRON_KEY; set up by scripts/ses-setup.mjs), with the service key (every
 // hotel), or by staff from the panel ("Enviar ahora", their hotel only).
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { dispatchTenant, type DispatchReport } from "../_shared/ses/dispatch.ts";
 import { supabaseSesStore } from "../_shared/ses/supabase-store.ts";
 import { transportFor } from "../_shared/ses/transport.ts";
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
   const tenantId = body.tenant_id ?? null;
   if (!service) {
     const { data: auth } =
-      bearer.split(".").length === 3 ? await db.auth.getUser(bearer) : { data: null };
+      bearer.split(".").length === 3 ? await verifiedUser(db, bearer) : { data: null };
     const { data: member } =
       auth?.user && tenantId
         ? await db

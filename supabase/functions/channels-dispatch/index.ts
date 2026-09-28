@@ -4,7 +4,7 @@
 // through its provider's adapter: one ARI message per channel covering the
 // dates that changed. Called by staff from the panel ("Enviar ahora", their
 // hotel only) or by a scheduled job with the service key (every hotel).
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { adapterFor, buildAri, outboxRange } from "../_shared/channels/outbound.ts";
 import { supabaseChannelStore } from "../_shared/channels/supabase-store.ts";
 
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   let tenantId: string | null = body.tenant_id ?? null;
   if (!service) {
     const { data: auth } =
-      bearer.split(".").length === 3 ? await db.auth.getUser(bearer) : { data: null };
+      bearer.split(".").length === 3 ? await verifiedUser(db, bearer) : { data: null };
     const { data: member } =
       auth?.user && tenantId
         ? await db

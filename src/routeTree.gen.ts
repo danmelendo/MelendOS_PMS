@@ -42,6 +42,7 @@ import { Route as AppExtrasRouteImport } from './routes/_app.extras'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppChannelsRouteImport } from './routes/_app.channels'
 import { Route as AppCalendarRouteImport } from './routes/_app.calendar'
+import { Route as AppAccountRouteImport } from './routes/_app.account'
 import { Route as WebUploadBookingIdRouteImport } from './routes/web.upload.$bookingId'
 import { Route as WebSignBookingIdRouteImport } from './routes/web.sign.$bookingId'
 import { Route as WebRoomRoomIdRouteImport } from './routes/web.room.$roomId'
@@ -219,6 +220,11 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AppRoute,
+} as any)
 const WebUploadBookingIdRoute = WebUploadBookingIdRouteImport.update({
   id: '/upload/$bookingId',
   path: '/upload/$bookingId',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/reservar-ok': typeof ReservarOkRoute
   '/reset-password': typeof ResetPasswordRoute
   '/web': typeof WebRouteWithChildren
+  '/account': typeof AppAccountRoute
   '/calendar': typeof AppCalendarRoute
   '/channels': typeof AppChannelsRoute
   '/customers': typeof AppCustomersRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/reservar': typeof ReservarRoute
   '/reservar-ok': typeof ReservarOkRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/account': typeof AppAccountRoute
   '/calendar': typeof AppCalendarRoute
   '/channels': typeof AppChannelsRoute
   '/customers': typeof AppCustomersRoute
@@ -382,6 +390,7 @@ export interface FileRoutesById {
   '/reservar-ok': typeof ReservarOkRoute
   '/reset-password': typeof ResetPasswordRoute
   '/web': typeof WebRouteWithChildren
+  '/_app/account': typeof AppAccountRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/channels': typeof AppChannelsRoute
   '/_app/customers': typeof AppCustomersRoute
@@ -430,6 +439,7 @@ export interface FileRouteTypes {
     | '/reservar-ok'
     | '/reset-password'
     | '/web'
+    | '/account'
     | '/calendar'
     | '/channels'
     | '/customers'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/reservar'
     | '/reservar-ok'
     | '/reset-password'
+    | '/account'
     | '/calendar'
     | '/channels'
     | '/customers'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/reservar-ok'
     | '/reset-password'
     | '/web'
+    | '/_app/account'
     | '/_app/calendar'
     | '/_app/channels'
     | '/_app/customers'
@@ -808,6 +820,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCalendarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/account': {
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/web/upload/$bookingId': {
       id: '/web/upload/$bookingId'
       path: '/upload/$bookingId'
@@ -896,6 +915,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRoute
   AppCalendarRoute: typeof AppCalendarRoute
   AppChannelsRoute: typeof AppChannelsRoute
   AppCustomersRoute: typeof AppCustomersRoute
@@ -919,6 +939,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRoute,
   AppCalendarRoute: AppCalendarRoute,
   AppChannelsRoute: AppChannelsRoute,
   AppCustomersRoute: AppCustomersRoute,

@@ -3177,4 +3177,50 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(suspended).toEqual({ ok: true, value: null });
     });
   });
+
+  describe("two-step verification of staff", () => {
+    it("once turned on, a hotel's rights need a session verified with the second factor", async () => {
+      await client.query("savepoint setup");
+      const member = async (aal: string | null) => {
+        await client.query("savepoint probe");
+        try {
+          await client.query(
+            "select set_config('request.jwt.claims', $1, true), set_config('request.headers', '{}', true)",
+            [
+              JSON.stringify({
+                sub: users.lumenAdmin,
+                role: "authenticated",
+                ...(aal ? { aal } : {}),
+              }),
+            ],
+          );
+          await client.query("set local role authenticated");
+          const r = (
+            await client.query(
+              `select public.is_tenant_member($1) as member, public.has_tenant_role($1, 'admin') as admin,
+                      (select count(*)::int from public.rooms where tenant_id = $1 and not active) as hidden_rooms`,
+              [ids.lumen],
+            )
+          ).rows[0];
+          return r;
+        } finally {
+          await client.query("rollback to savepoint probe");
+          await client.query("reset role");
+        }
+      };
+      const before = await member(null);
+      await client.query(
+        `insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at)
+         values (gen_random_uuid(), $1, 'test', 'totp', 'verified', now(), now())`,
+        [users.lumenAdmin],
+      );
+      const withoutSecondStep = await member("aal1");
+      const verified = await member("aal2");
+      await client.query("rollback to savepoint setup");
+
+      expect(before).toMatchObject({ member: true, admin: true });
+      expect(withoutSecondStep).toMatchObject({ member: false, admin: false, hidden_rooms: 0 });
+      expect(verified).toMatchObject({ member: true, admin: true });
+    });
+  });
 });

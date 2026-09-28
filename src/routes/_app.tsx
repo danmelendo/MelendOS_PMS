@@ -7,6 +7,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { CopilotWidget } from "@/components/CopilotWidget";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
+import { useAssurance } from "@/lib/mfa";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   const { session, loading } = useAuth();
   const { isGroup, canOperate } = useRoles();
+  const aal = useAssurance(!!session);
   // Panel scrollbars (styles.css: html.panel).
   useEffect(() => {
     document.documentElement.classList.add("panel");
@@ -27,6 +29,8 @@ function AppLayout() {
       </div>
     );
   if (!session) return <Navigate to="/login" />;
+  // Two-step verification on and not done in this session: the code first.
+  if (aal.data?.needsCode) return <Navigate to="/login" />;
 
   return (
     <SidebarProvider>

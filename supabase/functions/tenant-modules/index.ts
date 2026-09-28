@@ -5,7 +5,7 @@
 // unless the project has the DEMO_ACCESS=true secret (in production packages
 // are contracted with sales and set by the platform, never by the hotel).
 // Caller: an admin of that hotel (Authorization: Bearer <user JWT>).
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { PACKAGE_IDS } from "../_shared/domain/features.ts";
 
 Deno.serve(async (req) => {
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
   const db = adminClient();
   const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const { data: auth } = jwt.split(".").length === 3 ? await db.auth.getUser(jwt) : { data: null };
+  const { data: auth } = jwt.split(".").length === 3 ? await verifiedUser(db, jwt) : { data: null };
   const userId = auth?.user?.id;
   const { data: member } = userId
     ? await db
