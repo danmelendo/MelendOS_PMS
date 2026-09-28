@@ -63,6 +63,7 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
     onError: (e: Error) => toast.error(e.message),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["refundable", reservationId] });
+      qc.invalidateQueries({ queryKey: ["pending_refunds"] });
       qc.invalidateQueries({ queryKey: ["reservations"] });
     },
   });
