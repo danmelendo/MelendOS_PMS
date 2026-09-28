@@ -32,6 +32,7 @@ import {
   PlugZap,
   Boxes,
   UsersRound,
+  Activity,
   Network,
   ShieldCheck,
   Receipt,
@@ -76,6 +77,7 @@ const adminItems: NavItem[] = [
   { to: "/channels", label: "Canales", icon: Network, feature: "channels" },
   { to: "/integrations", label: "Integraciones IA", icon: PlugZap, feature: "mcp" },
   { to: "/team", label: "Equipo", icon: UsersRound },
+  { to: "/activity", label: "Actividad y consumo", icon: Activity },
   { to: "/plan", label: "Plan y módulos", icon: Boxes },
 ];
 

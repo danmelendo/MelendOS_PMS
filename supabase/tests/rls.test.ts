@@ -3223,4 +3223,27 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(verified).toMatchObject({ member: true, admin: true });
     });
   });
+
+  describe("activity and consumption", () => {
+    it("is for the hotel's management only", async () => {
+      const read = (who: string, tenant: string) =>
+        attempt(
+          "authenticated",
+          who,
+          async () =>
+            (await client.query("select public.hotel_activity($1, 30) as a", [tenant])).rows[0].a,
+        );
+      const admin = await read(users.lumenAdmin, ids.lumen);
+      const reception = await read(users.lumenReception, ids.lumen);
+      const other = await read(users.alboraAdmin, ids.lumen);
+      expect(admin.ok && Object.keys(admin.value).sort()).toEqual(
+        ["ai", "errors", "mcp_calls", "queues", "since", "storage"].sort(),
+      );
+      expect(admin.ok && Object.keys(admin.value.queues).sort()).toEqual(
+        ["channels", "emails", "ses", "verifactu"].sort(),
+      );
+      expect(reception.ok).toBe(false);
+      expect(other.ok).toBe(false);
+    });
+  });
 });

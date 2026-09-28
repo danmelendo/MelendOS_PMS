@@ -3565,6 +3565,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      hotel_activity: {
+        Args: { p_days?: number; p_tenant: string }
+        Returns: Json
+      }
       hotel_cancellation_penalty: {
         Args: { p_tenant: string }
         Returns: string
@@ -3749,6 +3753,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      staff_mfa_ok: { Args: never; Returns: boolean }
       stay_traveller_write: {
         Args: {
           p_by: string
