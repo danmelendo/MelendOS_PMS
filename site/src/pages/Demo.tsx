@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowRight, CalendarPlus, Clock, Loader2, PhoneCall, Video } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { HeroPhoto } from "../components/HeroPhoto";
 import { Marker, Tick } from "../components/ui";
 import { PAGES, SALES } from "../config";
 import { LeadError, fetchSlots, submitLead } from "../lib/api";
@@ -213,7 +214,7 @@ export function DemoPage() {
   return (
     <Layout page="demo">
       <section className="lamp relative overflow-hidden bg-night text-navy-foreground">
-        <div aria-hidden="true" className="ledger-grid absolute inset-0" />
+        <HeroPhoto />
         <div className="relative mx-auto max-w-7xl px-4 pt-14 pb-24 sm:px-6 lg:px-8">
           <div className="rise">
             <Marker n="Demo" onNight>

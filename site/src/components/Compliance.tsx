@@ -26,7 +26,7 @@ export function ComplianceLedger({ className = "" }: { className?: string }) {
         {COMPLIANCE.map((c, i) => (
           <li
             key={c.name}
-            className="grid gap-3 px-5 py-5 sm:grid-cols-[auto_1fr_auto] sm:items-start"
+            className="glow-row grid gap-3 px-5 py-5 sm:grid-cols-[auto_1fr_auto] sm:items-start"
             data-reveal
             style={{ ["--d" as string]: `${150 + i * 110}ms` }}
           >

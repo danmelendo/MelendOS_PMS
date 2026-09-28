@@ -19,6 +19,7 @@ export function mount(page: ReactNode) {
   if (root.hasChildNodes()) hydrateRoot(root, tree);
   else createRoot(root).render(tree);
   revealOnScroll();
+  focusOnScroll();
   spotlight();
 }
 
@@ -44,6 +45,29 @@ function revealOnScroll() {
     document.querySelectorAll("[data-reveal]:not(.is-in)").forEach((el) => io.observe(el));
   watch();
   // Content rendered later (tabs, fetched data) gets observed too.
+  new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+}
+
+/**
+ * Cards (.glow) and rows (.glow-row) get .is-focus while they cross the middle
+ * of the screen: the emphasis a cursor gives on desktop, also on phones.
+ */
+function focusOnScroll() {
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) e.target.classList.toggle("is-focus", e.isIntersecting);
+    },
+    { rootMargin: "-47% 0px -47% 0px" },
+  );
+  const seen = new WeakSet<Element>();
+  const watch = () =>
+    document.querySelectorAll(".glow, .glow-row").forEach((el) => {
+      if (seen.has(el)) return;
+      seen.add(el);
+      io.observe(el);
+    });
+  watch();
   new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
 }
 

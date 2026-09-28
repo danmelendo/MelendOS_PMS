@@ -1,5 +1,6 @@
 import { FileText, UserCheck } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { HeroPhoto } from "../components/HeroPhoto";
 import { ComplianceLedger } from "../components/Compliance";
 import { DemoAgenda } from "../components/DemoAgenda";
 import { Marker, SectionHead } from "../components/ui";
@@ -36,7 +37,7 @@ export function CompliancePage() {
   return (
     <Layout page="compliance">
       <section className="lamp relative overflow-hidden bg-night text-navy-foreground">
-        <div aria-hidden="true" className="ledger-grid absolute inset-0" />
+        <HeroPhoto />
         <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-24 sm:px-6 lg:px-8">
           <div className="rise">
             <Marker n="Normativa" onNight>
@@ -60,10 +61,12 @@ export function CompliancePage() {
             data-reveal
             data-spotlight
             style={{ ["--d" as string]: `${i * 120}ms` }}
-            className={`surface rounded-2xl p-7 sm:p-9 ${i === 1 ? "md:mt-12" : ""}`}
+            className={`surface glow rounded-2xl p-7 sm:p-9 ${i === 1 ? "md:mt-12" : ""}`}
           >
             <div className="flex items-start justify-between gap-4">
-              <h2 className="font-display text-[2.4rem] leading-none">{r.name}</h2>
+              <h2 className="font-display min-w-0 text-[1.85rem] leading-none break-words sm:text-[2.4rem]">
+                {r.name}
+              </h2>
               <r.icon className="h-5 w-5 shrink-0 text-brass-deep" aria-hidden="true" />
             </div>
             <p className="font-figure mt-3 text-xs text-stone">{r.law}</p>

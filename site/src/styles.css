@@ -1,5 +1,4 @@
-@import "@fontsource/instrument-serif/latin-400.css";
-@import "@fontsource/instrument-serif/latin-400-italic.css";
+@import "@fontsource-variable/archivo/wdth.css";
 @import "@fontsource-variable/geist/wght.css";
 @import "@fontsource-variable/geist-mono/wght.css";
 @import "tailwindcss" source(none);
@@ -14,16 +13,16 @@
  * stone and a mineral green are the site's own. Colour carries meaning:
  * brass = the one thing to act on, mineral = done / included, night = product.
  *
- * Type: Instrument Serif for display (editorial, hospitality), Geist for the
- * interface and reading, Geist Mono for figures, times and room numbers (the
- * reception ledger).
+ * Type: Archivo for display (a sober grotesque, slightly narrow: serious,
+ * not ornate), Geist for the interface and reading, Geist Mono for figures,
+ * times and room numbers (the reception ledger).
  *
  * Product mock-ups sit inside `.product-ui`, which restores the panel's real
  * tokens: what visitors see there is what the software looks like.
  */
 @theme inline {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-display: "Archivo Variable", "Geist Variable", ui-sans-serif, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
 
   --radius-sm: 4px;
@@ -167,9 +166,16 @@
 /* ── Typography ─────────────────────────────────────────────────────────── */
 @utility font-display {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.02;
+  font-weight: 620;
+  font-stretch: 92%;
+  letter-spacing: -0.028em;
+  line-height: 1.04;
+}
+/* Emphasis in headlines is colour, not italics. */
+.font-display em,
+h1 em,
+h2 em {
+  font-style: normal;
 }
 @utility font-figure {
   font-family: var(--font-mono);
@@ -202,21 +208,6 @@
     ),
     radial-gradient(30rem 20rem at 8% 100%, oklch(0.52 0.08 168 / 0.1), transparent 70%);
 }
-/* The planning board as a background texture: rooms x days. */
-@utility ledger-grid {
-  background-image:
-    linear-gradient(to right, oklch(1 0 0 / 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(1 0 0 / 0.045) 1px, transparent 1px);
-  background-size: 56px 44px;
-  mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
-}
-@utility ledger-grid-light {
-  background-image:
-    linear-gradient(to right, oklch(0.21 0.032 262 / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.21 0.032 262 / 0.05) 1px, transparent 1px);
-  background-size: 56px 44px;
-}
-
 /* Cards that catch the light where the cursor is (set by mount.tsx). */
 [data-spotlight] {
   position: relative;
@@ -414,9 +405,56 @@
   }
 }
 
+/* Emphasis: cards light up (brass edge, warm halo, a small lift) when the
+   cursor is on them or when scrolling brings them to the middle of the screen
+   (mount.tsx adds .is-focus), so phones get the same cue. Rows only tint.
+   Declared after the reveals so these win once a card has appeared. */
+.glow,
+.js [data-reveal].is-in.glow {
+  transition:
+    box-shadow 450ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 450ms ease,
+    transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: 0ms;
+}
+.glow.is-focus,
+.js [data-reveal].is-in.glow.is-focus {
+  border-color: oklch(0.7 0.11 78 / 0.6);
+  box-shadow:
+    0 0 0 1px oklch(0.78 0.12 80 / 0.3),
+    0 24px 56px -26px oklch(0.62 0.12 70 / 0.6),
+    var(--shadow-lift);
+}
+.glow-row,
+.js [data-reveal].is-in.glow-row {
+  transition: background-color 400ms ease;
+  transition-delay: 0ms;
+}
+.glow-row.is-focus {
+  background-color: oklch(0.78 0.12 80 / 0.08);
+}
+@media (hover: hover) and (pointer: fine) {
+  .glow:hover,
+  .js [data-reveal].is-in.glow:hover {
+    border-color: oklch(0.7 0.11 78 / 0.7);
+    box-shadow:
+      0 0 0 1px oklch(0.78 0.12 80 / 0.4),
+      0 28px 60px -26px oklch(0.62 0.12 70 / 0.7),
+      var(--shadow-lift);
+    transform: translateY(-3px);
+  }
+  .glow-row:hover {
+    background-color: oklch(0.78 0.12 80 / 0.1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .glow:hover,
+  .js [data-reveal].is-in.glow:hover {
+    transform: none;
   }
   .rise,
   .drift-in,
@@ -431,6 +469,8 @@
     transition: none;
   }
   [data-spotlight]::after,
+  .glow,
+  .glow-row,
   .stay-bar,
   .lean svg:last-child,
   .btn {

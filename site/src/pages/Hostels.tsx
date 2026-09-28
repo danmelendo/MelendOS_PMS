@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { HeroPhoto } from "../components/HeroPhoto";
 import { ComplianceLedger } from "../components/Compliance";
 import { DemoAgenda } from "../components/DemoAgenda";
 import { PanelMock, WebMock } from "../components/Mockups";
@@ -46,7 +47,7 @@ export function HostelsPage() {
   return (
     <Layout page="hostels">
       <section className="lamp relative overflow-hidden bg-night text-navy-foreground">
-        <div aria-hidden="true" className="ledger-grid absolute inset-0" />
+        <HeroPhoto />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 pt-14 pb-24 sm:px-6 lg:grid-cols-[1fr_1fr] lg:px-8 lg:pt-20 lg:pb-28">
           <div>
             <div className="rise">
@@ -95,7 +96,7 @@ export function HostelsPage() {
               key={p.pain}
               data-reveal
               style={{ ["--d" as string]: `${i * 90}ms` }}
-              className="grid gap-3 py-8 md:grid-cols-[4rem_1fr_1fr] md:gap-8"
+              className="glow-row -mx-4 grid gap-3 rounded-xl px-4 py-8 md:grid-cols-[4rem_1fr_1fr] md:gap-8"
             >
               <span className="font-figure text-sm text-brass-deep">0{i + 1}</span>
               <p className="font-display text-[1.75rem] leading-tight">{p.pain}</p>
@@ -141,7 +142,7 @@ export function HostelsPage() {
               className="absolute inset-x-6 -bottom-3 h-full rounded-2xl bg-sand"
               style={{ transform: "rotate(1.4deg)" }}
             />
-            <div className="surface-lift relative rounded-2xl px-6 pt-6 pb-5">
+            <div className="surface-lift glow relative rounded-2xl px-6 pt-6 pb-5">
               <div className="flex items-baseline justify-between border-b border-dashed pb-4">
                 <p className="font-display text-2xl">La cuenta</p>
                 <p className="font-figure text-xs text-stone">Hostal · 10 hab.</p>
