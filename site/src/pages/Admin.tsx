@@ -19,6 +19,7 @@ import { Logo } from "../components/Layout";
 import { BTN, FIELD, Stat } from "./admin-ui";
 import { ClientsTab, draftFromLead } from "./AdminClients";
 import { BillingTab } from "./AdminBilling";
+import { SecurityTab } from "./AdminSecurity";
 import { LEAD_STATUSES, sales, type Lead, type LeadStatus } from "../lib/supabase";
 import { PLANS, type PlanId } from "../../supabase/functions/_shared/plans.ts";
 import { DEMO_TIMEZONE } from "../../supabase/functions/_shared/slots.ts";
@@ -55,7 +56,8 @@ const STATUS_TONE: Record<LeadStatus, string> = {
 
 export function AdminPage() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  // ok, not_admin (no admin account) or ip_blocked (not from an allowed network).
+  const [access, setAccess] = useState<{ status: string; ip: string | null } | null>(null);
 
   useEffect(() => {
     const db = sales();
@@ -65,13 +67,20 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (!session) return setIsAdmin(null);
+    if (!session) return setAccess(null);
     sales()
-      .rpc("is_sales_admin")
-      .then(({ data }) => setIsAdmin(data === true));
+      .rpc("sales_access")
+      .then(({ data }) =>
+        setAccess(
+          (data as { status: string; ip: string | null }[] | null)?.[0] ?? {
+            status: "not_admin",
+            ip: null,
+          },
+        ),
+      );
   }, [session]);
 
-  if (session === undefined || (session && isAdmin === null))
+  if (session === undefined || (session && access === null))
     return (
       <Shell>
         <p className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
@@ -80,21 +89,38 @@ export function AdminPage() {
       </Shell>
     );
   if (!session) return <Login />;
-  if (!isAdmin)
+  if (access?.status !== "ok")
     return (
       <Shell email={session.user.email}>
         <div className="mx-auto max-w-md p-10 text-center">
-          <p className="font-semibold">Esta cuenta no tiene acceso al panel.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pide que la añadan a la lista de administradores.
-          </p>
+          {access?.status === "ip_blocked" ? (
+            <>
+              <p className="font-semibold">No se puede entrar desde esta red.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                El panel solo se abre desde las direcciones autorizadas. Tu IP:{" "}
+                <code>{access.ip ?? "desconocida"}</code>
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold">Esta cuenta no tiene acceso al panel.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pide que la añadan a la lista de administradores.
+              </p>
+            </>
+          )}
         </div>
       </Shell>
     );
   return <Workspace email={session.user.email} />;
 }
 
-const TABS = { leads: "Leads", clientes: "Clientes", facturacion: "Facturación" } as const;
+const TABS = {
+  leads: "Leads",
+  clientes: "Clientes",
+  facturacion: "Facturación",
+  seguridad: "Seguridad",
+} as const;
 type Tab = keyof typeof TABS;
 const tabFromHash = (): Tab => {
   const h = window.location.hash.slice(1);
@@ -141,6 +167,7 @@ function Workspace({ email }: { email?: string }) {
       )}
       {tab === "clientes" && <ClientsTab pending={pending} onPendingUsed={clearPending} />}
       {tab === "facturacion" && <BillingTab />}
+      {tab === "seguridad" && <SecurityTab />}
     </Shell>
   );
 }
