@@ -82,10 +82,11 @@ export function redsysGateway(cfg: RedsysConfig): PaymentGateway {
       return { providerRef: order, redirect: { kind: "form", url: form.url, fields: form.fields } };
     },
     async refund(providerRef, amount) {
+      const { merchantCode, terminal, secretKeyB64 } = cfg;
       const r = await redsys.refund({
-        merchantCode: cfg.merchantCode,
-        terminal: cfg.terminal,
-        secretKeyB64: cfg.secretKeyB64,
+        merchantCode,
+        terminal,
+        secretKeyB64,
         order: providerRef,
         amount,
         environment: cfg.environment,
