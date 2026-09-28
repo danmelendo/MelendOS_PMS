@@ -99,15 +99,22 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <div className="flex flex-col gap-1 px-2 py-1.5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
+          {/* Collapsed: only the icon. Both variants are for the navy sidebar. */}
           <img
-            src="/brand/isologo.png"
+            src="/brand/isotipo-dark.webp"
             alt="Melend/OS"
-            className="h-8 w-8 min-w-8 shrink-0 object-contain"
+            className="hidden h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:block"
           />
-          <div className="flex min-w-0 flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold tracking-tight">Melend/OS</span>
-            <span className="text-xs text-sidebar-foreground/60">
+          <div className="flex min-w-0 flex-col gap-1 leading-tight group-data-[collapsible=icon]:hidden">
+            <img
+              src="/brand/logo-dark.webp"
+              alt="Melend/OS"
+              width={583}
+              height={96}
+              className="h-7 w-auto self-start"
+            />
+            <span className="pl-0.5 text-xs text-sidebar-foreground/60">
               {isGroup && !canOperate
                 ? "Dirección de grupo"
                 : isAdmin
