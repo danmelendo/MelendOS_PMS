@@ -31,10 +31,15 @@ const TYPES: Record<string, CsvRoom["type"]> = {
   familiar: "family",
 };
 
-const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+export const plain = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 
 /** Splits one CSV line (quotes allowed, "" inside quotes). */
-function cells(line: string, sep: string): string[] {
+export function cells(line: string, sep: string): string[] {
   const out: string[] = [];
   let cur = "";
   let quoted = false;
@@ -57,7 +62,7 @@ function cells(line: string, sep: string): string[] {
 }
 
 /** "60,50" or "60.50" or "1.060,50" → number; "" → undefined. */
-function amount(v: string): number | undefined {
+export function amount(v: string): number | undefined {
   if (!v) return undefined;
   const s = v.replace(/[€\s]/g, "");
   const n = Number(

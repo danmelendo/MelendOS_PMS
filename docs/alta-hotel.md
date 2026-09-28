@@ -46,7 +46,26 @@ node --env-file=.env scripts/create-hotel.ts hotel.json --apply --app-url https:
 
 `--app-url` es la dirección del panel a la que vuelve el enlace de la invitación (`/reset-password`). Tiene que estar en las _Redirect URLs_ de Auth (ver `DEPLOY.md`).
 
-## 3. Lo que hace el hotel desde el panel
+## 3. Reservas del sistema anterior
+
+Con el hotel creado, sus reservas se traen desde una hoja (CSV UTF-8), una fila por reserva:
+
+| Establecimiento | Habitación | Entrada    | Salida     | Huéspedes | Nombre      | Email             | Teléfono  | Total | Pagado | Pago   | Estado     | Referencia | Notas |
+| --------------- | ---------- | ---------- | ---------- | --------- | ----------- | ----------------- | --------- | ----- | ------ | ------ | ---------- | ---------- | ----- |
+| Hostal Ejemplo  | 2          | 15/10/2026 | 18/10/2026 | 2         | Laura Gómez | laura@example.com | 600000000 | 180   | 180    | online | confirmada | BK-1234    | Cuna  |
+
+- Obligatorias: establecimiento, habitación, entrada, salida, huéspedes, nombre y total. Fechas `dd/mm/aaaa` o `aaaa-mm-dd`; coma decimal.
+- `Pago`: `online` (ya cobrada por internet) u `hotel`. `Estado`: `confirmada` (por defecto) o `cancelada`.
+- El estado final sale de las fechas: las ya terminadas quedan como completadas y las de hoy, como alojados.
+
+```bash
+node --env-file=.env scripts/import-reservations.ts <slug> reservas.csv            # comprobar (no guarda)
+node --env-file=.env scripts/import-reservations.ts <slug> reservas.csv --apply    # importar
+```
+
+Es todo o nada: si una fila falla (habitación que no existe, noches ya ocupadas, más huéspedes que plazas), no se importa ninguna y dice qué fila y por qué. Las reservas importadas no envían email de confirmación ni se comunican a SES.HOSPEDAJES al crearse, porque ya lo hizo el sistema anterior. Desde ahí funcionan como cualquier otra: parte de viajeros al llegar, cancelación y facturas. Ejemplo: `scripts/reservas.example.csv`.
+
+## 4. Lo que hace el hotel desde el panel
 
 1. **Equipo**: invitar al resto del personal.
 2. **Facturación → Datos fiscales**: razón social, NIF y domicilio. Salen en sus facturas y en el aviso legal de su web.
@@ -57,5 +76,4 @@ node --env-file=.env scripts/create-hotel.ts hotel.json --apply --app-url https:
 
 ## Pendiente
 
-- Importar **reservas** existentes desde Excel o CSV (las habitaciones y tarifas ya se importan).
 - Alta desde una consola interna en lugar del script.

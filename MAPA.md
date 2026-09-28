@@ -38,6 +38,7 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 | Desplegar una función a la demo                        | `npx supabase functions deploy <fn> --project-ref isqompyvktijdasgophh --use-api`                            |
 | Regenerar tipos de la base                             | `npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts`            |
 | Alta de un hotel (plataforma)                          | `node --env-file=.env scripts/create-hotel.ts hotel.json [--apply --app-url <panel>]`                        |
+| Importar reservas anteriores (plataforma)              | `node --env-file=.env scripts/import-reservations.ts <slug> reservas.csv [--apply]`                          |
 | Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                                 |
 | E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses,verifactu,promo-emails,mfa}.mjs` |
 | Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                            |
@@ -109,7 +110,7 @@ site/                               Web comercial de Melend/OS (landing, hostale
 | Equipo (personal del hotel)                   | `routes/_app.team.tsx`, `list_staff()`, función `staff-invite`, trigger `guard_staff_changes`                                                                                     |
 | Páginas legales de la web del hotel           | `routes/web.legal.$page.tsx`, `src/lib/legal-texts.ts`, `hotel_legal()`                                                                                                           |
 | Verificación en dos pasos (personal)          | `staff_mfa_ok()` en las funciones de permisos, `verifiedUser()` en `_shared/http.ts`, `src/lib/mfa.ts`, `/account`, `MfaCodeForm`                                                 |
-| Alta de un hotel                              | `scripts/create-hotel.ts` + `_shared/onboarding/hotel.ts`, `scripts/hotel.example.json`, `docs/alta-hotel.md`                                                                     |
+| Alta de un hotel                              | `scripts/create-hotel.ts` + `_shared/onboarding/hotel.ts`, `scripts/hotel.example.json`, `docs/alta-hotel.md`; reservas anteriores: `scripts/import-reservations.ts`              |
 | Actividad y consumo (observabilidad)          | `hotel_activity()`, `routes/_app.activity.tsx`, `src/lib/activity.ts`                                                                                                             |
 | Alertas de operación (plataforma)             | `ops_alerts()`, `scripts/ops-alerts.mjs`, `.github/workflows/ops-alerts.yml` (incidencia en GitHub)                                                                               |
 | Estado del producto y despliegue              | `docs/estado-producto.md`, `DEPLOY.md`                                                                                                                                            |

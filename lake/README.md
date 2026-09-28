@@ -75,7 +75,10 @@ happened. Columns: `id`, `tenant_id`, `event_type`, `entity`, `entity_id`,
   fixed when the booking was made (free until that instant, then that fee).
 - `created_by_role` is the channel: `public` (website), `admin` (reception or
   phone), `agent` (AI assistant on the website), `mcp` (an external AI tool
-  connected to the hotel's MCP server, since 26/09/2026), `member` (guest app).
+  connected to the hotel's MCP server, since 26/09/2026), `member` (guest app),
+  `import` (brought from the hotel's previous system when it joined, since
+  28/09/2026: their `created_at` is the import date, not the booking date, so
+  leave them out of lead-time features).
 - `simulated = true`: fictitious history generated for the demo
   (`scripts/simulate-history.ts`). Real bookings are always `false`.
 
