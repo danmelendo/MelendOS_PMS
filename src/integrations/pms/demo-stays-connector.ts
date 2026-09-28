@@ -10,6 +10,7 @@
 // the singleton exported from ./index.ts — the mobile UI is unaffected.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { t } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateNightlyPrice } from "@/lib/pricing";
 import { bookingReference } from "@domain/reference.ts";
@@ -197,7 +198,9 @@ export class DemoStaysConnector implements PmsConnector {
       propertyId: r.property_id ?? (room as Row)?.property_id ?? "",
       propertyName: (property as Row)?.name ?? "Melend/OS",
       roomId: r.room_id,
-      roomName: (room as Row)?.name ? `Habitación ${(room as Row).name}` : "Habitación",
+      roomName: (room as Row)?.name
+        ? t("Habitación {name}", { name: String((room as Row).name) })
+        : t("Habitación"),
       checkIn,
       checkOut,
       nights: nightsBetween(checkIn, checkOut),
@@ -676,7 +679,9 @@ export class DemoStaysConnector implements PmsConnector {
       propertyId: r.property_id,
       propertyName: (property as Row)?.name ?? "Melend/OS",
       roomId: r.room_id,
-      roomName: (room as Row)?.name ? `Habitación ${(room as Row).name}` : "Habitación",
+      roomName: (room as Row)?.name
+        ? t("Habitación {name}", { name: String((room as Row).name) })
+        : t("Habitación"),
       checkIn: r.check_in,
       checkOut: r.check_out,
       guests: Number(r.guests ?? 2),
