@@ -1076,7 +1076,9 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(asOther.ok).toBe(false);
       expect(byManagement.ok).toBe(false);
       expect(edit.ok).toBe(false);
-      expect(thread.map((m: { sender: string }) => m.sender)).toEqual(["guest", "staff"]);
+      // Both messages are inserted in the same transaction (same created_at):
+      // compare what is there, not the order.
+      expect(thread.map((m: { sender: string }) => m.sender).sort()).toEqual(["guest", "staff"]);
       expect(thread.every((m: { read_at: string | null }) => m.read_at)).toBe(true);
       expect(thread[0].category).toBe("towels");
     });
