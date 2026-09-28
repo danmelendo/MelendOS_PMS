@@ -5,3 +5,8 @@ project_id = "demo-stays-sales"
 [functions.leads]
 # Called by the public website with the publishable key.
 verify_jwt = false
+
+[functions.device-session]
+# Called by the admin panel with the user's session; it checks the JWT itself
+# (getUser) to read its session id.
+verify_jwt = false

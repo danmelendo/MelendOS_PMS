@@ -1,226 +1,233 @@
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { Laptop, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { sales } from "../lib/supabase";
-import { BTN, BTN_OUTLINE, BTN_PRIMARY, FIELD } from "./admin-ui";
-import { allowFor, inRange } from "../lib/ip";
+import { BTN, BTN_OUTLINE, BTN_PRIMARY } from "./admin-ui";
+import { TotpSetup, useAuthenticator } from "./AdminDevice";
+import { DEMO_TIMEZONE } from "../../supabase/functions/_shared/slots.ts";
 
-// Seguridad: the IPs the management panel opens from (sales_allowed_ips). The
-// page is guarded by the Vercel middleware and the data by the database, and
-// each may see a different address (IPv4 to one, IPv6 to the other), so
-// "Añadir mis IPs" adds both.
+// Seguridad: the trusted devices the panel opens from (sales_devices, migration
+// 20260929160000_trusted_devices.sql) and the authenticator app that approves
+// new ones. Approving and revoking go through the database, which only lets a
+// trusted session do either.
 
-interface AllowedIp {
+interface Device {
   id: string;
-  network: string;
-  label: string | null;
+  owner: string;
+  name: string;
   created_at: string;
-  includes_me: boolean;
+  approved_at: string | null;
+  approved_via: "mfa" | "device" | "script" | null;
+  last_seen_at: string | null;
+  revoked_at: string | null;
+  is_current: boolean;
 }
 
-async function webIp(): Promise<string | null> {
-  try {
-    const res = await fetch("/admin/__ip/", { cache: "no-store" });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { ip?: string };
-    return body.ip || null;
-  } catch {
-    // Local development has no middleware.
-    return null;
-  }
-}
+const VIA: Record<NonNullable<Device["approved_via"]>, string> = {
+  mfa: "con la app",
+  device: "desde otro equipo",
+  script: "por script",
+};
 
-export function SecurityTab() {
-  const [list, setList] = useState<AllowedIp[] | null>(null);
-  const [dbIp, setDbIp] = useState<string | null>(null);
-  const [siteIp, setSiteIp] = useState<string | null>(null);
-  const [network, setNetwork] = useState("");
-  const [label, setLabel] = useState("");
+const when = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString("es-ES", {
+        timeZone: DEMO_TIMEZONE,
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
+export function SecurityTab({ onDeviceChange }: { onDeviceChange: () => Promise<unknown> }) {
+  const [list, setList] = useState<Device[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{ id: string; action: "approve" | "revoke" } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const app = useAuthenticator();
 
   const load = useCallback(async () => {
-    const db = sales();
-    const [l, a] = await Promise.all([db.rpc("list_admin_ips"), db.rpc("sales_access")]);
-    if (l.error) return setError(l.error.message);
-    setList(l.data as AllowedIp[]);
-    setDbIp((a.data as { ip: string | null }[] | null)?.[0]?.ip ?? null);
+    const { data, error } = await sales().rpc("list_sales_devices");
+    if (error) return setError(error.message);
+    setList(data as Device[]);
   }, []);
   useEffect(() => {
     load();
-    webIp().then(setSiteIp);
   }, [load]);
 
-  const add = async (entries: { network: string; label: string }[]) => {
+  const act = async (d: Device, action: "approve" | "revoke") => {
     setBusy(true);
     setError(null);
-    for (const e of entries) {
-      const { error } = await sales().rpc("add_admin_ip", {
-        p_network: e.network,
-        p_label: e.label,
-      });
-      if (error) {
-        setError(error.message);
-        break;
-      }
-    }
+    const { error } = await sales().rpc(
+      action === "approve" ? "approve_sales_device" : "revoke_sales_device",
+      { p_device: d.id },
+    );
     setBusy(false);
-    setNetwork("");
-    setLabel("");
-    load();
-  };
-  const remove = async (id: string) => {
-    const { error } = await sales().rpc("remove_admin_ip", { p_id: id });
     setConfirm(null);
     if (error) return setError(error.message);
+    // Revoking this very device closes the panel here at once.
+    if (action === "revoke" && d.is_current) return void onDeviceChange();
     load();
   };
 
-  // The database says whether its view of us is inside the list; the web's
-  // view is checked here.
-  const dbMissing = !!dbIp && !(list ?? []).some((r) => r.includes_me);
-  const siteMissing =
-    !!siteIp && siteIp !== dbIp && !(list ?? []).some((r) => inRange(siteIp, r.network));
-  // The database's view goes first: the first entry of the list must include it.
-  const missing = [
-    ...(dbMissing ? [{ network: allowFor(dbIp!), label: "Mi conexión (base de datos)" }] : []),
-    ...(siteMissing ? [{ network: allowFor(siteIp!), label: "Mi conexión (web)" }] : []),
-  ];
+  const pending = (list ?? []).filter((d) => !d.approved_at && !d.revoked_at).length;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
-      {list === null ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Cargando…
+    <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+      <div className="flex gap-3 rounded-xl border bg-card p-4 text-sm">
+        <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+        <p>
+          El panel y sus datos solo se abren desde <b>equipos de confianza</b>, desde cualquier red.
+          Cada navegador guarda una clave que no se puede copiar y firma cada sesión con ella; con
+          la contraseña sola, la base de datos no devuelve nada. Un equipo nuevo se aprueba con el
+          código de la app de autenticación o desde aquí.
         </p>
-      ) : list.length === 0 ? (
-        <div className="flex gap-3 rounded-xl border border-gold/50 bg-gold/10 p-4 text-sm">
-          <ShieldAlert className="h-5 w-5 shrink-0 text-gold" aria-hidden="true" />
-          <div>
-            <p className="font-semibold">Sin restricción por IP</p>
-            <p className="mt-1">
-              Ahora cualquiera con una cuenta del panel puede entrar desde cualquier red. Añade tu
-              conexión para que solo se pueda entrar desde ella (y las que añadas después).
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-3 rounded-xl border bg-card p-4 text-sm">
-          <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-          <p>
-            El panel y sus datos solo se abren desde{" "}
-            {list.length === 1 ? "esta dirección" : `estas ${list.length} direcciones`}. Desde
-            cualquier otra red, la página responde «acceso no permitido» y la base de datos no
-            devuelve nada, aunque se tenga la contraseña.
-          </p>
-        </div>
-      )}
+      </div>
 
       <section className="rounded-xl border bg-card p-4 text-sm">
-        <h2 className="font-semibold">Tu conexión ahora</h2>
-        <dl className="mt-2 grid grid-cols-[10rem_1fr] gap-y-1">
-          <dt className="text-muted-foreground">Vista por la base</dt>
-          <dd className="font-mono">{dbIp ?? "—"}</dd>
-          <dt className="text-muted-foreground">Vista por la web</dt>
-          <dd className="font-mono">{siteIp ?? "— (solo en os.melendo.app)"}</dd>
-        </dl>
-        {missing.length > 0 && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => add(missing)}
-            className={`${BTN_PRIMARY} mt-3`}
-          >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            <Plus className="h-4 w-4" aria-hidden="true" /> Añadir mi
-            {missing.length > 1 ? "s IPs" : " IP"} actual
-            {missing.length > 1 ? "es" : ""}
-          </button>
+        <h2 className="font-semibold">App de autenticación</h2>
+        {app.factors === null ? (
+          <p className="mt-2 flex items-center gap-2 text-muted-foreground">
+            {app.error ?? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Cargando…
+              </>
+            )}
+          </p>
+        ) : app.verified ? (
+          <p className="mt-2">
+            Configurada el {when(app.verified.created_at)}. Con su código apruebas un equipo nuevo
+            desde ese mismo equipo. Si pierdes el móvil: <code>scripts/admin-devices.mjs</code>{" "}
+            (<code>reset-mfa</code>).
+          </p>
+        ) : (
+          <div className="mt-2 space-y-3">
+            <p className="flex gap-2 rounded-md border border-gold/50 bg-gold/10 p-3">
+              <ShieldAlert className="h-5 w-5 shrink-0 text-gold" aria-hidden="true" />
+              Sin configurar. Hazlo ya: hasta entonces, quien tuviera tu contraseña podría
+              configurar la suya y aprobar su equipo.
+            </p>
+            <TotpSetup leftovers={app.factors} onVerified={app.refresh} submitLabel="Activar" />
+          </div>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Si tu proveedor de internet cambia tu IP (pasa en muchas conexiones de casa), te quedarías
-          fuera: añade también la del trabajo o del móvil, o usa un rango (p. ej. 83.45.120.0/24).
-          Para recuperar el acceso sin panel: <code>site/scripts/admin-ips.mjs</code>.
-        </p>
       </section>
 
       <section className="rounded-xl border bg-card">
-        <h2 className="border-b p-4 text-sm font-semibold">Direcciones permitidas</h2>
-        {list && list.length > 0 && (
+        <h2 className="flex items-center gap-2 border-b p-4 text-sm font-semibold">
+          Equipos
+          {pending > 0 && (
+            <span className="rounded-full bg-gold/20 px-2 py-0.5 text-xs text-gold-foreground">
+              {pending} pendiente{pending > 1 ? "s" : ""}
+            </span>
+          )}
+        </h2>
+        {list === null ? (
+          <p className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Cargando…
+          </p>
+        ) : (
           <ul className="divide-y">
-            {list.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm">
-                <span className="font-mono">{r.network}</span>
-                <span className="text-muted-foreground">{r.label ?? ""}</span>
-                {r.includes_me && (
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground">
-                    estás aquí
+            {list.map((d) => (
+              <li
+                key={d.id}
+                className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm ${d.revoked_at ? "text-muted-foreground" : ""}`}
+              >
+                <Laptop className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2 font-semibold">
+                    {d.name}
+                    {d.is_current && (
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                        este equipo
+                      </span>
+                    )}
+                    <Status d={d} />
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {d.owner} · alta {when(d.created_at)} · último uso {when(d.last_seen_at)}
+                    {d.approved_at &&
+                      ` · aprobado ${when(d.approved_at)}${d.approved_via ? ` ${VIA[d.approved_via]}` : ""}`}
+                    {d.revoked_at && ` · revocado ${when(d.revoked_at)}`}
+                  </p>
+                </div>
+                {!d.revoked_at && (
+                  <span className="ml-auto">
+                    {confirm?.id === d.id ? (
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        <span className="text-xs">
+                          {confirm.action === "approve"
+                            ? "¿Aprobarlo? Podrá abrir el panel."
+                            : d.is_current
+                              ? "¿Revocar este equipo? Se cerrará el panel aquí."
+                              : "¿Revocarlo? Sus sesiones se cortan ya."}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          className={
+                            confirm.action === "approve"
+                              ? BTN_PRIMARY
+                              : `${BTN} bg-destructive text-white`
+                          }
+                          onClick={() => act(d, confirm.action)}
+                        >
+                          {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                          Sí
+                        </button>
+                        <button
+                          type="button"
+                          className={BTN_OUTLINE}
+                          onClick={() => setConfirm(null)}
+                        >
+                          No
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="inline-flex gap-2">
+                        {!d.approved_at && (
+                          <button
+                            type="button"
+                            className={BTN_OUTLINE}
+                            onClick={() => setConfirm({ id: d.id, action: "approve" })}
+                          >
+                            Aprobar
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className={`${BTN_OUTLINE} text-destructive`}
+                          onClick={() => setConfirm({ id: d.id, action: "revoke" })}
+                        >
+                          Revocar
+                        </button>
+                      </span>
+                    )}
                   </span>
                 )}
-                <span className="ml-auto">
-                  {confirm === r.id ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="text-xs">
-                        {list.length === 1
-                          ? "¿Quitarla? El panel quedará abierto desde cualquier red."
-                          : "¿Quitarla?"}
-                      </span>
-                      <button
-                        type="button"
-                        className={`${BTN} bg-destructive text-white`}
-                        onClick={() => remove(r.id)}
-                      >
-                        Sí
-                      </button>
-                      <button
-                        type="button"
-                        className={BTN_OUTLINE}
-                        onClick={() => setConfirm(null)}
-                      >
-                        No
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      aria-label={`Quitar ${r.network}`}
-                      className="rounded-md p-1.5 hover:bg-muted"
-                      onClick={() => setConfirm(r.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </button>
-                  )}
-                </span>
               </li>
             ))}
           </ul>
         )}
-        <div className="flex flex-wrap items-end gap-2 border-t p-4">
-          <input
-            className={`${FIELD} w-56 font-mono`}
-            placeholder="83.45.120.7 o 83.45.120.0/24"
-            aria-label="IP o rango"
-            value={network}
-            onChange={(e) => setNetwork(e.target.value)}
-          />
-          <input
-            className={`${FIELD} min-w-40 flex-1`}
-            placeholder="Nombre (p. ej. oficina)"
-            aria-label="Nombre"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-          <button
-            type="button"
-            disabled={busy || !network.trim()}
-            onClick={() => add([{ network: network.trim(), label }])}
-            className={BTN_OUTLINE}
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" /> Añadir
-          </button>
-        </div>
         {error && <p className="px-4 pb-4 text-sm text-destructive">{error}</p>}
+        <p className="border-t p-4 text-xs text-muted-foreground">
+          ¿Un equipo perdido o que no reconoces? Revócalo: sus sesiones dejan de ver datos al
+          momento. Un pendiente que no reconoces es alguien con tu contraseña: revócalo y cámbiala.
+          Sin acceso a ningún equipo: <code>node --env-file=.env scripts/admin-devices.mjs</code>{" "}
+          desde <code>site/</code>.
+        </p>
       </section>
     </main>
   );
+}
+
+function Status({ d }: { d: Device }) {
+  const [text, tone] = d.revoked_at
+    ? ["revocado", "bg-muted text-muted-foreground"]
+    : d.approved_at
+      ? ["de confianza", "bg-primary text-primary-foreground"]
+      : ["pendiente", "bg-gold/20 text-gold-foreground"];
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tone}`}>{text}</span>;
 }

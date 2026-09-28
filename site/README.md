@@ -40,6 +40,7 @@ set -a; . ./.env; set +a                     # SUPABASE_ACCESS_TOKEN of the sale
 npx supabase link --project-ref <sales-ref>
 npx supabase db push
 npx supabase functions deploy leads --use-api
+npx supabase functions deploy device-session --use-api            # admin panel devices
 npx supabase secrets set SITE_ORIGIN=https://<site-domain>              # CORS
 npx supabase secrets set SALES_WEBHOOK_URL=<slack/discord/crm webhook>  # optional
 ```
@@ -53,7 +54,7 @@ limits 3 leads per email and 5 per IP a day, and a unique index prevents double-
 
 ## Admin panel and lead emails
 
-- **`/admin/`**, the management panel, with three tabs:
+- **`/admin/`**, the management panel, with four tabs:
   - **Leads**: filters, upcoming demos, conversion, status and internal notes, CSV export and
     delete (right to erasure). A won lead can become a client («Convertir en cliente»).
   - **Clientes** (`#clientes`): each customer's contract (plan, rooms, packages, SLA, agreed
@@ -71,18 +72,27 @@ limits 3 leads per email and 5 per IP a day, and a unique index prevents double-
     (`InvoiceDocument.tsx`; migration `20260929150000_billing_settings.sql`). VERI\*FACTU is not
     integrated yet (see `Cambiospendientes.md`).
   - Tables in migration `20260929120000_clients.sql`.
-  - **Seguridad** (`#seguridad`): the IPs the panel opens from (`sales_allowed_ips`, migration
-    `20260929140000_admin_ip_allowlist.sql`). Two layers over one list:
-    - the page: `middleware.ts` (Vercel Routing Middleware on `/admin/*`) asks
-      `admin_ip_allowed()` and answers 403 to any other IP;
-    - the data: `is_sales_admin()`, which every policy uses, also requires the IP of the
-      request, so the API returns nothing to an admin account connecting from elsewhere.
-    - An empty list means no restriction. The first entry must include your own IP, and nobody
-      can remove the range they are connected from.
-    - The page and the database may see different addresses (IPv6 to Vercel, IPv4 to Supabase),
-      so «Añadir mis IPs» adds both, IPv6 by its /64.
-    - Locked out (new IP at home)? `node --env-file=.env scripts/admin-ips.mjs add <ip>`, or
-      `clear` to remove the restriction.
+  - **Seguridad** (`#seguridad`): the panel only works from **trusted devices**, from any
+    network (migration `20260929160000_trusted_devices.sql`; it replaced the IP allowlist, which
+    broke with mobile data, CG-NAT and travel).
+    - Each browser creates an ECDSA P-256 key pair with WebCrypto; the private half is not
+      exportable and stays in IndexedDB (`melendos-admin`), the database only has the public half
+      (`sales_devices`). Code: `src/lib/device.ts` and `supabase/functions/_shared/device.ts`.
+    - At sign-in the browser signs its Supabase session (`session_id` of the JWT + time) and the
+      Edge Function `device-session` checks the signature. If the device is approved, that session
+      is trusted for 12 hours (`sales_device_sessions`); the panel proves it again every 6.
+    - `is_sales_admin()`, which every policy uses, only holds for a trusted session: with the
+      password alone the API returns nothing.
+    - A new device is approved with the **authenticator app** (TOTP of Supabase Auth; the session
+      goes to `aal2` and `approve_sales_device_with_mfa` accepts it; the first time the panel asks
+      to set the app up) or **from a trusted device** (Seguridad → Equipos → Aprobar). Revoking a
+      device cuts its sessions at once.
+    - Until the account has the app set up, someone with the password could set up theirs: do it
+      right after the first sign-in. Supabase then asks for `aal2` to add another factor.
+    - No device at hand? `node --env-file=.env scripts/admin-devices.mjs` (`list`,
+      `approve <id>`, `revoke <id>`, `reset-mfa <email>` if the phone is lost).
+    - Try the migration without applying it: `node --env-file=.env scripts/trusted-devices-trial.mjs`
+      (transaction with rollback).
   - Not indexed (`noindex`, `robots.txt`, out of the sitemap). Sign-in with email and password;
     public sign-up is disabled on the sales project.
 - **Who can see it**: users listed in `public.sales_admins` (RLS on `leads`; migration
