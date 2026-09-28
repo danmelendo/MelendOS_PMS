@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { CalendarCheck, Check, Minus, ShieldCheck, Sparkles } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+import { ArrowRight, Minus, Sparkles } from "lucide-react";
 import { Layout } from "../components/Layout";
+import { Marker, SectionHead, Tick } from "../components/ui";
 import { PAGES } from "../config";
 import { PRICING_FAQ as FAQ } from "../content/faq";
 import {
@@ -29,8 +31,12 @@ import {
   type SlaId,
 } from "../../supabase/functions/_shared/plans.ts";
 
-const INPUT =
-  "h-9 rounded-md border border-input bg-card px-3 text-sm tabular-nums shadow-sm focus-visible:outline-2 focus-visible:outline-ring";
+// Pricing as a bill: controls on top, the four plans as choices, and a bill
+// that lists, line by line, what the chosen plan costs. Same catalogue and
+// the same rules as before (plans.ts).
+
+const FIELD =
+  "h-10 rounded-lg border border-input bg-card px-3 text-sm tabular-nums shadow-[var(--shadow-rest)] focus-visible:outline-2 focus-visible:outline-ring";
 
 const eur = (n: number, decimals = 0) =>
   n.toLocaleString("es-ES", {
@@ -39,6 +45,7 @@ const eur = (n: number, decimals = 0) =>
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
+const eur2 = (n: number) => eur(n, n % 1 ? 2 : 0);
 const pct = (n: number) => `${n.toLocaleString("es-ES")} %`;
 const clampInt = (v: string, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number(v) || min)));
@@ -49,40 +56,51 @@ export function PricingPage() {
   const [annual, setAnnual] = useState(false);
   const [addons, setAddons] = useState<AddonId[]>([]);
   const [sla, setSla] = useState<SlaId | "">("");
+  const [chosen, setChosen] = useState<PlanId | null>(null);
 
   const suggested = suggestPlan(rooms, hotels, addons);
+  // Follows the suggestion until the visitor picks a plan; a group plan needs 2+ hotels.
+  const plan: PlanId = chosen && hotels >= PLANS[chosen].minHotels ? chosen : suggested;
   // The Hostal plan has no SLA: its card keeps the included support.
-  const slaFor = (plan: PlanId) => (sla && PLANS[plan].slaAvailable ? sla : null);
-  const priceOf = (plan: PlanId) =>
+  const slaFor = (id: PlanId) => (sla && PLANS[id].slaAvailable ? sla : null);
+  const priceOf = (id: PlanId) =>
     quote({
-      plan,
+      plan: id,
       rooms,
-      hotels: Math.max(hotels, PLANS[plan].minHotels),
-      addons: plan === "starter" ? addons : [],
-      sla: slaFor(plan),
+      hotels: Math.max(hotels, PLANS[id].minHotels),
+      addons: id === "starter" ? addons : [],
+      sla: slaFor(id),
       annual,
     });
   const toggleAddon = (id: AddonId, on: boolean) =>
     setAddons((a) => (on ? [...a, id] : a.filter((x) => x !== id)));
+  const q = priceOf(plan);
+  const p = PLANS[plan];
+  const planSla = slaFor(plan);
 
   return (
     <Layout page="pricing">
-      <section className="bg-navy text-navy-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-          <p className="text-sm font-semibold text-navy-gold">Precios</p>
-          <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight text-balance text-navy-strong sm:text-4xl">
-            Un precio por habitación, publicado y sin letra pequeña
+      <section className="lamp relative overflow-hidden bg-night text-navy-foreground">
+        <div aria-hidden="true" className="ledger-grid absolute inset-0" />
+        <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-28 sm:px-6 lg:px-8">
+          <div className="rise">
+            <Marker n="Precios" onNight>
+              En euros, sin IVA
+            </Marker>
+          </div>
+          <h1 className="font-display rise mt-5 max-w-3xl text-[2.9rem] text-balance text-navy-strong [--d:80ms] sm:text-[4rem]">
+            Un precio por habitación, <em className="text-brass">publicado</em> y sin letra pequeña
           </h1>
-          <p className="mt-3 max-w-2xl text-navy-foreground/75">
+          <p className="rise mt-5 max-w-2xl text-lg text-navy-foreground/75 [--d:160ms]">
             Sin comisiones por reserva, sin permanencia y con el nivel de soporte que tu hotel
-            necesite. Precios en euros, sin IVA.
+            necesite.
           </p>
         </div>
       </section>
 
-      {/* Calculator */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="-mt-6 grid gap-6 rounded-xl border bg-card p-5 shadow-sm md:grid-cols-[1.4fr_auto_1fr_auto] md:items-end">
+      {/* Controls */}
+      <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="surface-lift -mt-14 grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[1.5fr_auto_1.2fr_auto] md:items-end">
           <div className="space-y-2">
             <label htmlFor="rooms" className="text-sm font-medium">
               Habitaciones en total
@@ -94,7 +112,7 @@ export function PricingPage() {
                 max={300}
                 value={rooms}
                 onChange={(e) => setRooms(clampInt(e.target.value, 1, 300))}
-                className="w-full accent-[var(--primary)]"
+                className="w-full accent-[var(--brass-deep)]"
                 aria-label="Habitaciones"
               />
               <input
@@ -104,7 +122,7 @@ export function PricingPage() {
                 max={5000}
                 value={rooms}
                 onChange={(e) => setRooms(clampInt(e.target.value, 1, 5000))}
-                className={`${INPUT} w-24`}
+                className={`${FIELD} w-24`}
               />
             </div>
           </div>
@@ -119,7 +137,7 @@ export function PricingPage() {
               max={200}
               value={hotels}
               onChange={(e) => setHotels(clampInt(e.target.value, 1, 200))}
-              className={`${INPUT} block w-24`}
+              className={`${FIELD} block w-24`}
             />
           </div>
           <div className="space-y-2">
@@ -130,7 +148,7 @@ export function PricingPage() {
               id="sla"
               value={sla}
               onChange={(e) => setSla(e.target.value as SlaId | "")}
-              className={`${INPUT} block w-full`}
+              className={`${FIELD} block w-full`}
             >
               <option value="">Sin SLA (soporte incluido)</option>
               {SLA_IDS.map((id) => (
@@ -145,155 +163,240 @@ export function PricingPage() {
             role="switch"
             aria-checked={annual}
             onClick={() => setAnnual((a) => !a)}
-            className="flex items-center gap-3 rounded-md bg-muted px-3 py-2 text-left text-sm"
+            className="flex h-10 items-center gap-3 rounded-lg bg-muted px-3 text-left text-sm"
           >
             <span
-              className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${annual ? "bg-primary" : "bg-input"}`}
+              className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${annual ? "bg-night" : "bg-input"}`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-card shadow transition-transform ${annual ? "translate-x-4" : ""}`}
+                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-card shadow transition-transform duration-200 ${annual ? "translate-x-4" : ""}`}
               />
             </span>
-            <span>
+            <span className="whitespace-nowrap">
               Pago anual{" "}
-              <span className="font-semibold text-gold-foreground">−{ANNUAL_DISCOUNT * 100} %</span>
+              <span className="font-semibold text-brass-deep">−{ANNUAL_DISCOUNT * 100} %</span>
             </span>
           </button>
         </div>
       </section>
 
-      {/* Plans */}
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {PLAN_IDS.map((id) => {
-            const plan = PLANS[id];
-            const q = priceOf(id);
-            const list = listPrice(id, { sla: sla || null, annual });
-            const planSla = slaFor(id);
-            const best = id === suggested;
-            const needsHotels = hotels < plan.minHotels;
-            return (
-              <div
-                key={id}
-                className={`relative flex flex-col rounded-xl border bg-card p-6 ${
-                  best ? "border-2 border-primary shadow-lg" : ""
-                }`}
-              >
-                {best && (
-                  <span className="absolute -top-3 left-6 rounded-full bg-navy-gold px-3 py-0.5 text-xs font-semibold text-navy-gold-foreground">
-                    El que te conviene
-                  </span>
-                )}
-                <p className="text-lg font-semibold">{plan.name}</p>
-                <p className="mt-1 min-h-10 text-sm text-muted-foreground">{plan.tagline}</p>
-                <p className="mt-5 flex items-baseline gap-1">
-                  <span className="text-4xl font-semibold tracking-tight tabular-nums">
-                    {eur(list.perRoom, list.perRoom % 1 ? 2 : 0)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">/ habitación y mes</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Mínimo {eur(list.minimum, list.minimum % 1 ? 2 : 0)}/mes
-                  {plan.minHotels > 1 ? ` · desde ${plan.minHotels} hoteles` : ""}
-                </p>
-                {(planSla || annual) && (
-                  <p className="mt-1 text-xs font-medium text-info-foreground">
-                    {[planSla && `SLA ${SLA_TIERS[planSla].name} incluido`, annual && "pago anual"]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                )}
-                <div className="mt-4 rounded-md bg-muted px-3 py-2 text-sm">
-                  {needsHotels ? (
-                    <span className="text-muted-foreground">Para grupos de 2 hoteles o más.</span>
-                  ) : (
-                    <>
-                      Para {rooms} hab.:{" "}
-                      <span className="font-semibold tabular-nums">
-                        {eur(q.effectiveMonthly, 2)}/mes
-                      </span>
-                      {planSla && (
-                        <span className="block text-xs text-muted-foreground">
-                          De ellos, SLA {SLA_TIERS[planSla].name}:{" "}
-                          {eur(q.lines[q.lines.length - 1].amount * (1 - q.discount), 2)}
-                        </span>
-                      )}
-                      {annual && (
-                        <span className="block text-xs text-muted-foreground">
-                          {eur(q.yearly, 2)} al año
-                        </span>
-                      )}
-                    </>
+      {/* Plans + bill */}
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[1fr_24rem] lg:items-start xl:gap-12">
+          <div role="radiogroup" aria-label="Plan" className="grid gap-4 sm:grid-cols-2">
+            {PLAN_IDS.map((id) => {
+              const pl = PLANS[id];
+              const pq = priceOf(id);
+              const list = listPrice(id, { sla: sla || null, annual });
+              const idSla = slaFor(id);
+              const on = id === plan;
+              const needsHotels = hotels < pl.minHotels;
+              return (
+                <div
+                  key={id}
+                  data-spotlight
+                  className={`relative flex flex-col rounded-2xl p-6 transition-shadow ${
+                    on ? "bg-night text-navy-foreground shadow-[var(--shadow-night)]" : "surface"
+                  }`}
+                >
+                  {id === suggested && (
+                    <span className="font-figure absolute top-5 right-5 rounded-full bg-brass px-2.5 py-0.5 text-[0.7rem] text-night">
+                      El que te conviene
+                    </span>
                   )}
-                </div>
-                <ul className="mt-5 flex-1 space-y-2 text-sm">
-                  {plan.highlights.map((h) => (
-                    <li key={h} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-info-foreground" /> {h}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    disabled={needsHotels}
+                    onClick={() => setChosen(id)}
+                    className="text-left after:absolute after:inset-0 after:rounded-2xl disabled:cursor-not-allowed"
+                  >
+                    <span className={`block text-lg font-semibold ${on ? "text-navy-strong" : ""}`}>
+                      {pl.name}
+                    </span>
+                  </button>
+                  <p
+                    className={`mt-1 min-h-10 text-sm ${on ? "text-navy-foreground/70" : "text-stone"}`}
+                  >
+                    {pl.tagline}
+                  </p>
+                  <p className="mt-5 flex items-baseline gap-1.5">
+                    <span
+                      className={`text-[2.6rem] leading-none font-semibold tracking-[-0.03em] tabular-nums ${on ? "text-navy-strong" : ""}`}
+                    >
+                      {eur2(list.perRoom)}
+                    </span>
+                    <span className={`text-sm ${on ? "text-navy-foreground/60" : "text-stone"}`}>
+                      / habitación y mes
+                    </span>
+                  </p>
+                  <p
+                    className={`font-figure mt-1 text-xs ${on ? "text-navy-foreground/55" : "text-stone"}`}
+                  >
+                    Mínimo {eur2(list.minimum)}/mes
+                    {pl.minHotels > 1 ? ` · desde ${pl.minHotels} hoteles` : ""}
+                  </p>
+                  <p className={`mt-4 text-sm ${on ? "text-navy-strong" : ""}`}>
+                    {needsHotels ? (
+                      <span className={on ? "text-navy-foreground/60" : "text-stone"}>
+                        Para grupos de 2 hoteles o más.
+                      </span>
+                    ) : (
+                      <>
+                        Para {rooms} hab.:{" "}
+                        <span className="font-figure font-semibold">
+                          {eur(pq.effectiveMonthly, 2)}/mes
+                        </span>
+                      </>
+                    )}
+                  </p>
+                  <ul className="mt-5 flex-1 space-y-2 text-sm">
+                    {pl.highlights.map((h) => (
+                      <li key={h} className="flex gap-2">
+                        <Tick className={`mt-0.5 ${on ? "!text-[oklch(0.78_0.08_168)]" : ""}`} />{" "}
+                        {h}
+                      </li>
+                    ))}
+                    <li className={`flex gap-2 ${on ? "text-navy-foreground/70" : "text-stone"}`}>
+                      <span className="mt-2 h-px w-3 shrink-0 bg-current" aria-hidden="true" />
+                      {idSla
+                        ? `SLA ${SLA_TIERS[idSla].name}: respuesta crítica en ${SLA_TIERS[idSla].response.critical}, disponibilidad ${pct(SLA_TIERS[idSla].uptime)}`
+                        : pl.slaAvailable
+                          ? `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. SLA opcional`
+                          : `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. Sin SLA en este plan`}
                     </li>
-                  ))}
-                  <li className="flex gap-2">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" />
-                    {planSla
-                      ? `SLA ${SLA_TIERS[planSla].name}: respuesta crítica en ${SLA_TIERS[planSla].response.critical}, disponibilidad ${pct(SLA_TIERS[planSla].uptime)}`
-                      : plan.slaAvailable
-                        ? `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. SLA opcional`
-                        : `Soporte incluido: ${BASE_SUPPORT.channels.toLowerCase()}. Sin SLA en este plan`}
-                  </li>
-                </ul>
-                {id === "starter" && (
-                  <fieldset className="mt-5 space-y-2 border-t pt-4">
-                    <legend className="sr-only">Paquetes opcionales</legend>
-                    <p className="text-xs font-semibold text-muted-foreground">Añade si quieres</p>
-                    {ADDON_IDS.map((a) => (
-                      <label key={a} className="flex items-center gap-2 text-sm">
+                  </ul>
+                  <p className={`mt-5 text-xs ${on ? "text-navy-foreground/55" : "text-stone"}`}>
+                    Implantación:{" "}
+                    <span className={on ? "text-navy-strong" : "text-foreground"}>
+                      {pq.onboarding
+                        ? `${id === "group" ? "desde " : ""}${eur(pq.onboarding)}`
+                        : "gratis con el pago anual"}
+                    </span>
+                    {pq.onboarding > 0 && pl.onboardingFreeAnnual && " (gratis con el pago anual)"}.{" "}
+                    {pl.onboardingNote}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* The bill */}
+          <aside className="lg:sticky lg:top-24" aria-label={`Cuenta del plan ${p.name}`}>
+            <div className="surface-lift rounded-2xl px-6 pt-6 pb-5">
+              <div className="flex items-baseline justify-between border-b border-dashed pb-4">
+                <p className="font-display text-2xl">La cuenta</p>
+                <p className="font-figure text-xs text-stone">
+                  {p.name} · {rooms} hab.{hotels > 1 ? ` · ${hotels} hoteles` : ""}
+                </p>
+              </div>
+              <dl className="font-figure divide-y divide-dashed text-sm">
+                {q.lines.map((l) => (
+                  <BillLine key={l.label} label={l.label} value={eur(l.amount, 2)} />
+                ))}
+                {PACKAGE_IDS.filter((id) => PLAN_PACKAGES[plan].includes(id)).map((id) => (
+                  <BillLine
+                    key={id}
+                    label={`Paquete ${PACKAGES[id].name}`}
+                    value="incluido"
+                    tone="mineral"
+                  />
+                ))}
+                {!planSla && (
+                  <BillLine
+                    label="SLA"
+                    value={p.slaAvailable ? "sin SLA" : "no disponible"}
+                    tone="muted"
+                  />
+                )}
+                {q.discount > 0 && (
+                  <BillLine
+                    label={`Pago anual −${q.discount * 100} %`}
+                    value={`−${eur(q.monthly - q.effectiveMonthly, 2)}`}
+                    tone="mineral"
+                  />
+                )}
+              </dl>
+              <div className="mt-2 flex items-end justify-between border-t-2 border-foreground/80 pt-4">
+                <span className="text-sm">Total al mes</span>
+                <span className="font-figure text-3xl font-semibold">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <m.span
+                      key={q.effectiveMonthly}
+                      className="inline-block"
+                      initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                    >
+                      {eur(q.effectiveMonthly, 2)}
+                    </m.span>
+                  </AnimatePresence>
+                </span>
+              </div>
+              {annual && (
+                <p className="font-figure mt-1 text-right text-xs text-stone">
+                  {eur(q.yearly, 2)} al año
+                </p>
+              )}
+              <p className="mt-3 text-xs text-stone">
+                Sin IVA. Implantación{" "}
+                {q.onboarding
+                  ? `${plan === "group" ? "desde " : ""}${eur(q.onboarding)}`
+                  : "gratis con el pago anual"}
+                .
+              </p>
+
+              {plan === "starter" && (
+                <fieldset className="mt-5 space-y-2.5 border-t border-dashed pt-4">
+                  <legend className="sr-only">Paquetes opcionales</legend>
+                  <p className="text-xs font-semibold text-stone">Añade paquetes a Esencial</p>
+                  {ADDON_IDS.map((a) => {
+                    const list = listPrice("starter", { sla: sla || null, annual });
+                    return (
+                      <label key={a} className="flex cursor-pointer items-center gap-2.5 text-sm">
                         <input
                           type="checkbox"
                           checked={addons.includes(a)}
                           onChange={(e) => toggleAddon(a, e.target.checked)}
-                          className="h-4 w-4 accent-[var(--primary)]"
+                          className="h-4 w-4 accent-[var(--brass-deep)]"
                         />
                         <span className="flex-1">{PACKAGES[a].name}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          +{eur(list.addonPerRoom(a), list.addonPerRoom(a) % 1 ? 2 : 0)}/hab.
+                        <span className="font-figure text-xs text-stone">
+                          +{eur2(list.addonPerRoom(a))}/hab.
                         </span>
                       </label>
-                    ))}
-                  </fieldset>
-                )}
-                <p className="mt-5 text-xs text-muted-foreground">
-                  Implantación:{" "}
-                  <span className="font-medium text-foreground">
-                    {q.onboarding
-                      ? `${id === "group" ? "desde " : ""}${eur(q.onboarding)}`
-                      : "gratis con el pago anual"}
-                  </span>
-                  {q.onboarding > 0 && plan.onboardingFreeAnnual && " (gratis con el pago anual)"}.{" "}
-                  {plan.onboardingNote}
-                </p>
-                <a
-                  href={`${PAGES.demo}?${new URLSearchParams({ plan: id, rooms: String(rooms), hotels: String(Math.max(hotels, plan.minHotels)) })}`}
-                  className={`mt-5 inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold ${
-                    best
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "border bg-background hover:bg-accent"
-                  }`}
-                >
-                  <CalendarCheck className="h-4 w-4" /> Agendar demo
-                </a>
-              </div>
-            );
-          })}
-        </div>
-        {suggested === "pro" && addons.length > 0 && (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Con esos paquetes, Profesional te sale igual o más barato que Esencial y lo incluye
-            todo.
-          </p>
-        )}
+                    );
+                  })}
+                  {suggested === "pro" && addons.length > 0 && (
+                    <p className="text-xs text-brass-deep">
+                      Con esos paquetes, Profesional te sale igual o más barato y lo incluye todo.
+                    </p>
+                  )}
+                </fieldset>
+              )}
 
-        <div className="mt-8 flex flex-col gap-3 rounded-xl border border-gold/50 bg-gold/10 p-5 sm:flex-row sm:items-center">
-          <Sparkles className="h-5 w-5 shrink-0 text-gold-foreground" />
+              <a
+                href={`${PAGES.demo}?${new URLSearchParams({ plan, rooms: String(rooms), hotels: String(Math.max(hotels, p.minHotels)) })}`}
+                className="btn btn-night lean mt-6 w-full"
+              >
+                Agendar demo con este plan <ArrowRight aria-hidden="true" />
+              </a>
+            </div>
+            {chosen === null && (
+              <p className="mt-3 text-center text-xs text-stone">
+                Te mostramos el plan que más te conviene. Toca otro para ver su cuenta.
+              </p>
+            )}
+          </aside>
+        </div>
+
+        <div
+          className="mt-10 flex flex-col gap-3 rounded-2xl border border-brass/40 bg-[linear-gradient(135deg,oklch(0.96_0.03_82),var(--card))] p-5 sm:flex-row sm:items-center"
+          data-reveal
+        >
+          <Sparkles className="h-5 w-5 shrink-0 text-brass-deep" aria-hidden="true" />
           <p className="text-sm">
             <span className="font-semibold">Hoteles fundadores:</span> los {FOUNDERS.seats} primeros
             hoteles que paguen el año por adelantado tienen un {FOUNDERS.annualDiscount * 100} % de
@@ -304,17 +407,17 @@ export function PricingPage() {
       </section>
 
       {/* Always */}
-      <section className="border-y bg-card">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-12 sm:px-6 md:grid-cols-[1fr_2fr]">
-          <h2 className="text-2xl font-semibold tracking-tight">En todos los planes</h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
+      <section className="border-y border-border/70 bg-card">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 md:grid-cols-[0.8fr_1.2fr] lg:px-8">
+          <SectionHead n="01" label="Siempre" title="En todos los planes" />
+          <ul className="grid gap-4 self-end sm:grid-cols-2" data-reveal>
             {ALWAYS.map((a) => (
-              <li key={a} className="flex gap-2 text-sm">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-info-foreground" /> {a}
+              <li key={a} className="flex gap-2.5 text-sm">
+                <Tick className="mt-0.5" /> {a}
               </li>
             ))}
-            <li className="flex gap-2 text-sm">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-info-foreground" />
+            <li className="flex gap-2.5 text-sm">
+              <Tick className="mt-0.5" />
               IA: {AI_CONVERSATIONS_INCLUDED.toLocaleString("es-ES")} conversaciones al mes por
               hotel incluidas; después, {eur(AI_EXTRA_CONVERSATION, 2)} por conversación
             </li>
@@ -323,15 +426,15 @@ export function PricingPage() {
       </section>
 
       {/* Modules by plan */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <h2 className="text-2xl font-semibold tracking-tight">Qué incluye cada plan</h2>
-        <div className="mt-6 overflow-x-auto rounded-xl border bg-card">
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <SectionHead n="02" label="Módulos" title="Qué incluye cada plan" />
+        <div className="surface mt-10 overflow-x-auto rounded-2xl" data-reveal>
           <table className="w-full min-w-[36rem] text-sm">
             <thead>
-              <tr className="border-b bg-muted text-left">
-                <th className="px-4 py-3 font-medium">Módulo</th>
+              <tr className="border-b bg-muted/70 text-left">
+                <th className="px-5 py-3.5 font-medium">Módulo</th>
                 {PLAN_IDS.map((id) => (
-                  <th key={id} className="px-4 py-3 text-center font-medium">
+                  <th key={id} className="px-4 py-3.5 text-center font-medium">
                     {PLANS[id].name}
                   </th>
                 ))}
@@ -344,58 +447,49 @@ export function PricingPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          «Opcional»: paquete que se añade a Esencial con el precio indicado arriba.
+        <p className="mt-3 text-xs text-stone">
+          «Opcional»: paquete que se añade a Esencial con el precio indicado en la cuenta.
         </p>
       </section>
 
       {/* SLA */}
-      <section className="border-t bg-card" id="sla">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-gold-foreground">
-              Acuerdo de nivel de servicio (SLA)
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-              Paga la urgencia que necesitas, por escrito
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Todos los planes incluyen soporte en horario laboral. Si tu hotel no puede esperar,
-              contrata un SLA (planes Esencial, Profesional y Grupo): compromisos de respuesta y
-              disponibilidad en el contrato, compensados en la factura si no los cumplimos. Se cobra
-              como un porcentaje de tu cuota, con un mínimo, y puedes cambiarlo cada mes.
-            </p>
-          </div>
-          <div className="mt-6 overflow-x-auto rounded-xl border">
+      <section className="border-t border-border/70 bg-card" id="sla">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <SectionHead
+            n="03"
+            label="Acuerdo de nivel de servicio"
+            title="Paga la urgencia que necesitas, por escrito"
+            lead="Todos los planes incluyen soporte en horario laboral. Si tu hotel no puede esperar, contrata un SLA (planes Esencial, Profesional y Grupo): compromisos de respuesta y disponibilidad en el contrato, compensados en la factura si no los cumplimos. Se cobra como un porcentaje de tu cuota, con un mínimo, y puedes cambiarlo cada mes."
+          />
+          <div className="surface mt-10 overflow-x-auto rounded-2xl" data-reveal>
             <table className="w-full min-w-[48rem] text-sm">
               <thead>
-                <tr className="border-b bg-muted text-left align-top">
-                  <th className="px-4 py-3 font-medium" />
-                  <th className="px-4 py-3 font-medium">
+                <tr className="border-b bg-muted/70 text-left align-top">
+                  <th className="px-5 py-3.5 font-medium" />
+                  <th className="px-4 py-3.5 font-medium">
                     Incluido
-                    <span className="block text-xs font-normal text-muted-foreground">
+                    <span className="block text-xs font-normal text-stone">
                       En todos los planes
                     </span>
                   </th>
                   {SLA_IDS.map((id) => (
-                    <th key={id} className="px-4 py-3 font-medium">
+                    <th key={id} className="px-4 py-3.5 font-medium">
                       {SLA_TIERS[id].name}
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        +{SLA_TIERS[id].share * 100} % de la cuota · mín.{" "}
-                        {eur(SLA_TIERS[id].minimum)}/mes
+                      <span className="font-figure block text-xs font-normal text-stone">
+                        +{SLA_TIERS[id].share * 100} % · mín. {eur(SLA_TIERS[id].minimum)}/mes
                       </span>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="[&_td]:px-4 [&_td]:py-3 [&_td]:align-top [&_tr]:border-b">
+              <tbody className="[&_td]:px-4 [&_td]:py-3.5 [&_td]:align-top [&_td:first-child]:pl-5 [&_tr]:border-b [&_tr:last-child]:border-0">
                 <SlaRow
                   label="Disponibilidad mensual"
                   base="Sin compromiso"
                   cell={(id) => (
                     <>
-                      <span className="font-semibold">{pct(SLA_TIERS[id].uptime)}</span>
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="font-figure font-semibold">{pct(SLA_TIERS[id].uptime)}</span>
+                      <span className="block text-xs text-stone">
                         máx. {downtimeMinutes(SLA_TIERS[id].uptime)} min sin servicio al mes
                       </span>
                     </>
@@ -436,27 +530,36 @@ export function PricingPage() {
                 />
                 <SlaRow
                   label="Compensación si fallamos"
-                  base={<Minus className="h-4 w-4 text-muted-foreground" aria-label="No" />}
-                  cell={() => <Check className="h-4 w-4 text-info-foreground" aria-label="Sí" />}
+                  base={<Minus className="h-4 w-4 text-stone" aria-label="No" />}
+                  cell={() => (
+                    <>
+                      <Tick />
+                      <span className="sr-only">Sí</span>
+                    </>
+                  )}
                 />
               </tbody>
             </table>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border bg-background p-5 text-sm">
+            <div className="surface rounded-2xl p-6 text-sm" data-reveal>
               <p className="font-semibold">Compensación si no cumplimos</p>
-              <ul className="mt-2 space-y-1 text-muted-foreground">
+              <ul className="font-figure mt-3 space-y-1.5 text-stone">
                 <li>Por debajo del compromiso: 10 % de la cuota del mes</li>
                 <li>Por debajo del 99 %: 25 %</li>
                 <li>Por debajo del 98 %: 50 %</li>
               </ul>
-              <p className="mt-2 text-muted-foreground">
+              <p className="mt-3 text-stone">
                 Se descuenta sola de la siguiente factura, sin que tengas que reclamarla.
               </p>
             </div>
-            <div className="rounded-lg border bg-background p-5 text-sm">
+            <div
+              className="surface rounded-2xl p-6 text-sm"
+              data-reveal
+              style={{ ["--d" as string]: "120ms" }}
+            >
               <p className="font-semibold">Qué no cuenta como caída</p>
-              <ul className="mt-2 space-y-1 text-muted-foreground">
+              <ul className="mt-3 space-y-1.5 text-stone">
                 <li>
                   Mantenimiento avisado con 48 h, entre las 2:00 y las 6:00 y como máximo 4 h al mes
                 </li>
@@ -469,33 +572,54 @@ export function PricingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-        <h2 className="text-2xl font-semibold tracking-tight">Preguntas frecuentes</h2>
-        <div className="mt-6 divide-y rounded-xl border bg-card">
+      <section className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+        <SectionHead n="04" label="Dudas" title="Preguntas frecuentes" />
+        <div className="surface mt-10 divide-y rounded-2xl" data-reveal>
           {FAQ.map((f) => (
-            <details key={f.q} className="group px-5 py-4">
-              <summary className="cursor-pointer list-none font-medium marker:hidden">
-                <span className="flex items-center justify-between gap-4">
-                  {f.q}
-                  <span className="text-muted-foreground transition-transform group-open:rotate-45">
-                    +
-                  </span>
+            <details key={f.q} className="group px-6 py-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium marker:hidden">
+                {f.q}
+                <span
+                  aria-hidden="true"
+                  className="text-xl leading-none text-stone transition-transform duration-200 group-open:rotate-45"
+                >
+                  +
                 </span>
               </summary>
-              <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>
+              <p className="mt-3 text-sm leading-relaxed text-stone">{f.a}</p>
             </details>
           ))}
         </div>
-        <div className="mt-10 text-center">
-          <a
-            href={PAGES.demo}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-          >
-            <CalendarCheck className="h-4 w-4" /> Resolver dudas en una demo
+        <div className="mt-12 text-center">
+          <a href={PAGES.demo} className="btn btn-night lean">
+            Resolver dudas en una demo <ArrowRight aria-hidden="true" />
           </a>
         </div>
       </section>
     </Layout>
+  );
+}
+
+function BillLine({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "mineral" | "muted";
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2.5">
+      <dt className={tone === "muted" ? "text-stone" : ""}>{label}</dt>
+      <dd
+        className={
+          tone === "mineral" ? "text-mineral" : tone === "muted" ? "text-stone" : "font-semibold"
+        }
+      >
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -509,30 +633,27 @@ function PackageRows({ pkg }: { pkg: PackageId }) {
         : "no";
   return (
     <>
-      <tr className="border-b bg-secondary/40">
-        <td
-          colSpan={PLAN_IDS.length + 1}
-          className="px-4 py-2 text-xs font-semibold tracking-wide uppercase"
-        >
+      <tr className="border-b bg-sand/50">
+        <td colSpan={PLAN_IDS.length + 1} className="font-figure px-5 py-2 text-xs text-brass-deep">
           {PACKAGES[pkg].name}
         </td>
       </tr>
       {features.map((f) => (
         <tr key={f} className="border-b last:border-0">
-          <td className="px-4 py-2.5">{f}</td>
+          <td className="px-5 py-3">{f}</td>
           {PLAN_IDS.map((plan) => {
             const s = status(plan);
             return (
-              <td key={plan} className="px-4 py-2.5 text-center">
+              <td key={plan} className="px-4 py-3 text-center">
                 {s === "yes" ? (
-                  <Check className="mx-auto h-4 w-4 text-info-foreground" aria-label="Incluido" />
+                  <>
+                    <Tick className="mx-auto" />
+                    <span className="sr-only">Incluido</span>
+                  </>
                 ) : s === "optional" ? (
-                  <span className="text-xs text-muted-foreground">Opcional</span>
+                  <span className="font-figure text-xs text-brass-deep">Opcional</span>
                 ) : (
-                  <Minus
-                    className="mx-auto h-4 w-4 text-muted-foreground"
-                    aria-label="No incluido"
-                  />
+                  <Minus className="mx-auto h-4 w-4 text-stone/50" aria-label="No incluido" />
                 )}
               </td>
             );
@@ -559,9 +680,9 @@ function SlaRow({
     <tr>
       <td className="font-medium">
         {label}
-        {hint && <span className="block text-xs font-normal text-muted-foreground">{hint}</span>}
+        {hint && <span className="block text-xs font-normal text-stone">{hint}</span>}
       </td>
-      <td className="text-muted-foreground">{base}</td>
+      <td className="text-stone">{base}</td>
       {SLA_IDS.map((id) => (
         <td key={id}>{cell(id)}</td>
       ))}
