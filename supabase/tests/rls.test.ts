@@ -2858,7 +2858,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
           await client.query<{ id: string }>(
             `insert into public.reservations (tenant_id, room_id, member_id, start_at, end_at, status, total, created_by_role, simulated, payment_mode)
              values ($1, $2, $3, now() + make_interval(days => $4), now() + make_interval(days => $4 + 1), $5, 100, $6, $7,
-                     case when $5 = 'pending' then 'prepay' else 'at_hotel' end)
+                     $8)
              returning id`,
             [
               ids.lumen,
@@ -2868,6 +2868,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
               status,
               role,
               simulated,
+              status === "pending" ? "prepay" : "at_hotel",
             ],
           )
         ).rows[0].id;
@@ -2922,10 +2923,16 @@ describe.skipIf(!DB_URL)("RLS", () => {
             )
           ).rows[0].n,
       );
-      const write = await attempt("authenticated", users.lumenAdmin, () =>
-        client.query("update public.guest_emails set status = 'sent' where reservation_id = $1", [
-          atHotel,
-        ]),
+      const write = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "update public.guest_emails set status = 'sent' where reservation_id = $1",
+              [atHotel],
+            )
+          ).rowCount,
       );
       await client.query("rollback to savepoint setup");
 
@@ -2939,8 +2946,8 @@ describe.skipIf(!DB_URL)("RLS", () => {
       );
       expect(staff).toEqual({ ok: true, value: 3 });
       expect(other).toEqual({ ok: true, value: 0 });
-      // No write grant: only the server marks emails as sent.
-      expect(write.ok).toBe(false);
+      // No write policy: only the server marks emails as sent.
+      expect(write).toEqual({ ok: true, value: 0 });
     });
   });
 });
