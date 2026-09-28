@@ -7,8 +7,8 @@ select t.id, 'date', s.name,
        jsonb_build_object('from', (current_date + s.start_in)::text,
                           'to', (current_date + s.start_in + s.nights - 1)::text),
        s.pct, true
-  from (values ('hotel-lumen', 'Semana de otoño', 10, 7, -15),
-               ('albora-hotel-spa', 'Escapada entre semana', 5, 4, -20))
+  from (values ('hotel-lumen', 'Semana de otoño', 14, 7, -15),
+               ('albora-hotel-spa', 'Escapada entre semana', 17, 5, -20))
        as s(slug, name, start_in, nights, pct)
   join public.tenants t on t.slug = s.slug
  where not exists (
