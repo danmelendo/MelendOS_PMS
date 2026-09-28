@@ -464,3 +464,6 @@ verify_jwt = false
 
 [functions.verifactu-dispatch]
 verify_jwt = false
+
+[functions.guest-emails-dispatch]
+verify_jwt = false

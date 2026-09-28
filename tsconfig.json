@@ -13,6 +13,7 @@
     "supabase/functions/_shared/channels/**/*.ts",
     "supabase/functions/_shared/ses/**/*.ts",
     "supabase/functions/_shared/verifactu/**/*.ts",
+    "supabase/functions/_shared/email/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.db.config.ts",
