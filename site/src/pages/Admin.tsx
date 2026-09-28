@@ -12,20 +12,20 @@ import {
   Search,
   Trash2,
   Trophy,
+  UserPlus,
   X,
 } from "lucide-react";
 import { Logo } from "../components/Layout";
+import { BTN, FIELD, Stat } from "./admin-ui";
+import { ClientsTab, draftFromLead } from "./AdminClients";
+import { BillingTab } from "./AdminBilling";
 import { LEAD_STATUSES, sales, type Lead, type LeadStatus } from "../lib/supabase";
 import { PLANS, type PlanId } from "../../supabase/functions/_shared/plans.ts";
 import { DEMO_TIMEZONE } from "../../supabase/functions/_shared/slots.ts";
 
-// Sales admin panel: the leads from the website. Access is checked in the
-// database (sales_admins + RLS); this page only shows what the server returns.
-
-const FIELD =
-  "h-9 rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-2 focus-visible:outline-ring";
-const BTN =
-  "inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60";
+// Sales admin panel: leads from the website, customers and what we bill them.
+// Access is checked in the database (sales_admins + RLS); this page only shows
+// what the server returns.
 
 const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
   new Date(iso).toLocaleString("es-ES", { timeZone: DEMO_TIMEZONE, ...opts });
@@ -91,7 +91,58 @@ export function AdminPage() {
         </div>
       </Shell>
     );
-  return <Leads email={session.user.email} />;
+  return <Workspace email={session.user.email} />;
+}
+
+const TABS = { leads: "Leads", clientes: "Clientes", facturacion: "Facturación" } as const;
+type Tab = keyof typeof TABS;
+const tabFromHash = (): Tab => {
+  const h = window.location.hash.slice(1);
+  return h in TABS ? (h as Tab) : "leads";
+};
+
+function Workspace({ email }: { email?: string }) {
+  const [tab, setTab] = useState<Tab>(tabFromHash);
+  const [pending, setPending] = useState<ReturnType<typeof draftFromLead> | null>(null);
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const go = (t: Tab) => {
+    window.location.hash = t === "leads" ? "" : t;
+    setTab(t);
+  };
+  const clearPending = useCallback(() => setPending(null), []);
+  return (
+    <Shell email={email}>
+      <nav className="border-b bg-card" aria-label="Secciones">
+        <div className="mx-auto flex max-w-7xl gap-1 px-4 sm:px-6">
+          {(Object.keys(TABS) as Tab[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => go(t)}
+              aria-current={tab === t ? "page" : undefined}
+              className={`border-b-2 px-3 py-2.5 text-sm font-semibold ${tab === t ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              {TABS[t]}
+            </button>
+          ))}
+        </div>
+      </nav>
+      {tab === "leads" && (
+        <Leads
+          onConvert={(lead) => {
+            setPending(draftFromLead(lead));
+            go("clientes");
+          }}
+        />
+      )}
+      {tab === "clientes" && <ClientsTab pending={pending} onPendingUsed={clearPending} />}
+      {tab === "facturacion" && <BillingTab />}
+    </Shell>
+  );
 }
 
 function Shell({ children, email }: { children: ReactNode; email?: string }) {
@@ -101,7 +152,7 @@ function Shell({ children, email }: { children: ReactNode; email?: string }) {
       <header className="border-b bg-navy text-navy-foreground">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Logo onNavy />
-          <span className="text-sm text-navy-foreground/70">· Leads</span>
+          <span className="text-sm text-navy-foreground/70">· Gestión</span>
           {email && (
             <div className="ml-auto flex items-center gap-2 text-sm">
               <span className="hidden text-navy-foreground/70 sm:inline">{email}</span>
@@ -145,7 +196,7 @@ function Login() {
   return (
     <Shell>
       <form onSubmit={submit} className="mx-auto mt-16 max-w-sm rounded-xl border bg-card p-6">
-        <h1 className="text-lg font-semibold">Panel de leads</h1>
+        <h1 className="text-lg font-semibold">Panel de gestión</h1>
         <p className="mt-1 text-sm text-muted-foreground">Solo para el equipo de ventas.</p>
         <label className="mt-5 block text-sm font-medium">
           Email
@@ -232,7 +283,7 @@ function ChangePassword({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Leads({ email }: { email?: string }) {
+function Leads({ onConvert }: { onConvert: (lead: Lead) => void }) {
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -300,7 +351,7 @@ function Leads({ email }: { email?: string }) {
   };
 
   return (
-    <Shell email={email}>
+    <>
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat icon={Inbox} label="Nuevos por atender" value={count("new")} />
@@ -480,31 +531,10 @@ function Leads({ email }: { email?: string }) {
           onClose={() => setOpenId(null)}
           onSave={(patch) => update(open.id, patch)}
           onDelete={() => remove(open.id)}
+          onConvert={() => onConvert(open)}
         />
       )}
-    </Shell>
-  );
-}
-
-function Stat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Inbox;
-  label: string;
-  value: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
-      <span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
-        <Icon className="h-4 w-4" aria-hidden="true" />
-      </span>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-xl font-semibold tabular-nums">{value}</p>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -513,11 +543,13 @@ function LeadDrawer({
   onClose,
   onSave,
   onDelete,
+  onConvert,
 }: {
   lead: Lead;
   onClose: () => void;
   onSave: (patch: Partial<Pick<Lead, "status" | "notes">>) => Promise<void>;
   onDelete: () => void;
+  onConvert: () => void;
 }) {
   const [notes, setNotes] = useState(lead.notes ?? "");
   const [saved, setSaved] = useState(false);
@@ -583,6 +615,15 @@ function LeadDrawer({
             <a href={`tel:${lead.phone}`} className={`${BTN} border bg-background hover:bg-accent`}>
               <Phone className="h-4 w-4" aria-hidden="true" /> Llamar
             </a>
+          )}
+          {lead.status === "won" && (
+            <button
+              type="button"
+              onClick={onConvert}
+              className={`${BTN} bg-primary text-primary-foreground hover:bg-primary/90`}
+            >
+              <UserPlus className="h-4 w-4" aria-hidden="true" /> Convertir en cliente
+            </button>
           )}
         </div>
         <label className="mt-5 block px-5 text-sm font-medium">

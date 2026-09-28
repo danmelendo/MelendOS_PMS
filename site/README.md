@@ -53,9 +53,22 @@ limits 3 leads per email and 5 per IP a day, and a unique index prevents double-
 
 ## Admin panel and lead emails
 
-- **`/admin/`**: leads with filters, upcoming demos, conversion, status and internal notes,
-  CSV export and delete (right to erasure). Not indexed (`noindex`, `robots.txt`, out of the
-  sitemap). Sign-in with email and password; public sign-up is disabled on the sales project.
+- **`/admin/`**, the management panel, with three tabs:
+  - **Leads**: filters, upcoming demos, conversion, status and internal notes, CSV export and
+    delete (right to erasure). A won lead can become a client («Convertir en cliente»).
+  - **Clientes** (`#clientes`): each customer's contract (plan, rooms, packages, SLA, agreed
+    fee against the public price from `plans.ts`), their hotels (product project and tenant, panel,
+    web, domain), links (Supabase, hosting, VPS…) and an **access register**: _where_ each
+    credential is kept and when it expires, never the secret itself. MRR and access about to
+    expire at the top.
+  - **Facturación** (`#facturacion`): `generate_client_invoices()` creates the drafts of every
+    active client on its due date (monthly, or yearly when paying annually) and the setup fee
+    once. It runs daily with pg_cron at 06:00 UTC and on demand from the panel.
+    `issue_client_invoice()` numbers them `MOS-<year>-0001…`; once issued an invoice cannot be
+    edited, only paid or cancelled. Pending, overdue, collected and CSV export.
+  - Tables in migration `20260929120000_clients.sql`.
+  - Not indexed (`noindex`, `robots.txt`, out of the sitemap). Sign-in with email and password;
+    public sign-up is disabled on the sales project.
 - **Who can see it**: users listed in `public.sales_admins` (RLS on `leads`; migration
   `20260927120000_sales_admins.sql`). To add someone: create the user in Supabase → Auth (or with
   the Auth admin API) and `insert into public.sales_admins (user_id, email) select id, email from
