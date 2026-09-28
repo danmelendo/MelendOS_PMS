@@ -130,10 +130,10 @@ function WebBookingDetail() {
           </span>
         ) : canSign ? (
           <button
-            onClick={() => navigate({ to: "/web/sign/$bookingId", params: { bookingId } })}
+            onClick={() => navigate({ to: "/web/checkin/$bookingId", params: { bookingId } })}
             className=" bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
           >
-            Firmar
+            Hacer check-in
           </button>
         ) : (
           <span className="flex items-center gap-1 text-sm text-neutral-400">

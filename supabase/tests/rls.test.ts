@@ -2950,4 +2950,107 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(write).toEqual({ ok: true, value: 0 });
     });
   });
+  describe("online check-in (traveller register by the guest)", () => {
+    it("lets the guest with the link add and correct travellers, and never read them back", async () => {
+      await client.query("savepoint setup");
+      const stay = async (days: number, status = "confirmed") =>
+        (
+          await client.query<{ id: string }>(
+            `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, access_token_hash)
+             values ($1, $2, now() + make_interval(days => $3), now() + make_interval(days => $3 + 1), $4, 100, 'public',
+                     encode(extensions.digest('checkin-token', 'sha256'), 'hex'))
+             returning id`,
+            [ids.lumen, ids["lumen-room-101"], days, status],
+          )
+        ).rows[0].id;
+      const id = await stay(3100);
+      const closed = await stay(3110, "cancelled");
+      const holder = {
+        is_holder: true,
+        first_name: "Laura",
+        last_name1: "Gómez",
+        last_name2: "Ruiz",
+        document_type: "NIF",
+        document_number: "12345678Z",
+        document_support: "ABC123456",
+        birth_date: "1990-05-01",
+        nationality: "ESP",
+        address: "Calle Mayor 1",
+        municipality_code: "46250",
+        postal_code: "46001",
+        country: "ESP",
+        phone: "600000000",
+      };
+      const saveAs = (token: string, reservation: string, data: unknown, travellerId?: string) =>
+        attempt("anon", undefined, async () =>
+          travellerId
+            ? (
+                await client.query("select public.guest_save_traveller($1, $2, $3, $4) as t", [
+                  reservation,
+                  token,
+                  data,
+                  travellerId,
+                ])
+              ).rows[0].t
+            : (
+                await client.query("select public.guest_save_traveller($1, $2, $3) as t", [
+                  reservation,
+                  token,
+                  data,
+                ])
+              ).rows[0].t,
+        );
+      await as("anon");
+      const tid = (
+        await client.query("select public.guest_save_traveller($1, $2, $3) as t", [
+          id,
+          "checkin-token",
+          { ...holder, last_name2: null },
+        ])
+      ).rows[0].t;
+      // A correction sends only what changes.
+      await client.query("select public.guest_save_traveller($1, $2, $3, $4)", [
+        id,
+        "checkin-token",
+        { last_name2: "Ruiz" },
+        tid,
+      ]);
+      const list = (
+        await client.query("select * from public.guest_list_travellers($1, $2)", [
+          id,
+          "checkin-token",
+        ])
+      ).rows;
+      await client.query("reset role");
+      const stored = (
+        await client.query(
+          "select document_number, last_name2, updated_by from public.stay_travellers where id = $1",
+          [tid],
+        )
+      ).rows[0];
+      const wrongToken = await saveAs("guess", id, holder);
+      const cancelled = await saveAs("checkin-token", closed, holder);
+      const direct = await attempt("anon", undefined, () =>
+        client.query("select * from public.stay_travellers where reservation_id = $1", [id]),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(list).toHaveLength(1);
+      expect(list[0]).toMatchObject({
+        first_name: "Laura",
+        is_holder: true,
+        document_hint: "••••••78Z",
+        missing: [],
+      });
+      expect(JSON.stringify(list)).not.toContain("12345678Z");
+      expect(stored).toEqual({
+        document_number: "12345678Z",
+        last_name2: "Ruiz",
+        updated_by: null,
+      });
+      expect(wrongToken.ok).toBe(false);
+      expect(cancelled.ok).toBe(false);
+      expect(direct.ok).toBe(false);
+    });
+  });
 });

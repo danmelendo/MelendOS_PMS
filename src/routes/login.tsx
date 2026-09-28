@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { DemoAccountPicker } from "@/components/DemoAccountPicker";
 import { DEMO_ACCESS } from "@/lib/demo-access";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -19,6 +20,8 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
+  const [sent, setSent] = useState(false);
 
   if (loading) return null;
   if (session) return <Navigate to="/today" />;
@@ -33,6 +36,17 @@ function LoginPage() {
     } else {
       navigate({ to: "/today" });
     }
+  };
+
+  const sendReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setBusy(false);
+    // Same answer whether the account exists or not.
+    setSent(true);
   };
 
   return (
@@ -50,6 +64,45 @@ function LoginPage() {
               tone="panel"
               onSignedIn={() => navigate({ to: "/today" })}
             />
+          ) : forgot ? (
+            sent ? (
+              <div className="space-y-4 text-sm">
+                <p>
+                  Si <strong>{email}</strong> tiene cuenta, te llegará un email con un enlace para
+                  elegir una contraseña nueva. Revisa también el correo no deseado.
+                </p>
+                <Button variant="outline" className="w-full" onClick={() => setForgot(false)}>
+                  Volver
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={sendReset} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Escribe tu email y te enviaremos un enlace para elegir una contraseña nueva.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={busy}>
+                  {busy ? "..." : "Enviar enlace"}
+                </Button>
+                <button
+                  type="button"
+                  className="w-full text-center text-xs text-muted-foreground hover:underline"
+                  onClick={() => setForgot(false)}
+                >
+                  Volver a entrar
+                </button>
+              </form>
+            )
           ) : (
             <form onSubmit={submit} className="space-y-4">
               <div className="space-y-2">
@@ -77,6 +130,16 @@ function LoginPage() {
               <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? "..." : "Entrar"}
               </Button>
+              <button
+                type="button"
+                className="w-full text-center text-xs text-muted-foreground hover:underline"
+                onClick={() => {
+                  setSent(false);
+                  setForgot(true);
+                }}
+              >
+                ¿Has olvidado la contraseña?
+              </button>
             </form>
           )}
         </CardContent>

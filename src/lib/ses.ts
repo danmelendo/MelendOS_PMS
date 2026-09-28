@@ -265,3 +265,35 @@ export const FIELD_LABELS: Record<string, string> = {
   email: "email",
   kinship: "parentesco",
 };
+
+// ── Online check-in (the guest, with the booking link or their account) ─────
+
+export function useGuestTravellers(reservationId: string, token: string | null) {
+  return useQuery({
+    queryKey: ["ses", "guest-travellers", reservationId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("guest_list_travellers", {
+        p_reservation: reservationId,
+        p_token: token as string,
+      });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as TravellerRow[];
+    },
+  });
+}
+
+export function useGuestTravellerSave(reservationId: string, token: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id?: string; data: SesTraveller }) => {
+      const { error } = await supabase.rpc("guest_save_traveller", {
+        p_reservation: reservationId,
+        p_token: token as string,
+        p_data: data as never,
+        p_id: id,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["ses", "guest-travellers", reservationId] }),
+  });
+}

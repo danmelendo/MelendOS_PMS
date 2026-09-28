@@ -1,0 +1,67 @@
+# Estado de Melend/OS y qué falta para venderlo
+
+_28/09/2026. Para Dan y Mercedes. Se actualiza cuando cambie algo de lo que aquí se dice._
+
+## En una frase
+
+El producto funciona de punta a punta **en la demo, que es la preproducción**: un hotel puede recibir reservas en su web o en la que ya tiene, cobrarlas, atender la estancia, registrar viajeros, facturar y medir el negocio. **Todavía no existe un entorno de producción ni una forma de dar de alta a un hotel real.** Para el primer cliente faltan sobre todo infraestructura, operaciones y papeles; el producto en sí está bastante completo.
+
+## Qué está hecho
+
+Todo lo que sigue funciona contra la demo (`isqompyvktijdasgophh`). Tiene tests unitarios (197), tests de permisos contra Postgres (~70 escenarios) y pruebas de extremo a extremo (`scripts/e2e-*.mjs`).
+
+| Área                   | Qué hace                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PMS (panel)**        | «Hoy» (llegadas, salidas, alojados, ocupación), planning de habitaciones × días, editor de reservas con precio en vivo, clientes con datos sensibles protegidos (solo dirección, con reautenticación), tarifas por noche y precio dinámico, extras, códigos promo, limpieza entre estancias, roles (recepción, dirección, dirección de grupo solo lectura), booking journal. |
+| **Motor de reservas**  | Disponibilidad y precio calculados en el servidor, calendario con precio por noche, pago online completo o en el hotel, política de cancelación por hotel copiada en cada reserva, **códigos promocionales canjeados en el servidor**, prereserva de 30 min.                                                                                                                 |
+| **Web del hotel**      | Plantilla editable desde el panel (logo, portada, textos, galería, contacto), **dominio o subdominio propio**, **«Habitaciones en oferta»**, «Mi reserva» (buscar por referencia + email o entrar con cuenta), **widget para incrustar** en la web que ya tenga el hotel (buscador y asistente).                                                                             |
+| **Estancia**           | Chat con recepción en tiempo real, cuenta de la estancia (cargos, ampliación de noches, pago del saldo), reseñas verificadas con respuesta del hotel, check-in online con firma y documentación, **emails de confirmación y cancelación** (simulados en la demo).                                                                                                            |
+| **Pagos**              | Pasarela por hotel (Redsys probada de extremo a extremo en su entorno de pruebas; Stripe implementada sin probar con claves), credenciales cifradas en Vault, la reserva solo se confirma con la notificación firmada del banco.                                                                                                                                             |
+| **Normativa**          | **SES.HOSPEDAJES**: partes de viajeros y reservas con XML, ZIP y SOAP del ministerio, cola y reintentos. **VERI\*FACTU**: facturas completas y simplificadas, rectificativas, anulación, huella encadenada validada con los vectores de la AEAT, XML validado contra el XSD oficial, QR. Ambas probadas contra un entorno **simulado**, no contra los reales.                |
+| **IA**                 | Asistente de reservas en la web (busca, cotiza, reserva, recupera la referencia, cancela con verificación en dos pasos) con barreras en el servidor; servidor MCP por hotel con tokens; copiloto del panel con herramientas de solo lectura. Evals automáticas (15/15 y 7/7 con un modelo local de 7B).                                                                      |
+| **Distribución**       | Capa de canales (OTAs, channel managers, touroperadores): entrada firmada, salida de disponibilidad y precio, registro de mensajes. **Solo existe el adaptador de demostración**; ninguno real.                                                                                                                                                                              |
+| **Datos**              | Informes (ocupación, ADR, RevPAR, antelación, cancelaciones y motivos, canales), historial simulado de 2 años, exportación diaria al data lake (Parquet) con contrato documentado para el ML.                                                                                                                                                                                |
+| **Paquetes y módulos** | Base + Estancia, IA, Cadena, Datos y Distribución, activables por hotel y comprobados en el servidor.                                                                                                                                                                                                                                                                        |
+| **Web comercial**      | `os.melendo.app` desplegada: landing, hostales, normativa, precios con calculadora y SLA, agenda de demos con leads en un Supabase de ventas aparte, avisos por email y panel de leads.                                                                                                                                                                                      |
+
+Se retiró el 28/09/2026 (decisión de Dan): la app del huésped `/stays` (lo que aportaba ya está en «Mi reserva») y las experiencias.
+
+## Qué falta para poder venderlo
+
+### 1. Imprescindible antes del primer hotel
+
+| #   | Qué                                                                                                                                                                                                                                                                                                                                                                                              | Esfuerzo orientativo  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| 1   | **Entorno de producción**: proyecto Supabase de pago con PITR, flujo de promoción con aprobación (`DEPLOY.md`), secretos de producción, simulacro de restauración.                                                                                                                                                                                                                               | 2-3 días              |
+| 2   | **Frontend publicado** con dominio comodín (`*.reservas.melendo.app`) y certificados automáticos para los dominios propios de los hoteles. Hay que elegir hosting: Vercel con su API de dominios o Cloudflare for SaaS.                                                                                                                                                                          | 1-2 días              |
+| 3   | **Alta de un hotel**: hoy los hoteles salen del seed (SQL). Hace falta una consola interna o un script guiado para crear el hotel, su dirección, establecimientos, habitaciones, tarifas y políticas. También la **importación de habitaciones y reservas desde Excel/CSV**, que la web comercial promete y no existe.                                                                           | 4-6 días              |
+| 4   | **Cuentas del personal**: recuperación de contraseña (no existe), invitar a recepción desde el panel y 2FA al menos para dirección, que ve datos sensibles.                                                                                                                                                                                                                                      | 2-3 días              |
+| 5   | **Pasarela real** con el comercio de un hotel (Redsys en real o Stripe en vivo), incluidas las **devoluciones**: hoy la base marca «devolución pendiente» y el hotel la hace a mano en la pasarela.                                                                                                                                                                                              | 2-4 días + banco      |
+| 6   | **Emails reales**: dominio de envío verificado (SPF/DKIM) y `RESEND_API_KEY` + `EMAIL_FROM` en producción. El código está hecho.                                                                                                                                                                                                                                                                 | ½ día                 |
+| 7   | **SES.HOSPEDAJES real**: credenciales de un establecimiento y una comunicación aceptada por el ministerio en su entorno de pruebas.                                                                                                                                                                                                                                                              | 1-2 días + ministerio |
+| 8   | **VERI\*FACTU real**: certificado, datos del productor, declaración responsable del sistema y comprobar que las Edge Functions admiten certificado de cliente. Si no, un pequeño servicio aparte para el envío. **No lanzar campañas sobre normativa hasta cerrar 7 y 8** (la web lo dice «en desarrollo»).                                                                                      | 3-5 días + AEAT       |
+| 9   | **Papeles**: condiciones del servicio, contrato de encargo del tratamiento (RGPD, art. 28) y el reparto de responsabilidades de `docs/normativa-alcance.md` en el contrato. Además, **páginas legales en la web de cada hotel** (aviso legal, privacidad para sus huéspedes, cookies, condiciones de reserva), que la plantilla aún no tiene. Alta como autónomo o sociedad cuando haya cliente. | 2-3 días + asesoría   |
+| 10  | **Operación mínima**: alertas de errores de las funciones y de colas atascadas (SES, VERI\*FACTU, emails), canal de soporte y horario, y un procedimiento para incidencias.                                                                                                                                                                                                                      | 2 días                |
+
+Total orientativo: **4-6 semanas de trabajo**, más los tiempos de terceros (banco, ministerio, AEAT, asesoría).
+
+### 2. Importante en los primeros meses
+
+- **Idiomas**: la web del huésped y los emails solo están en español. En costa y ciudad turística el inglés es imprescindible (y según el mercado, francés o alemán).
+- **LLM de producción**: hoy el asistente usa un modelo local en el PC de Dan. Hace falta un proveedor de API por hotel con el consumo medido (ya se registra por turno) y afinar lo conocido: a veces responde preguntas fuera de tema.
+- **Un channel manager real** (p. ej. Channex): sin conexión con Booking y Expedia muchos hoteles no cambian de PMS.
+- **Cobro de la suscripción** (propuesta: Stripe Billing) y facturas propias de Melend/OS.
+- **Observabilidad por hotel en el panel** (fase 9): coste del asistente, envíos y errores.
+- **Ayuda de uso**: guía corta por pantalla y vídeos de 2 minutos. Reduce soporte, que es el coste que más escala.
+- **Informes a escala**: `report_stays` devuelve una fila por estancia. Con hoteles grandes hay que agregar en SQL.
+
+### 3. Después
+
+Predicciones de ML (Mercedes, sobre el data lake), API pública con webhooks, llamada VoIP a recepción, garantía con tarjeta de las reservas con pago en el hotel, reserva de instalaciones por franjas (se fue con la app) y README en inglés para la presentación.
+
+## Riesgos a vigilar
+
+- **Normativa**: el valor diferencial (SES y VERI\*FACTU) es también el mayor riesgo mientras no esté probado contra los entornos reales.
+- **Dependencia de Supabase**: base, funciones, cron y almacenamiento en un solo proveedor. Es razonable para empezar; el esquema es Postgres estándar y la salida es posible.
+- **Capacidad de soporte**: con dos personas, cada hotel que llama cuesta margen. Por eso importan la plantilla cerrada, el SLA como servicio aparte y la ayuda dentro del producto.
+- **Conocimiento concentrado**: `CLAUDE.md`, `MAPA.md` y los `docs/` están al día; mantenerlos así es parte del trabajo.

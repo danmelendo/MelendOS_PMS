@@ -260,7 +260,7 @@ function emptyForm(initial: TravellerRow | null, holder: boolean): Form {
   };
 }
 
-function TravellerForm({
+export function TravellerForm({
   stay,
   initial,
   firstOne = false,
