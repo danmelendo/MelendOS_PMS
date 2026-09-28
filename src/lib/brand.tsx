@@ -72,18 +72,26 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     queryKey: ["brand-hotels", host?.domain ?? host?.slug ?? "demo"],
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      let q = supabase.from("tenants").select(COLUMNS).order("name");
-      if (host?.domain) q = q.eq("domain", host.domain);
-      else if (host?.slug) q = q.eq("slug", host.slug);
-      const { data, error } = await q;
-      if (error) throw error;
-      return ((data ?? []) as TenantRow[]).map(brandOf);
+      const load = async (by?: { domain?: string; slug?: string }) => {
+        let q = supabase.from("tenants").select(COLUMNS).order("name");
+        if (by?.domain) q = q.eq("domain", by.domain);
+        else if (by?.slug) q = q.eq("slug", by.slug);
+        const { data, error } = await q;
+        if (error) throw error;
+        return ((data ?? []) as TenantRow[]).map(brandOf);
+      };
+      if (host) {
+        const own = await load(host);
+        if (own.length) return { hotels: own, matched: true };
+      }
+      // A host that matches no hotel (a tunnel, a preview URL, a domain not
+      // yet saved) shows the demo list instead of a blank page.
+      return { hotels: await load(), matched: false };
     },
   });
 
-  // A hotel's host that matches no hotel falls back to the demo list.
-  const locked = !!host && !!data?.length;
-  const hotels = useMemo(() => data ?? [], [data]);
+  const locked = !!data?.matched;
+  const hotels = useMemo(() => data?.hotels ?? [], [data]);
   const brand =
     (locked
       ? hotels[0]
