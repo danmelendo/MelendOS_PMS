@@ -21,11 +21,21 @@ Copia `scripts/hotel.example.json` y rellénalo:
 | `rates`                                           | Tarifas por noche (entre semana y, opcional, viernes y sábado).                                                                                                            |
 | `properties[].rooms`                              | Habitaciones de cada establecimiento: nombre, capacidad, tipo (`room`, `suite`, `family`), tarifa y características.                                                       |
 
+### Habitaciones desde el Excel del hotel
+
+Si el hotel tiene sus habitaciones en una hoja de cálculo, no hace falta pasarlas al fichero: guarda la hoja como **CSV UTF-8** con estas columnas (en cualquier orden; mayúsculas y tildes dan igual) y pásala con `--rooms`:
+
+| Establecimiento | Habitación | Capacidad | Tipo                          | Tarifa     | Precio | Precio fin de semana | Características |
+| --------------- | ---------- | --------- | ----------------------------- | ---------- | ------ | -------------------- | --------------- |
+| Hostal Ejemplo  | 1          | 1         | habitación / suite / familiar | Individual | 45     | 55                   | wifi            |
+
+Acepta `;` o `,` como separador, coma decimal (`95,50`) y comillas. Cada tarifa tiene que tener el mismo precio en todas sus filas. Las habitaciones y tarifas de la hoja sustituyen a las del fichero; el establecimiento de cada fila tiene que existir en el fichero. Ejemplo: `scripts/habitaciones.example.csv`.
+
 ## 2. Comprobar y crear
 
 ```bash
 set -a; . ./.env; set +a    # el .env del entorno donde se crea (¡comprueba cuál!)
-node --env-file=.env scripts/create-hotel.ts hotel.json
+node --env-file=.env scripts/create-hotel.ts hotel.json [--rooms habitaciones.csv]
 ```
 
 Sin `--apply` comprueba el fichero y hace todo dentro de una transacción que luego deshace: si algo falla, lo dice sin haber tocado nada. Cuando todo está bien:
@@ -47,5 +57,5 @@ node --env-file=.env scripts/create-hotel.ts hotel.json --apply --app-url https:
 
 ## Pendiente
 
-- Importar habitaciones y reservas desde Excel o CSV (la web comercial lo promete): de momento, el fichero del hotel se prepara a partir de su Excel.
+- Importar **reservas** existentes desde Excel o CSV (las habitaciones y tarifas ya se importan).
 - Alta desde una consola interna en lugar del script.

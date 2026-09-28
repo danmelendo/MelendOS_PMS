@@ -1,0 +1,8 @@
+Establecimiento;Habitación;Capacidad;Tipo;Tarifa;Precio;Precio fin de semana;Características
+Hostal Ejemplo;1;1;habitación;Individual;45;55;wifi
+Hostal Ejemplo;2;2;habitación;Doble;60;72;wifi, ac
+Hostal Ejemplo;3;2;habitación;Doble;60;72;wifi, ac
+Hostal Ejemplo;4;2;habitación;Doble;60;72;wifi, ac
+Hostal Ejemplo;5;3;familiar;Triple;78;;wifi, ac
+Hostal Ejemplo;6;1;habitación;Individual;45;55;wifi
+Hostal Ejemplo;7;2;suite;Suite;95,50;110;wifi, ac, bathtub

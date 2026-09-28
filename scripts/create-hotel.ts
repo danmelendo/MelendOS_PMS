@@ -6,6 +6,7 @@
 //
 //   node --env-file=.env scripts/create-hotel.ts hotel.json                 # check only (rollback)
 //   node --env-file=.env scripts/create-hotel.ts hotel.json --apply --app-url https://panel.melendo.app
+//   … hotel.json --rooms habitaciones.csv    # rooms and rates from the hotel's spreadsheet
 //
 // Platform tool: it uses the database URL and the service key of the project
 // in the .env loaded (check which one before --apply).
@@ -18,17 +19,20 @@ import {
   specProblems,
   type HotelSpec,
 } from "../supabase/functions/_shared/onboarding/hotel.ts";
+import { roomsFromCsv } from "../supabase/functions/_shared/onboarding/csv.ts";
 
 const args = process.argv.slice(2);
-const file = args.find(
-  (a) => !a.startsWith("--") && !args[args.indexOf(a) - 1]?.startsWith("--app-url"),
-);
+const option = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
+const file = args.find((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"));
+const roomsCsv = option("--rooms");
 const apply = args.includes("--apply");
-const appUrl = args[args.indexOf("--app-url") + 1];
+const appUrl = option("--app-url");
 const { SUPABASE_DB_URL, SUPABASE_URL, SUPABASE_SECRET_KEY } = process.env;
 
 if (!file) {
-  console.error("Uso: create-hotel.ts <hotel.json> [--apply --app-url <url del panel>]");
+  console.error(
+    "Uso: create-hotel.ts <hotel.json> [--rooms habitaciones.csv] [--apply --app-url <url del panel>]",
+  );
   process.exit(1);
 }
 if (apply && !/^https?:\/\/[^/]+$/.test(appUrl ?? "")) {
@@ -37,7 +41,28 @@ if (apply && !/^https?:\/\/[^/]+$/.test(appUrl ?? "")) {
   );
   process.exit(1);
 }
-const raw: unknown = JSON.parse(readFileSync(file, "utf8"));
+const raw = JSON.parse(readFileSync(file, "utf8")) as {
+  rates?: unknown;
+  properties?: { name?: string; rooms?: unknown }[];
+};
+// Rooms and rates from the spreadsheet replace those of the file.
+if (roomsCsv) {
+  const sheet = roomsFromCsv(readFileSync(roomsCsv, "utf8"));
+  const names = new Set((raw.properties ?? []).map((p) => p.name));
+  const unknown = [...new Set(sheet.rooms.map((r) => r.property))].filter((p) => !names.has(p));
+  if (sheet.problems.length || unknown.length) {
+    console.error(
+      `La hoja tiene problemas:\n- ${[
+        ...sheet.problems,
+        ...unknown.map((p) => `El establecimiento «${p}» no está en ${file}`),
+      ].join("\n- ")}`,
+    );
+    process.exit(1);
+  }
+  raw.rates = sheet.rates;
+  for (const p of raw.properties ?? [])
+    p.rooms = sheet.rooms.filter((r) => r.property === p.name).map(({ property: _p, ...r }) => r);
+}
 const problems = specProblems(raw);
 if (problems.length) {
   console.error(`El fichero tiene ${problems.length} problema(s):\n- ${problems.join("\n- ")}`);
