@@ -1037,6 +1037,63 @@ export type Database = {
           },
         ]
       }
+      guest_emails: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          provider_id: string | null
+          reservation_id: string
+          sent_at: string | null
+          status: string
+          tenant_id: string
+          to_email: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          provider_id?: string | null
+          reservation_id: string
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+          to_email?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          provider_id?: string | null
+          reservation_id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+          to_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_emails_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_emails_tenant_id_reservation_id_fkey"
+            columns: ["tenant_id", "reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       guest_identities: {
         Row: {
           address_line: string | null
@@ -3418,6 +3475,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      guest_emails_tick: { Args: never; Returns: undefined }
       guest_stay: {
         Args: { p_id: string; p_token: string }
         Returns: {

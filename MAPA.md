@@ -26,21 +26,21 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 
 ## Comandos
 
-| Qué                                                    | Comando                                                                                           |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Arrancar                                               | `npm run dev`                                                                                     |
-| Typecheck / lint / tests / build                       | `npm run typecheck` · `npm run lint` · `npm test` · `npm run build`                               |
-| Tests de base de datos (RLS, permisos, paridad SQL↔TS) | `npm run test:db`                                                                                 |
-| Evals del agente y del copiloto (modelo real)          | `npm run eval:agent` · `npm run eval:copilot` (`EVAL_MODEL=stays-agent-7b`)                       |
-| Probar SQL sin aplicarlo (rollback)                    | `node --env-file=.env scripts/sql-dry-run.mjs <archivo.sql>`                                      |
-| Aplicar un SQL suelto a la demo (semillas)             | `node --env-file=.env scripts/sql-apply.mjs <archivo.sql>`                                        |
-| Aplicar migraciones a la demo                          | `npx supabase db push --db-url "$SUPABASE_DB_URL"` (con el `.env` cargado)                        |
-| Desplegar una función a la demo                        | `npx supabase functions deploy <fn> --project-ref isqompyvktijdasgophh --use-api`                 |
-| Regenerar tipos de la base                             | `npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts` |
-| Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                      |
-| E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses,verifactu}.mjs`       |
-| Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                 |
-| LLM local (Ollama)                                     | `node --env-file=.env scripts/llm-gateway.mjs` + túnel cloudflared (ver CLAUDE.md)                |
+| Qué                                                    | Comando                                                                                                  |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Arrancar                                               | `npm run dev`                                                                                            |
+| Typecheck / lint / tests / build                       | `npm run typecheck` · `npm run lint` · `npm test` · `npm run build`                                      |
+| Tests de base de datos (RLS, permisos, paridad SQL↔TS) | `npm run test:db`                                                                                        |
+| Evals del agente y del copiloto (modelo real)          | `npm run eval:agent` · `npm run eval:copilot` (`EVAL_MODEL=stays-agent-7b`)                              |
+| Probar SQL sin aplicarlo (rollback)                    | `node --env-file=.env scripts/sql-dry-run.mjs <archivo.sql>`                                             |
+| Aplicar un SQL suelto a la demo (semillas)             | `node --env-file=.env scripts/sql-apply.mjs <archivo.sql>`                                               |
+| Aplicar migraciones a la demo                          | `npx supabase db push --db-url "$SUPABASE_DB_URL"` (con el `.env` cargado)                               |
+| Desplegar una función a la demo                        | `npx supabase functions deploy <fn> --project-ref isqompyvktijdasgophh --use-api`                        |
+| Regenerar tipos de la base                             | `npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts`        |
+| Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                             |
+| E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses,verifactu,promo-emails}.mjs` |
+| Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                        |
+| LLM local (Ollama)                                     | `node --env-file=.env scripts/llm-gateway.mjs` + túnel cloudflared (ver CLAUDE.md)                       |
 
 Flujo: rama desde `main` → PR → CI en verde → squash merge (permisos ya concedidos).
 
@@ -104,6 +104,7 @@ site/                               Web comercial de Melend/OS (landing, hostale
 | OTAs y touroperadores                         | `channel-webhook`, `channels-dispatch`, `_shared/channels`, tablas `channels*`; `docs/channels.md`                                                                                |
 | Informes                                      | `report_stays()` (SQL, solo datos) → `@domain/kpis.ts` → `routes/_app.reports.tsx`                                                                                                |
 | Ofertas en la web (rebajas y códigos)         | `hotel_offers()` (reglas de fecha en negativo + `promo_codes.published`), `HotelOffers.tsx`; canje en el motor (`validate_/claim_promo_code`)                                     |
+| Emails al huésped                             | Cola `guest_emails` (trigger en reservas) → `guest-emails-dispatch` (Resend con `RESEND_API_KEY` + `EMAIL_FROM`, si no simulado) · `_shared/email`; `scripts/emails-setup.mjs`    |
 | Calendario con precios                        | `tools/calendar.ts` → función `price-calendar` → `DateRangePicker`                                                                                                                |
 | Web y dominio del hotel                       | `tenants.brand`/`domain`, `save_hotel_web()`, `src/lib/hotel-web.ts` (resolución por host), `brand.tsx`, Admin → «Web y dominio»; `docs/web-y-dominio.md`                         |
 | Acceso demo                                   | `_shared/demo/accounts.ts`, función `demo-login`, `VITE_DEMO_ACCESS`                                                                                                              |

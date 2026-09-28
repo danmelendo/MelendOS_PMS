@@ -2849,4 +2849,105 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(row).toEqual({ times_used: 2, active: false, archived: true });
     });
   });
+
+  describe("emails to the guest", () => {
+    it("queues one email when a booking is confirmed or cancelled, never for OTAs or history", async () => {
+      await client.query("savepoint setup");
+      const book = async (day: number, status: string, role = "public", simulated = false) =>
+        (
+          await client.query<{ id: string }>(
+            `insert into public.reservations (tenant_id, room_id, member_id, start_at, end_at, status, total, created_by_role, simulated, payment_mode)
+             values ($1, $2, $3, now() + make_interval(days => $4), now() + make_interval(days => $4 + 1), $5, 100, $6, $7,
+                     $8)
+             returning id`,
+            [
+              ids.lumen,
+              ids["lumen-room-101"],
+              ids["lumen-member-alex"],
+              3000 + day * 3,
+              status,
+              role,
+              simulated,
+              status === "pending" ? "prepay" : "at_hotel",
+            ],
+          )
+        ).rows[0].id;
+      const atHotel = await book(1, "confirmed");
+      const prepaid = await book(2, "pending");
+      const unpaid = await book(3, "pending");
+      const ota = await book(4, "confirmed", "ota");
+      const history = await book(5, "confirmed", "public", true);
+      await client.query("update public.reservations set status = 'confirmed' where id = $1", [
+        prepaid,
+      ]);
+      // Paid, then cancelled: a second email. Unpaid pending cancelled: none.
+      await client.query("update public.reservations set status = 'cancelled' where id = any($1)", [
+        [prepaid, unpaid],
+      ]);
+      // Reconfirming does not send the confirmation twice.
+      await client.query("update public.reservations set status = 'confirmed' where id = $1", [
+        prepaid,
+      ]);
+      await client.query("update public.reservations set status = 'pending' where id = $1", [
+        prepaid,
+      ]);
+      await client.query("update public.reservations set status = 'confirmed' where id = $1", [
+        prepaid,
+      ]);
+      const queued = (
+        await client.query<{ reservation_id: string; kind: string; status: string }>(
+          `select reservation_id, kind, status from public.guest_emails
+            where reservation_id = any($1) order by kind`,
+          [[atHotel, prepaid, unpaid, ota, history]],
+        )
+      ).rows;
+      const staff = await attempt(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (
+            await client.query(
+              "select count(*)::int as n from public.guest_emails where reservation_id = any($1)",
+              [[atHotel, prepaid]],
+            )
+          ).rows[0].n,
+      );
+      const other = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () =>
+          (
+            await client.query(
+              "select count(*)::int as n from public.guest_emails where reservation_id = any($1)",
+              [[atHotel, prepaid]],
+            )
+          ).rows[0].n,
+      );
+      const write = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "update public.guest_emails set status = 'sent' where reservation_id = $1",
+              [atHotel],
+            )
+          ).rowCount,
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(queued).toHaveLength(3);
+      expect(queued).toEqual(
+        expect.arrayContaining([
+          { reservation_id: atHotel, kind: "booking_confirmed", status: "pending" },
+          { reservation_id: prepaid, kind: "booking_confirmed", status: "pending" },
+          { reservation_id: prepaid, kind: "booking_cancelled", status: "pending" },
+        ]),
+      );
+      expect(staff).toEqual({ ok: true, value: 3 });
+      expect(other).toEqual({ ok: true, value: 0 });
+      // No write policy: only the server marks emails as sent.
+      expect(write).toEqual({ ok: true, value: 0 });
+    });
+  });
 });
