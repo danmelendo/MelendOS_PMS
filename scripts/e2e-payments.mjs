@@ -43,10 +43,27 @@ async function notify(tenant, order, cents, response = "0000", signature) {
   return { status: res.status, body: await res.json() };
 }
 
+// The demo is live (simulated bookings months ahead): take the first night
+// from dayOffset on when the room is free, with margin for the cleaning gap.
+async function freeNight(roomId, dayOffset) {
+  for (let d = dayOffset; d < dayOffset + 300; d++) {
+    const start = new Date(Date.now() + d * 86_400_000);
+    start.setUTCHours(13, 0, 0, 0);
+    const end = new Date(start.getTime() + 21 * 3_600_000);
+    const { count } = await admin
+      .from("reservations")
+      .select("id", { count: "exact", head: true })
+      .eq("room_id", roomId)
+      .not("status", "in", "(cancelled,rejected,no_show)")
+      .lt("start_at", new Date(end.getTime() + 3 * 3_600_000).toISOString())
+      .gt("end_at", new Date(start.getTime() - 3 * 3_600_000).toISOString());
+    if (!count) return { start, end };
+  }
+  throw new Error("No free night for the test in the next 300 days");
+}
+
 async function pendingReservation(tenant, roomId, dayOffset) {
-  const start = new Date(Date.now() + dayOffset * 86_400_000);
-  start.setUTCHours(13, 0, 0, 0);
-  const end = new Date(start.getTime() + 21 * 3_600_000);
+  const { start, end } = await freeNight(roomId, dayOffset);
   const { data, error } = await admin
     .from("reservations")
     .insert({
@@ -166,6 +183,8 @@ try {
   // 4. Already paid reservations cannot start a new payment
   const again = await startPayment(r1);
   check("paid reservation cannot be charged again", again.status === 409, `HTTP ${again.status}`);
+} catch (e) {
+  check("no unexpected error", false, e.message ?? JSON.stringify(e));
 } finally {
   if (created.length) {
     await admin.from("reservations").delete().in("id", created);
