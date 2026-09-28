@@ -1,18 +1,21 @@
 import type { ReactNode } from "react";
-import { CalendarCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { BRAND, PAGES, SALES } from "../config";
+import { Wordmark } from "./ui";
 
 type Page = "home" | "hostels" | "compliance" | "pricing" | "demo" | "privacy" | "notfound";
 
 export function Logo({ onNavy = false }: { onNavy?: boolean }) {
   return (
-    <span className="flex items-center gap-2">
-      <img src="/isologo.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
-      <span
-        className={`text-base font-semibold tracking-tight whitespace-nowrap ${onNavy ? "text-navy-strong" : "text-foreground"}`}
-      >
-        {BRAND}
-      </span>
+    <span className="flex items-center gap-2.5">
+      <img
+        src="/isologo.png"
+        alt=""
+        width={30}
+        height={30}
+        className="h-[30px] w-[30px] shrink-0"
+      />
+      <Wordmark onNight={onNavy} className="text-[1.05rem]" />
     </span>
   );
 }
@@ -28,91 +31,105 @@ const NAV: { page: Page; href: string; label: string; wide?: boolean }[] = [
 export function Layout({ page, children }: { page: Page; children: ReactNode }) {
   return (
     <div className="flex min-h-[100svh] flex-col">
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16 sm:px-6">
-          <a href={PAGES.home} aria-label={`${BRAND}, inicio`}>
+      <header className="sticky top-0 z-40 border-b border-border/70 bg-ivory/85 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
+          <a href={PAGES.home} aria-label={`${BRAND}, inicio`} className="rounded-md">
             <Logo />
           </a>
-          <nav className="ml-2 flex items-center gap-1 sm:ml-4" aria-label="Principal">
-            {NAV.map((n) => (
-              <a
-                key={n.label}
-                href={n.href}
-                aria-current={n.page === page ? "page" : undefined}
-                className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3 ${
-                  n.page === page
-                    ? "bg-secondary text-secondary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                } ${n.wide ? "hidden md:inline-flex" : ""}`}
-              >
-                {n.label}
-              </a>
-            ))}
+          <nav className="ml-3 flex items-center gap-1 sm:ml-6" aria-label="Principal">
+            {NAV.map((n) => {
+              const current = n.page === page;
+              return (
+                <a
+                  key={n.label}
+                  href={n.href}
+                  aria-current={current ? "page" : undefined}
+                  className={`group relative rounded-md px-2.5 py-2 text-sm transition-colors sm:px-3 ${
+                    current ? "text-foreground" : "text-stone hover:text-foreground"
+                  } ${n.wide ? "hidden md:inline-flex" : ""}`}
+                >
+                  {n.label}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute right-3 -bottom-px left-3 h-px origin-left bg-brass-deep transition-transform duration-300 ease-out ${
+                      current ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                    }`}
+                  />
+                </a>
+              );
+            })}
           </nav>
           <a
             href={PAGES.demo}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
+            className="btn btn-night lean ml-auto !py-2.5 text-[0.8rem] sm:!px-4"
           >
-            <CalendarCheck className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Pide una demo</span>
             <span className="sm:hidden">Demo</span>
+            <ArrowRight aria-hidden="true" />
           </a>
         </div>
       </header>
 
       <main className="flex-1">{children}</main>
 
-      <footer className="bg-navy text-navy-foreground">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr]">
-          <div className="space-y-3">
-            <Logo onNavy />
-            <p className="max-w-sm text-sm text-navy-foreground/70">
-              Software de gestión para hostales y hoteles independientes: PMS, reserva directa,
-              normativa, atención al huésped e inteligencia artificial. Precios sin IVA.
+      <footer className="lamp relative overflow-hidden bg-navy text-navy-foreground [--lamp-x:15%] [--lamp-y:0%]">
+        <div className="mx-auto max-w-7xl px-4 pt-16 pb-10 sm:px-6 lg:px-8">
+          <div className="grid gap-12 md:grid-cols-[1.6fr_1fr_1fr]">
+            <div>
+              <Logo onNavy />
+              <p className="font-display mt-6 max-w-md text-[2rem] leading-tight text-navy-strong">
+                El sistema operativo para hoteles independientes.
+              </p>
+              <p className="mt-4 max-w-sm text-sm text-navy-foreground/65">
+                PMS, reserva directa, normativa, atención al huésped e inteligencia artificial.
+                Precios sin IVA.
+              </p>
+            </div>
+            <FooterLinks
+              title="Producto"
+              links={[
+                [PAGES.home, "Qué incluye"],
+                [PAGES.pricing, "Precios y SLA"],
+                [PAGES.hostels, "Para hostales"],
+                [PAGES.compliance, "SES.HOSPEDAJES y VeriFactu"],
+                [PAGES.demo, "Agendar una demo"],
+              ]}
+            />
+            <FooterLinks
+              title="Contacto"
+              links={[
+                ...(SALES.email
+                  ? [[`mailto:${SALES.email}`, SALES.email] as [string, string]]
+                  : []),
+                [PAGES.privacy, "Privacidad"],
+              ]}
+            />
+          </div>
+          <div className="mt-14 flex flex-wrap items-center justify-between gap-3 border-t border-navy-border pt-6 text-xs text-navy-foreground/45">
+            <p>
+              © {new Date().getFullYear()} {BRAND}
             </p>
+            <p className="font-figure">Reserva · Estancia · Normativa · Datos</p>
           </div>
-          <div className="space-y-2 text-sm">
-            <p className="font-semibold text-navy-strong">Producto</p>
-            <a href={PAGES.home} className="block text-navy-foreground/70 hover:text-navy-gold">
-              Qué incluye
-            </a>
-            <a href={PAGES.pricing} className="block text-navy-foreground/70 hover:text-navy-gold">
-              Precios y SLA
-            </a>
-            <a href={PAGES.hostels} className="block text-navy-foreground/70 hover:text-navy-gold">
-              Para hostales
-            </a>
-            <a
-              href={PAGES.compliance}
-              className="block text-navy-foreground/70 hover:text-navy-gold"
-            >
-              SES.HOSPEDAJES y VeriFactu
-            </a>
-            <a href={PAGES.demo} className="block text-navy-foreground/70 hover:text-navy-gold">
-              Agendar una demo
-            </a>
-          </div>
-          <div className="space-y-2 text-sm">
-            <p className="font-semibold text-navy-strong">Contacto</p>
-            {SALES.email && (
-              <a
-                href={`mailto:${SALES.email}`}
-                className="block text-navy-foreground/70 hover:text-navy-gold"
-              >
-                {SALES.email}
-              </a>
-            )}
-            <a href={PAGES.privacy} className="block text-navy-foreground/70 hover:text-navy-gold">
-              Privacidad
-            </a>
-          </div>
-        </div>
-        <div className="border-t border-navy-border">
-          <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-navy-foreground/50 sm:px-6">
-            © {new Date().getFullYear()} {BRAND}
-          </p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function FooterLinks({ title, links }: { title: string; links: [string, string][] }) {
+  return (
+    <div className="text-sm">
+      <p className="font-figure text-xs text-navy-foreground/50">{title}</p>
+      <ul className="mt-4 space-y-2.5">
+        {links.map(([href, label]) => (
+          <li key={href}>
+            <a href={href} className="link-draw text-navy-foreground/80 hover:text-navy-strong">
+              {label}
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

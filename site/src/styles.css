@@ -1,16 +1,37 @@
+@import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
+@import "@fontsource-variable/geist/wght.css";
+@import "@fontsource-variable/geist-mono/wght.css";
 @import "tailwindcss" source(none);
 @source "../src";
 
 /*
- * Same palette as the product's staff panel (navy, celeste and a muted gold
- * used sparingly), copied rather than imported: the site is its own project.
- * The site is always light; navy bands give the contrast.
+ * Melend/OS sales site — "the front desk at night".
+ *
+ * The brand is a hotel reception after dark: midnight walls, brass fittings,
+ * warm lamplight, ivory paper. Night navy and brass come from the product's
+ * staff panel, so the site and the software read as one family; ivory, sand,
+ * stone and a mineral green are the site's own. Colour carries meaning:
+ * brass = the one thing to act on, mineral = done / included, night = product.
+ *
+ * Type: Instrument Serif for display (editorial, hospitality), Geist for the
+ * interface and reading, Geist Mono for figures, times and room numbers (the
+ * reception ledger).
+ *
+ * Product mock-ups sit inside `.product-ui`, which restores the panel's real
+ * tokens: what visitors see there is what the software looks like.
  */
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -36,10 +57,68 @@
   --color-navy-border: var(--navy-border);
   --color-navy-gold: var(--navy-gold);
   --color-navy-gold-foreground: var(--navy-gold-foreground);
+
+  --color-ivory: var(--ivory);
+  --color-sand: var(--sand);
+  --color-stone: var(--stone);
+  --color-brass: var(--brass);
+  --color-brass-deep: var(--brass-deep);
+  --color-mineral: var(--mineral);
+  --color-mineral-soft: var(--mineral-soft);
+  --color-night: var(--navy);
+  --color-night-2: var(--navy-accent);
 }
 
 :root {
-  --radius: 0.625rem;
+  /* Site palette */
+  --ivory: oklch(0.972 0.009 84);
+  --sand: oklch(0.935 0.02 80);
+  --stone: oklch(0.49 0.02 65);
+  --brass: oklch(0.78 0.12 80);
+  --brass-deep: oklch(0.5 0.1 68);
+  --mineral: oklch(0.52 0.08 168);
+  --mineral-soft: oklch(0.93 0.035 168);
+
+  --background: var(--ivory);
+  --foreground: oklch(0.21 0.032 262);
+  --card: oklch(0.99 0.005 84);
+  --primary: oklch(0.23 0.05 262);
+  --primary-foreground: oklch(0.975 0.008 84);
+  --secondary: var(--sand);
+  --secondary-foreground: oklch(0.25 0.04 262);
+  --muted: oklch(0.95 0.013 80);
+  --muted-foreground: var(--stone);
+  --accent: oklch(0.935 0.02 80);
+  --destructive: oklch(0.55 0.2 27);
+  --gold: var(--brass);
+  --gold-foreground: var(--brass-deep);
+  --info: oklch(0.7 0.11 234);
+  --info-foreground: oklch(0.42 0.095 248);
+  --border: oklch(0.89 0.014 80);
+  --input: oklch(0.86 0.016 80);
+  --ring: oklch(0.62 0.12 75);
+
+  /* Night bands: the panel's sidebar, a shade deeper */
+  --navy: oklch(0.185 0.042 262);
+  --navy-foreground: oklch(0.84 0.02 80);
+  --navy-strong: oklch(0.975 0.008 84);
+  --navy-accent: oklch(0.245 0.05 262);
+  --navy-border: oklch(0.31 0.045 262);
+  --navy-gold: var(--brass);
+  --navy-gold-foreground: oklch(0.185 0.042 262);
+
+  /* Depth: warm, layered, never grey */
+  --shadow-rest:
+    0 1px 0 0 oklch(1 0 0 / 0.7) inset, 0 1px 2px oklch(0.2 0.04 262 / 0.06),
+    0 10px 28px -14px oklch(0.2 0.04 262 / 0.2);
+  --shadow-lift:
+    0 1px 0 0 oklch(1 0 0 / 0.6) inset, 0 2px 6px oklch(0.2 0.04 262 / 0.08),
+    0 30px 70px -30px oklch(0.16 0.04 262 / 0.45);
+  --shadow-night: 0 0 0 1px oklch(1 0 0 / 0.06), 0 30px 80px -30px oklch(0.05 0.03 262 / 0.8);
+}
+
+/* The panel's real tokens, for anything that depicts the product. */
+.product-ui {
   --background: oklch(0.984 0.004 250);
   --foreground: oklch(0.24 0.05 262);
   --card: oklch(1 0 0);
@@ -49,23 +128,14 @@
   --secondary-foreground: oklch(0.3 0.075 260);
   --muted: oklch(0.965 0.008 250);
   --muted-foreground: oklch(0.52 0.03 256);
-  --accent: oklch(0.945 0.028 234);
-  --destructive: oklch(0.577 0.215 27.325);
   --gold: oklch(0.76 0.12 82);
   --gold-foreground: oklch(0.5 0.1 70);
-  --info: oklch(0.7 0.11 234);
-  --info-foreground: oklch(0.42 0.095 248);
   --border: oklch(0.915 0.012 250);
-  --input: oklch(0.9 0.014 250);
-  --ring: oklch(0.68 0.11 234);
-  /* Panel sidebar tones, for the navy bands. */
   --navy: oklch(0.225 0.058 262);
   --navy-foreground: oklch(0.9 0.018 250);
-  --navy-strong: oklch(0.985 0.004 250);
   --navy-accent: oklch(0.29 0.066 260);
-  --navy-border: oklch(0.31 0.05 260);
   --navy-gold: oklch(0.78 0.12 82);
-  --navy-gold-foreground: oklch(0.225 0.058 262);
+  color: var(--foreground);
 }
 
 @layer base {
@@ -74,41 +144,297 @@
   }
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      "Segoe UI",
-      Roboto,
-      sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   :focus-visible {
     outline: 2px solid var(--color-ring);
-    outline-offset: 2px;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: oklch(0.78 0.12 80 / 0.35);
   }
 }
 
-/* Showcase screen swap: quick fade-up, transform/opacity only. */
-@keyframes swap-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+/* ── Typography ─────────────────────────────────────────────────────────── */
+@utility font-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.02;
+}
+@utility font-figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+@utility surface {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-rest);
+}
+@utility surface-lift {
+  background: var(--color-card);
+  border: 1px solid oklch(0.88 0.014 80 / 0.8);
+  box-shadow: var(--shadow-lift);
+}
+@utility surface-night {
+  background: linear-gradient(180deg, oklch(0.245 0.05 262), oklch(0.2 0.045 262));
+  box-shadow: var(--shadow-night);
+}
+/* Lamplight: a warm pool of light, used once per dark band. */
+@utility lamp {
+  background-image:
+    radial-gradient(
+      40rem 26rem at var(--lamp-x, 78%) var(--lamp-y, 12%),
+      oklch(0.78 0.12 80 / 0.16),
+      transparent 70%
+    ),
+    radial-gradient(30rem 20rem at 8% 100%, oklch(0.52 0.08 168 / 0.1), transparent 70%);
+}
+/* The planning board as a background texture: rooms x days. */
+@utility ledger-grid {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.045) 1px, transparent 1px);
+  background-size: 56px 44px;
+  mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
+}
+@utility ledger-grid-light {
+  background-image:
+    linear-gradient(to right, oklch(0.21 0.032 262 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.21 0.032 262 / 0.05) 1px, transparent 1px);
+  background-size: 56px 44px;
+}
+
+/* Cards that catch the light where the cursor is (set by mount.tsx). */
+[data-spotlight] {
+  position: relative;
+  isolation: isolate;
+}
+[data-spotlight]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  background: radial-gradient(
+    22rem circle at var(--mx, 50%) var(--my, 50%),
+    oklch(0.78 0.12 80 / 0.1),
+    transparent 60%
+  );
+  z-index: -1;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-spotlight]:hover::after {
+    opacity: 1;
   }
 }
-.swap-in {
-  animation: swap-in 200ms cubic-bezier(0.23, 1, 0.32, 1);
+
+/* ── Buttons: a physical press, no bounce ───────────────────────────────── */
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease;
+  &:active {
+    transform: scale(0.97);
+  }
+  & svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
 }
+@utility btn-brass {
+  background: var(--brass);
+  color: oklch(0.18 0.04 262);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.45) inset,
+    0 8px 22px -10px oklch(0.6 0.12 70 / 0.8);
+  &:hover {
+    background: oklch(0.82 0.12 82);
+  }
+}
+@utility btn-night {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 8px 22px -12px oklch(0.2 0.05 262 / 0.9);
+  &:hover {
+    background: oklch(0.28 0.055 262);
+  }
+}
+@utility btn-quiet {
+  background: transparent;
+  color: currentColor;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 22%, transparent);
+  &:hover {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 45%, transparent);
+  }
+}
+/* Arrow that leans into the direction of travel on hover. */
+.lean svg:last-child {
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lean:hover svg:last-child {
+    transform: translateX(3px);
+  }
+}
+
+/* Links in running text: an underline that draws in. */
+@utility link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 250ms cubic-bezier(0.23, 1, 0.32, 1);
+  &:hover {
+    background-size: 100% 1px;
+  }
+}
+
+/* ── Entrances ──────────────────────────────────────────────────────────── */
+/* The hero enters with CSS so the prerendered page paints without waiting
+   for JavaScript. Layers arrive at slightly different times: depth. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+}
+@keyframes drift-in {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--from-x, 0), var(--from-y, 18px), 0) scale(0.98);
+    filter: blur(8px);
+  }
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0.15);
+  }
+}
+@keyframes booking-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px) scaleX(0.6);
+  }
+  60% {
+    opacity: 1;
+  }
+}
+@keyframes ring-once {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.78 0.12 80 / 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 8px oklch(0.78 0.12 80 / 0);
+  }
+}
+.rise {
+  animation: rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.drift-in {
+  animation: drift-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.bar-grow {
+  transform-origin: bottom;
+  animation: bar-grow 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.booking-in {
+  transform-origin: left;
+  animation:
+    booking-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    ring-once 900ms ease-out 1;
+  animation-delay: var(--d, 0ms), calc(var(--d, 0ms) + 600ms);
+}
+
+/* Scroll reveals: hidden only when JS is on (html.js, set in each page's
+   head), shown by mount.tsx as they enter the viewport. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(4px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 800ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--d, 0ms);
+}
+.js [data-reveal="fade"] {
+  transform: none;
+}
+.js [data-reveal="scale"] {
+  transform: scale(0.97) translateY(10px);
+}
+.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* Bookings on a planning board nudge along their row when you point at them,
+   the way you would drag one to another day. */
+@media (hover: hover) and (pointer: fine) {
+  .stay-bar {
+    transition:
+      transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 220ms ease;
+  }
+  .stay-bar:hover {
+    transform: translateX(4px);
+    box-shadow: 0 6px 14px -8px oklch(0.2 0.05 262 / 0.6);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .swap-in {
-    animation: none;
+  .rise,
+  .drift-in,
+  .bar-grow,
+  .booking-in {
+    animation: none !important;
+  }
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+  [data-spotlight]::after,
+  .stay-bar,
+  .lean svg:last-child,
+  .btn {
+    transition: none !important;
   }
 }
 

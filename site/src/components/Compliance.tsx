@@ -1,33 +1,59 @@
-import { CheckCircle2, Hammer } from "lucide-react";
 import { COMPLIANCE } from "../../supabase/functions/_shared/plans.ts";
+import { Tick } from "./ui";
+
+const WHEN: Record<string, string> = {
+  "Registro de viajeros": "RD 933/2021",
+  "Comunicación a SES.HOSPEDAJES": "Desde 2 dic 2024",
+  "Facturación VeriFactu": "Desde 2027",
+};
 
 /**
- * Where the product stands on each legal obligation. What is not built yet is
+ * The obligations of a Spanish accommodation as a ledger: what the product
+ * does for each one and since when it is required. A "building" item would be
  * labelled as such: the site never claims compliance it does not deliver.
  */
-export function ComplianceList() {
+export function ComplianceLedger({ className = "" }: { className?: string }) {
+  const done = COMPLIANCE.filter((c) => c.status === "available").length;
   return (
-    <ul className="grid gap-4 md:grid-cols-3">
-      {COMPLIANCE.map((c) => (
-        <li key={c.name} className="rounded-lg border bg-card p-5">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-              c.status === "available"
-                ? "bg-secondary text-secondary-foreground"
-                : "bg-gold/20 text-gold-foreground"
-            }`}
+    <div className={`surface-lift overflow-hidden rounded-2xl ${className}`}>
+      <div className="flex items-center justify-between border-b bg-muted/60 px-5 py-3">
+        <p className="font-figure text-xs text-stone">Libro de obligaciones</p>
+        <p className="font-figure text-xs text-mineral">
+          {done} de {COMPLIANCE.length} al día
+        </p>
+      </div>
+      <ul className="divide-y">
+        {COMPLIANCE.map((c, i) => (
+          <li
+            key={c.name}
+            className="grid gap-3 px-5 py-5 sm:grid-cols-[auto_1fr_auto] sm:items-start"
+            data-reveal
+            style={{ ["--d" as string]: `${150 + i * 110}ms` }}
           >
-            {c.status === "available" ? (
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-            ) : (
-              <Hammer className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            {c.status === "available" ? "Disponible" : "En desarrollo"}
-          </span>
-          <p className="mt-3 font-semibold">{c.name}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{c.detail}</p>
-        </li>
-      ))}
-    </ul>
+            <span
+              className={`flex h-8 w-8 items-center justify-center rounded-full ${c.status === "available" ? "bg-mineral-soft" : "bg-sand"}`}
+            >
+              {c.status === "available" ? (
+                <Tick />
+              ) : (
+                <span className="font-figure text-[0.65rem] text-brass-deep">…</span>
+              )}
+            </span>
+            <div>
+              <p className="font-semibold">
+                {c.name}
+                {c.status !== "available" && (
+                  <span className="font-figure ml-2 text-xs font-normal text-brass-deep">
+                    en desarrollo
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-stone">{c.detail}</p>
+            </div>
+            <p className="font-figure text-xs whitespace-nowrap text-stone">{WHEN[c.name] ?? ""}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

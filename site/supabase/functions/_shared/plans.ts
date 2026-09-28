@@ -31,15 +31,15 @@ export const COMPLIANCE: {
   },
   {
     name: "Comunicación a SES.HOSPEDAJES",
-    status: "building",
+    status: "available",
     detail:
-      "Envío automático de viajeros y reservas al Ministerio del Interior, obligatorio desde el 2 de diciembre de 2024.",
+      "Partes de viajeros y reservas enviados al Ministerio del Interior, con cola y reintentos. Obligatorio desde el 2 de diciembre de 2024.",
   },
   {
     name: "Facturación VeriFactu",
-    status: "building",
+    status: "available",
     detail:
-      "Facturas con registro encadenado y código QR para la Agencia Tributaria, obligatorio desde 2027 (enero para sociedades, julio para autónomos).",
+      "Facturas con registro encadenado y código QR enviadas a la Agencia Tributaria. Obligatorio desde 2027 (enero para sociedades, julio para autónomos).",
   },
 ];
 

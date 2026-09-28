@@ -7,10 +7,10 @@ import { BRAND, PRIVACY_EMAIL } from "../config";
 export function PrivacyPage() {
   return (
     <Layout page="privacy">
-      <article className="mx-auto max-w-3xl space-y-6 px-4 py-14 text-sm leading-relaxed sm:px-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Política de privacidad</h1>
+      <article className="mx-auto max-w-3xl space-y-8 px-4 py-20 text-[0.95rem] leading-relaxed text-stone sm:px-6">
+        <h1 className="font-display text-[3rem] text-foreground">Política de privacidad</h1>
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Responsable</h2>
+          <h2 className="font-display text-[1.6rem] text-foreground">Responsable</h2>
           <p>
             El equipo de {BRAND}, un proyecto en fase de lanzamiento. Para cualquier cuestión sobre
             tus datos, escríbenos a{" "}
@@ -21,7 +21,9 @@ export function PrivacyPage() {
           </p>
         </section>
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Qué datos tratamos y para qué</h2>
+          <h2 className="font-display text-[1.6rem] text-foreground">
+            Qué datos tratamos y para qué
+          </h2>
           <p>
             Los que nos das en el formulario (nombre, email, teléfono, hotel y lo que nos cuentes)
             para organizar la demostración y contestarte. Si marcas la casilla de novedades, también
@@ -33,14 +35,14 @@ export function PrivacyPage() {
           </p>
         </section>
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Base legal y conservación</h2>
+          <h2 className="font-display text-[1.6rem] text-foreground">Base legal y conservación</h2>
           <p>
             Tu consentimiento y las medidas precontractuales que nos pides. Conservamos los datos
             mientras dure la relación comercial y, si no llega a haberla, un máximo de 12 meses.
           </p>
         </section>
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Quién más los ve</h2>
+          <h2 className="font-display text-[1.6rem] text-foreground">Quién más los ve</h2>
           <p>
             Los proveedores que nos prestan el servicio, como encargados del tratamiento: el
             alojamiento de la web (Vercel), la base de datos (Supabase) y el envío de emails
@@ -48,7 +50,7 @@ export function PrivacyPage() {
           </p>
         </section>
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Tus derechos</h2>
+          <h2 className="font-display text-[1.6rem] text-foreground">Tus derechos</h2>
           <p>
             Acceso, rectificación, supresión, oposición, limitación y portabilidad, y retirar tu
             consentimiento o darte de baja de las novedades en cualquier momento, escribiendo a{" "}

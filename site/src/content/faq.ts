@@ -48,6 +48,6 @@ export const COMPLIANCE_FAQ: Faq[] = [
   },
   {
     q: "¿Cuánto cuesta cumplir con Melend/OS?",
-    a: "Nada aparte: el registro de viajeros está incluido en todos los planes, y la comunicación a SES.HOSPEDAJES y la facturación VeriFactu también lo estarán cuando estén disponibles. Mientras tanto, en la demo te contamos el calendario.",
+    a: "Nada aparte: el registro de viajeros, la comunicación a SES.HOSPEDAJES y la facturación VeriFactu están incluidos en todos los planes. En la demo te enseñamos cómo se envía cada parte y cada factura.",
   },
 ];

@@ -105,3 +105,20 @@ Search Console and submit `/sitemap.xml`.
   with a cookie banner and Consent Mode) is installed. No tag is installed yet.
 - Landing pages for ads: `/hostales/` and `/normativa/`. The site states that SES.HOSPEDAJES and
   VeriFactu are in development (`COMPLIANCE` in `plans.ts`); update it there when they ship.
+
+## Design system and assets
+
+"The front desk at night": night navy and brass from the staff panel, plus ivory, sand, stone
+and a mineral green for states. Tokens, surfaces, buttons and motion live in `src/styles.css`;
+product mock-ups sit inside `.product-ui`, which restores the panel's real colours.
+
+- **Type**: Instrument Serif (display), Geist (UI and reading), Geist Mono (figures, times, room
+  numbers). Self-hosted from `@fontsource` packages, all under the SIL Open Font License 1.1
+  (commercial use allowed); no request to Google Fonts.
+- **Motion**: [Motion](https://motion.dev) (MIT) for interactive bits (tab indicator, screen
+  swaps, springs, cursor parallax); entrances and scroll reveals are CSS so the prerendered page
+  paints without JavaScript. `prefers-reduced-motion` turns them off; without JavaScript nothing
+  is hidden (`html.js` gates the reveals).
+- **Icons**: Lucide (ISC), one family, stroke icons only.
+- **Images**: `isologo.png`, `melend-os.jpg` and `og.jpg` are Melend/OS brand assets (Dan). No
+  stock photography; mock-ups and illustrations are HTML/CSS/SVG.
