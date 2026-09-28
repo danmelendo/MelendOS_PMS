@@ -3434,4 +3434,46 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(settled).toEqual({ ok: true, value: 0 });
     });
   });
+
+  describe("hotel alerts", () => {
+    it("show each hotel only what its own staff has to fix", async () => {
+      await client.query("savepoint setup");
+      const id = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, payment_mode)
+           values ($1, $2, now() + interval '3700 days', now() + interval '3701 days', 'pending', 100, 'public', 'at_hotel')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      await client.query(
+        `insert into public.ses_communications (tenant_id, reservation_id, kind, status, error)
+         values ($1, $2, 'RH', 'rejected', 'test')`,
+        [ids.lumen, id],
+      );
+      const rejected = `select * from public.hotel_alerts()
+                         where tenant_id = $1 and kind = 'ses_rejected'`;
+      const reception = await attempt("authenticated", users.lumenReception, async () =>
+        Number((await client.query(rejected, [ids.lumen])).rows[0]?.items ?? 0),
+      );
+      const otherHotel = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () =>
+          (
+            await client.query("select * from public.hotel_alerts() where tenant_id = $1", [
+              ids.lumen,
+            ])
+          ).rowCount,
+      );
+      const anon = await attempt("anon", undefined, () =>
+        client.query("select * from public.hotel_alerts()"),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(reception.ok && reception.value).toBeGreaterThanOrEqual(1);
+      expect(otherHotel).toEqual({ ok: true, value: 0 });
+      expect(anon.ok).toBe(false);
+    });
+  });
 });
