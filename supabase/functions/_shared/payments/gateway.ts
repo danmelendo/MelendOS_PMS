@@ -37,11 +37,21 @@ export interface VerifiedNotification {
   raw: unknown;
 }
 
+export interface RefundResult {
+  ok: boolean;
+  /** The provider's reference or answer code, kept with the refund. */
+  reference: string | null;
+  /** Why it failed (the provider's words), when it did. */
+  error?: string;
+}
+
 export interface PaymentGateway {
   readonly provider: Provider;
   createPayment(input: CreatePaymentInput): Promise<CreatedPayment>;
   /** Throws if the notification is not authentic. */
   verifyNotification(req: Request): Promise<VerifiedNotification | null>;
+  /** Gives back part or all of a payment (providerRef of that payment). */
+  refund(providerRef: string, amount: number): Promise<RefundResult>;
 }
 
 export interface RedsysConfig {
@@ -70,6 +80,28 @@ export function redsysGateway(cfg: RedsysConfig): PaymentGateway {
         environment: cfg.environment,
       });
       return { providerRef: order, redirect: { kind: "form", url: form.url, fields: form.fields } };
+    },
+    async refund(providerRef, amount) {
+      const { merchantCode, terminal, secretKeyB64 } = cfg;
+      const r = await redsys.refund({
+        merchantCode,
+        terminal,
+        secretKeyB64,
+        order: providerRef,
+        amount,
+        environment: cfg.environment,
+      });
+      return r.ok
+        ? { ok: true, reference: r.code }
+        : {
+            ok: false,
+            reference: r.code,
+            // SIS0295: two operations on the same payment too close together.
+            error:
+              r.code === "SIS0295"
+                ? "Redsys no admite dos operaciones seguidas sobre el mismo pago; inténtalo en un minuto"
+                : `Redsys ${r.code}`,
+          };
     },
     async verifyNotification(req) {
       // Redsys posts application/x-www-form-urlencoded.
@@ -105,6 +137,10 @@ export function stripeGateway(cfg: StripeConfig, fetchImpl: typeof fetch = fetch
         fetchImpl,
       );
       return { providerRef: session.id, redirect: { kind: "url", url: session.url } };
+    },
+    async refund(providerRef, amount) {
+      const r = await stripe.refundCheckoutSession(cfg.secretKey, providerRef, amount);
+      return r.ok ? { ok: true, reference: r.id } : { ok: false, reference: r.id, error: r.error };
     },
     async verifyNotification(req) {
       const body = await req.text();

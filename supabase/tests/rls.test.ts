@@ -3322,4 +3322,69 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(checkIn).toBe(1);
     });
   });
+
+  describe("refunds", () => {
+    it("are recorded only by the server, never beyond what was charged", async () => {
+      await client.query("savepoint setup");
+      const id = (
+        await client.query<{ id: string }>(
+          `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, paid_amount, deposit_paid, created_by_role, payment_mode)
+           values ($1, $2, now() + interval '3500 days', now() + interval '3501 days', 'confirmed', 100, 100, true, 'public', 'prepay')
+           returning id`,
+          [ids.lumen, ids["lumen-room-101"]],
+        )
+      ).rows[0].id;
+      const payment = (
+        await client.query<{ id: string }>(
+          `insert into public.payments (tenant_id, reservation_id, provider, provider_ref, amount, status)
+           values ($1, $2, 'redsys', $3, 100, 'succeeded') returning id`,
+          [ids.lumen, id, `T${randomUUID().slice(0, 11)}`],
+        )
+      ).rows[0].id;
+      const record = (amount: number) =>
+        client.query("select public.record_payment_refund($1, $2, 'ref', null)", [payment, amount]);
+      const byStaff = await attempt("authenticated", users.lumenAdmin, () => record(10));
+      const seen = await attempt(
+        "authenticated",
+        users.lumenReception,
+        async () =>
+          (await client.query("select * from public.refundable_payments($1)", [id])).rows[0],
+      );
+      const otherHotel = await attempt(
+        "authenticated",
+        users.alboraAdmin,
+        async () =>
+          (await client.query("select * from public.refundable_payments($1)", [id])).rowCount,
+      );
+      await client.query("set local role service_role");
+      await record(40);
+      let over: string | null = null;
+      try {
+        await client.query("savepoint over");
+        await record(70);
+      } catch (e) {
+        over = (e as Error).message;
+        await client.query("rollback to savepoint over");
+      }
+      await record(60);
+      await client.query("reset role");
+      const after = (
+        await client.query(
+          `select p.status, p.refunded_amount, r.paid_amount from public.payments p
+             join public.reservations r on r.id = p.reservation_id where p.id = $1`,
+          [payment],
+        )
+      ).rows[0];
+      await client.query("rollback to savepoint setup");
+
+      expect(byStaff.ok).toBe(false);
+      expect(seen.ok && seen.value).toMatchObject({ provider: "redsys" });
+      expect(seen.ok && Number(seen.value.refundable)).toBe(100);
+      expect(otherHotel).toEqual({ ok: true, value: 0 });
+      expect(over).toMatch(/supera lo cobrado/);
+      expect(after).toMatchObject({ status: "refunded" });
+      expect(Number(after.refunded_amount)).toBe(100);
+      expect(Number(after.paid_amount)).toBe(0);
+    });
+  });
 });

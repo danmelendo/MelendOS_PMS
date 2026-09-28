@@ -1590,6 +1590,8 @@ export type Database = {
           provider: Database["public"]["Enums"]["payment_provider"]
           provider_ref: string
           raw_notification: Json | null
+          refunded_amount: number
+          refunded_at: string | null
           reservation_id: string
           status: Database["public"]["Enums"]["payment_status"]
           tenant_id: string
@@ -1604,6 +1606,8 @@ export type Database = {
           provider: Database["public"]["Enums"]["payment_provider"]
           provider_ref: string
           raw_notification?: Json | null
+          refunded_amount?: number
+          refunded_at?: string | null
           reservation_id: string
           status?: Database["public"]["Enums"]["payment_status"]
           tenant_id?: string
@@ -1618,6 +1622,8 @@ export type Database = {
           provider?: Database["public"]["Enums"]["payment_provider"]
           provider_ref?: string
           raw_notification?: Json | null
+          refunded_amount?: number
+          refunded_at?: string | null
           reservation_id?: string
           status?: Database["public"]["Enums"]["payment_status"]
           tenant_id?: string
@@ -3667,6 +3673,15 @@ export type Database = {
         Args: { p_amount: number; p_method: string; p_reservation_id: string }
         Returns: undefined
       }
+      record_payment_refund: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_payment: string
+          p_reference: string
+        }
+        Returns: undefined
+      }
       rectify_invoice: {
         Args: { p_invoice: string; p_lines: Json; p_reason: string }
         Returns: string
@@ -3675,6 +3690,17 @@ export type Database = {
       redeem_reward: {
         Args: { p_member_id: string; p_reward_id: string }
         Returns: number
+      }
+      refundable_payments: {
+        Args: { p_reservation: string }
+        Returns: {
+          amount: number
+          created_at: string
+          id: string
+          provider: string
+          refundable: number
+          refunded_amount: number
+        }[]
       }
       reply_review: {
         Args: { p_reply: string; p_review_id: string }
