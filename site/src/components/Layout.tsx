@@ -3,7 +3,11 @@ import { ArrowRight } from "lucide-react";
 import { BRAND, PAGES, SALES } from "../config";
 type Page = "home" | "hostels" | "compliance" | "pricing" | "demo" | "privacy" | "notfound";
 
-/** The brand image; on navy, "Melend" turns ivory and the arch lighter. */
+/**
+ * The brand image; on navy, "Melend" turns ivory and the arch lighter.
+ * max-w-none: in a tight flex row the width must never shrink under the
+ * fixed height, or the logo gets squashed.
+ */
 export function Logo({ onNavy = false }: { onNavy?: boolean }) {
   return (
     <img
@@ -11,7 +15,7 @@ export function Logo({ onNavy = false }: { onNavy?: boolean }) {
       alt={BRAND}
       width={583}
       height={96}
-      className="block h-7 w-auto shrink-0 sm:h-8"
+      className="block h-[22px] w-auto max-w-none shrink-0 min-[380px]:h-6 sm:h-8"
     />
   );
 }
@@ -28,11 +32,11 @@ export function Layout({ page, children }: { page: Page; children: ReactNode }) 
   return (
     <div className="flex min-h-[100svh] flex-col">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-ivory/85 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
-          <a href={PAGES.home} aria-label={`${BRAND}, inicio`} className="rounded-md">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
+          <a href={PAGES.home} aria-label={`${BRAND}, inicio`} className="shrink-0 rounded-md">
             <Logo />
           </a>
-          <nav className="ml-3 flex items-center gap-1 sm:ml-6" aria-label="Principal">
+          <nav className="flex items-center gap-1 sm:ml-6" aria-label="Principal">
             {NAV.map((n) => {
               const current = n.page === page;
               return (
@@ -42,7 +46,7 @@ export function Layout({ page, children }: { page: Page; children: ReactNode }) 
                   aria-current={current ? "page" : undefined}
                   className={`group relative rounded-md px-2.5 py-2 text-sm transition-colors sm:px-3 ${
                     current ? "text-foreground" : "text-stone hover:text-foreground"
-                  } ${n.wide ? "hidden md:inline-flex" : ""}`}
+                  } ${n.wide ? "hidden md:inline-flex" : "max-[359px]:hidden"}`}
                 >
                   {n.label}
                   <span
