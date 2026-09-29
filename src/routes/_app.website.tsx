@@ -26,6 +26,7 @@ import {
   type DnsCheck,
 } from "@/lib/website";
 import { AdminOnly } from "@/components/settings/AdminOnly";
+import { DnsTutorial } from "@/components/DnsTutorial";
 
 export const Route = createFileRoute("/_app/website")({
   component: () => (
@@ -205,6 +206,11 @@ function DomainCard({
             <p className="text-xs text-muted-foreground">
               El cambio tarda de unos minutos a unas horas. El certificado HTTPS se crea solo.
             </p>
+            <DnsTutorial
+              subdomain={domain || "reservas.tuhotel.com"}
+              label={label}
+              target={PLATFORM_CNAME}
+            />
             {domain && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Button
