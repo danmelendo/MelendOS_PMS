@@ -55,6 +55,10 @@ src/                                Frontend (TanStack Start/Router, React 19, T
   routes/_app.*.tsx                 Panel: today, calendar, reservations, customers, messages, reports, reviews,
                                     rooms, rates, extras, promos, channels, integrations (MCP), plan (módulos), team, activity, account,
                                     travellers (registro de viajeros SES.HOSPEDAJES), invoices (VERI*FACTU)
+                                    Menú por rol: Operativa (todos), Gestión y Configuración (dirección;
+                                    settings.invoicing / settings.travellers), Administrar y configuración
+                                    (solo soporte Melend/OS: plan, canales, IA, journal, actividad).
+                                    Guardas de página en components/settings/AdminOnly.tsx
   routes/web.*.tsx                  Web pública: hoteles, habitación, reservar, checkout, mi-reserva, chat, firma
   routes/embed.*.tsx                Widget incrustable (búsqueda y asistente) que carga public/embed.js
   components/                       UI compartida (AppSidebar, CopilotWidget, AgentChat, CustomerDrawer,
