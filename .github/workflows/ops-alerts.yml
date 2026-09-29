@@ -6,6 +6,9 @@ name: Operations alerts
 # "Alertas de operación" issue (GitHub notifies whoever watches the repo),
 # comments on it only when the set of alerts changes, and closes it when
 # everything is back to normal. Can also be run by hand.
+# Runs for the demo (repository secrets) and, once its secrets exist, for
+# production (PROD_SUPABASE_URL, PROD_SUPABASE_SECRET_KEY,
+# PROD_SUPABASE_PUBLISHABLE_KEY), each with its own issue.
 on:
   schedule:
     - cron: "7 * * * *"
@@ -23,29 +26,42 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [demo, production]
+    env:
+      SUPABASE_URL: ${{ matrix.target == 'production' && secrets.PROD_SUPABASE_URL || secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ matrix.target == 'production' && secrets.PROD_SUPABASE_SECRET_KEY || secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ matrix.target == 'production' && secrets.PROD_SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
+      ISSUE_TITLE: ${{ matrix.target == 'production' && 'Alertas de operación · producción' || 'Alertas de operación' }}
     steps:
+      - name: Nothing to check yet
+        if: env.SUPABASE_URL == ''
+        run: echo "No secrets for ${{ matrix.target }} yet."
       - uses: actions/checkout@v4
+        if: env.SUPABASE_URL != ''
       - uses: actions/setup-node@v4
+        if: env.SUPABASE_URL != ''
         with:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+        if: env.SUPABASE_URL != ''
       - name: Check every hotel
         id: check
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        if: env.SUPABASE_URL != ''
         run: |
           node scripts/ops-alerts.mjs --out report.md | tee out.txt
           grep -E '^(alerts|signature)=' out.txt >> "$GITHUB_OUTPUT"
       - name: Open, update or close the issue
+        if: env.SUPABASE_URL != ''
         env:
           GH_TOKEN: ${{ github.token }}
           ALERTS: ${{ steps.check.outputs.alerts }}
           SIGNATURE: ${{ steps.check.outputs.signature }}
         run: |
-          title="Alertas de operación"
+          title="$ISSUE_TITLE"
           number=$(gh issue list --state open --limit 50 --json number,title \
             -q ".[] | select(.title == \"$title\") | .number" | head -1)
           if [ "$ALERTS" != "0" ]; then
