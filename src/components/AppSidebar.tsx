@@ -12,7 +12,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
   CalendarDays,
@@ -250,14 +249,7 @@ export function AppSidebar() {
           >
             {user?.email}
           </Link>
-          {isAdmin && (
-            <Badge
-              variant="outline"
-              className="border-sidebar-primary/50 text-[10px] text-sidebar-primary"
-            >
-              admin
-            </Badge>
-          )}
+          {/* The role is shown under the logo; no redundant badge here. */}
         </div>
         <Button
           variant="ghost"

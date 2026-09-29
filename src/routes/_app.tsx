@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { session, loading } = useAuth();
-  const { isGroup, canOperate } = useRoles();
+  const { isGroup, canOperate, isStaff, loading: rolesLoading } = useRoles();
   const aal = useAssurance(!!session);
   // The panel is in Spanish, whatever the guest web was showing in this tab.
   useState(() => setActiveLang("es"));
@@ -25,7 +25,7 @@ function AppLayout() {
     document.documentElement.classList.add("panel");
     return () => document.documentElement.classList.remove("panel");
   }, []);
-  if (loading)
+  if (loading || (session && rolesLoading))
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
         Cargando…
@@ -34,6 +34,11 @@ function AppLayout() {
   if (!session) return <Navigate to="/login" />;
   // Two-step verification on and not done in this session: the code first.
   if (aal.data?.needsCode) return <Navigate to="/login" />;
+  // Only hotel staff belong in the management panel. A guest who signed in on
+  // the public web (member account) has no tenant membership: send them back to
+  // the web. RLS already hides every hotel's data from them; this keeps the
+  // panel itself out of their reach, in the demo and in production.
+  if (!isStaff) return <Navigate to="/web" />;
 
   return (
     <SidebarProvider>
