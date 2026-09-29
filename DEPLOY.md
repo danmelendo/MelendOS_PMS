@@ -52,7 +52,7 @@ Dominios (ver `docs/web-y-dominio.md`):
 1. `supabase db push` (migraciones de `supabase/migrations/`).
 2. `supabase functions deploy` (todas las funciones de `supabase/functions/`).
 
-Secretos de GitHub del repositorio: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_URL` (tests de BD y lake), `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (lake y keep-alive), `SALES_SUPABASE_URL`, `SALES_SUPABASE_KEY` (keep-alive del proyecto de ventas).
+Secretos de GitHub del repositorio: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_URL` (tests de BD y lake), `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (lake y keep-alive), `SALES_SUPABASE_URL`, `SALES_SUPABASE_KEY` (keep-alive del proyecto de ventas). Para que las alertas horarias y el lake cubran también producción: `PROD_SUPABASE_URL`, `PROD_SUPABASE_SECRET_KEY`, `PROD_SUPABASE_PUBLISHABLE_KEY` y `PROD_SUPABASE_DB_URL`. Mientras no existan, esos workflows se saltan producción; las alertas de producción van en su propia incidencia («Alertas de operación · producción»).
 
 ### Secretos de las Edge Functions (`supabase secrets set …`)
 
