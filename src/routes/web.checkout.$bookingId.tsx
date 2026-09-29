@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import type { PaymentRedirect } from "@/integrations/pms";
 import { pms } from "@/integrations/pms";
 import { DEMO_ACCESS } from "@/lib/demo-access";
-import { followPaymentRedirect, paymentReturnSearch } from "@/lib/payments";
+import { paymentReturnSearch } from "@/lib/payments";
 import { GuestBookingMissing } from "@/components/GuestBookingMissing";
+import { PaymentModal } from "@/components/PaymentModal";
 import { eur, formatDateShort } from "@/lib/stays";
 import { useLang } from "@/lib/i18n";
 
@@ -34,12 +36,23 @@ function WebCheckoutScreen() {
     refetchInterval: (q) => (payment === "ok" && q.state.data?.status === "held" ? 2_000 : 15_000),
   });
 
+  // When the gateway returns inside our payment iframe, tell the parent page
+  // how it went so the modal can close and start polling for confirmation.
+  useEffect(() => {
+    if (payment && window.self !== window.top) {
+      window.parent.postMessage({ melendos_payment: payment }, window.location.origin);
+    }
+  }, [payment]);
+  const framed = payment && typeof window !== "undefined" && window.self !== window.top;
+
+  // The gateway shown in an in-page overlay; the guest never leaves the site.
+  const [redirect, setRedirect] = useState<PaymentRedirect | null>(null);
   const confirm = useMutation({
     mutationFn: () =>
       pms.startPayment(bookingId, `${window.location.origin}/web/checkout/${bookingId}`),
-    onSuccess: (redirect) => {
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["pms"] });
-      followPaymentRedirect(redirect);
+      setRedirect(r);
     },
     onError: (e: Error) => toast.error(t(e.message || "No se pudo iniciar el pago")),
   });
@@ -50,6 +63,15 @@ function WebCheckoutScreen() {
       confirm.mutate();
     }
   }, [auto, booking?.status, confirm]);
+
+  // Inside the payment iframe we only report the result up (above) and show a
+  // spinner; the real page is the parent one.
+  if (framed)
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center text-neutral-500">
+        <Clock className="h-6 w-6 animate-pulse" />
+      </div>
+    );
 
   if (!booking) return <GuestBookingMissing loading={bookingLoading} />;
 
@@ -138,6 +160,22 @@ function WebCheckoutScreen() {
           </button>
         )}
       </div>
+
+      {redirect && (
+        <PaymentModal
+          redirect={redirect}
+          amountLabel={eur(booking.payNow || booking.total)}
+          onResult={(result) => {
+            setRedirect(null);
+            navigate({
+              to: "/web/checkout/$bookingId",
+              params: { bookingId },
+              search: { payment: result },
+            });
+          }}
+          onClose={() => setRedirect(null)}
+        />
+      )}
     </div>
   );
 }
