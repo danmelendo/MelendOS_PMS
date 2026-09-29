@@ -27,7 +27,7 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 ## Comandos
 
 | Qué                                                    | Comando                                                                                                      |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ---------- |
 | Arrancar                                               | `npm run dev`                                                                                                |
 | Typecheck / lint / tests / build                       | `npm run typecheck` · `npm run lint` · `npm test` · `npm run build`                                          |
 | Tests de base de datos (RLS, permisos, paridad SQL↔TS) | `npm run test:db`                                                                                            |
@@ -40,6 +40,7 @@ entre hoteles y entornos es configuración. Dos hoteles ficticios en la demo:
 | Alta de un hotel (plataforma)                          | `node --env-file=.env scripts/create-hotel.ts hotel.json [--apply --app-url <panel>]`                        |
 | Importar reservas anteriores (plataforma)              | `node --env-file=.env scripts/import-reservations.ts <slug> reservas.csv [--apply]`                          |
 | Cuentas de demo                                        | `node --env-file=.env scripts/seed-auth.mjs`                                                                 |
+| Ciclo natural de 10 reservas (demo en vivo)            | `node --env-file=.env scripts/demo-cycle.mjs [--keep                                                         | --remove]` |
 | E2E contra la demo                                     | `node --env-file=.env scripts/e2e-{bookings,payments,folio,mcp,channels,ses,verifactu,promo-emails,mfa}.mjs` |
 | Web comercial (aparte)                                 | `cd site && npm run dev` · `npm run check` (ver `site/README.md`)                                            |
 | LLM local (Ollama)                                     | `node --env-file=.env scripts/llm-gateway.mjs` + túnel cloudflared (ver CLAUDE.md)                           |
