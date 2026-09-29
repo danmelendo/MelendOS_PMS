@@ -69,8 +69,23 @@ limits 3 leads per email and 5 per IP a day, and a unique index prevents double-
     «Datos del emisor») and the client's details; once issued an invoice cannot be edited, only
     paid or cancelled. Pending, overdue, collected and CSV export. Each invoice opens as a
     document with the Melend/OS branding, printable or saved as PDF from the browser
-    (`InvoiceDocument.tsx`; migration `20260929150000_billing_settings.sql`). VERI\*FACTU is not
-    integrated yet (see `Cambiospendientes.md`).
+    (`InvoiceDocument.tsx`; migration `20260929150000_billing_settings.sql`).
+  - **VERI\*FACTU** (migration `20260929170000_verifactu.sql`), the product's engine
+    (`supabase/functions/_shared/verifactu/`, copied here: a fix there goes here too).
+    - Environment in «Datos del emisor»: off (default) → simulated → pre (AEAT test portal) →
+      prod. Outside prod the numbers go in the `PMOS-…` series.
+    - Each issued invoice (F1) gets a billing record chained with its SHA-256 fingerprint in
+      `sales_verifactu_records` (immutable). Cancelling adds the cancellation record. The document
+      shows the tax QR.
+    - `verifactu-dispatch` sends them (pg_cron every minute while something is pending; key from
+      `scripts/verifactu-setup.mjs`, which also stores the certificate: `--cert --key`).
+    - Secrets `VERIFACTU_PRODUCER_NAME` and `VERIFACTU_PRODUCER_NIF` outside the simulated
+      environment.
+    - In production the environment and the issuer's NIF can no longer change.
+    - Not yet: corrective invoices (R1…). An invoice issued by mistake is cancelled and issued
+      again.
+    - Test: `node --env-file=.env scripts/verifactu-trial.mjs` (before applying the migration,
+      in a transaction that is always rolled back).
   - Tables in migration `20260929120000_clients.sql`.
   - **Seguridad** (`#seguridad`): the panel only works from **trusted devices**, from any
     network (migration `20260929160000_trusted_devices.sql`; it replaced the IP allowlist, which

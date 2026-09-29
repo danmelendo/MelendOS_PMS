@@ -1,8 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { Printer, X } from "lucide-react";
 import { BRAND } from "../config";
 import { INVOICE_STATUSES, day, eur, type Client, type ClientInvoice } from "../lib/clients";
 import { BTN_OUTLINE, BTN_PRIMARY } from "./admin-ui";
+import {
+  VERIFACTU_LEGEND,
+  qrUrl,
+  type VerifactuEnvironment,
+} from "../../supabase/functions/_shared/verifactu/domain.ts";
 
 // A Melend/OS invoice as a document: shown over the panel and printed or
 // saved as PDF from the browser (the print styles only print this sheet).
@@ -18,6 +24,9 @@ export interface Issuer {
   iban: string | null;
   payment_days: number;
   invoice_note: string | null;
+  verifactu_environment?: "off" | VerifactuEnvironment;
+  installation_number?: string;
+  has_certificate?: boolean;
 }
 
 interface Recipient {
@@ -36,7 +45,11 @@ export function InvoiceDocument({
   issuer: current,
   onClose,
 }: {
-  invoice: ClientInvoice & { issuer?: Issuer | null; recipient?: Recipient | null };
+  invoice: ClientInvoice & {
+    issuer?: Issuer | null;
+    recipient?: Recipient | null;
+    verifactu_env?: VerifactuEnvironment | null;
+  };
   client: Client | undefined;
   issuer: Issuer | null;
   onClose: () => void;
@@ -61,6 +74,23 @@ export function InvoiceDocument({
   };
   const vat = Math.round((Number(invoice.total) - Number(invoice.base)) * 100) / 100;
   const draft = invoice.status === "draft";
+  // Invoices issued with VERI*FACTU carry the tax QR (Orden HAC/1177/2024).
+  const [qr, setQr] = useState<string | null>(null);
+  const env = invoice.verifactu_env ?? null;
+  const nif = (issuer?.issuer_tax_id ?? "").toUpperCase().replace(/[\s.-]/g, "");
+  useEffect(() => {
+    if (!env || !invoice.number || !invoice.issued_on || !nif) return setQr(null);
+    const url = qrUrl({
+      environment: env,
+      nif,
+      number: invoice.number,
+      issueDate: invoice.issued_on,
+      total: Number(invoice.total),
+    });
+    QRCode.toDataURL(url, { margin: 0, width: 240, errorCorrectionLevel: "M" }).then(setQr, () =>
+      setQr(null),
+    );
+  }, [env, nif, invoice.number, invoice.issued_on, invoice.total]);
   const period =
     invoice.period_start && invoice.period_end
       ? `${day(invoice.period_start)} – ${day(invoice.period_end)}`
@@ -95,6 +125,23 @@ export function InvoiceDocument({
             <p className="font-mono text-sm">{invoice.number ?? "Sin número (borrador)"}</p>
           </div>
         </header>
+
+        {qr && (
+          <div className="mt-4 flex items-center gap-4">
+            <img src={qr} alt="QR tributario" className="h-[30mm] w-[30mm]" />
+            <div className="text-[12px]">
+              <p className="font-bold tracking-wide">VERI*FACTU</p>
+              <p>{VERIFACTU_LEGEND}</p>
+              {env !== "prod" && (
+                <p className="text-[#5b6477]">
+                  {env === "simulated"
+                    ? "Entorno simulado: sin valor fiscal"
+                    : "Entorno de pruebas de la AEAT"}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         <section className="mt-6 grid grid-cols-2 gap-8">
           <div>
