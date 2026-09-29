@@ -30,9 +30,14 @@ import {
   type McpToken,
   type NewMcpToken,
 } from "@/lib/mcp";
+import { PlatformOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/integrations")({
-  component: IntegrationsPage,
+  component: () => (
+    <PlatformOnly>
+      <IntegrationsPage />
+    </PlatformOnly>
+  ),
 });
 
 const READ_TOOLS = "disponibilidad, precios, detalles de habitación y consulta de reservas";

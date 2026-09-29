@@ -18,9 +18,14 @@ import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useStaffHotelModules } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
 import { ROLE_LABELS, useStaff, useTeamActions, type StaffMember } from "@/lib/team";
+import { AdminOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/team")({
-  component: TeamPage,
+  component: () => (
+    <AdminOnly>
+      <TeamPage />
+    </AdminOnly>
+  ),
 });
 
 const fmt = (iso: string | null) =>

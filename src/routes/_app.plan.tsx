@@ -25,9 +25,14 @@ import { Switch } from "@/components/ui/switch";
 import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useStaffHotelModules, type StaffHotel } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
+import { PlatformOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/plan")({
-  component: PlanPage,
+  component: () => (
+    <PlatformOnly>
+      <PlanPage />
+    </PlatformOnly>
+  ),
 });
 
 const PLAN_LABELS: Record<string, string> = {

@@ -25,9 +25,14 @@ import {
   useSaveHotelWeb,
   type DnsCheck,
 } from "@/lib/website";
+import { AdminOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/website")({
-  component: WebsitePage,
+  component: () => (
+    <AdminOnly>
+      <WebsitePage />
+    </AdminOnly>
+  ),
 });
 
 const copy = (text: string) =>

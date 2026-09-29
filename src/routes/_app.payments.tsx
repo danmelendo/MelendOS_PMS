@@ -22,9 +22,14 @@ import {
   useSavePaymentAccount,
   type Provider,
 } from "@/lib/payments-config";
+import { AdminOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/payments")({
-  component: PaymentsPage,
+  component: () => (
+    <AdminOnly>
+      <PaymentsPage />
+    </AdminOnly>
+  ),
 });
 
 function PaymentsPage() {

@@ -34,9 +34,14 @@ import { eur } from "@/lib/data";
 import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useHotelsWith } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
+import { PlatformOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/channels")({
-  component: ChannelsPage,
+  component: () => (
+    <PlatformOnly>
+      <ChannelsPage />
+    </PlatformOnly>
+  ),
 });
 
 const when = (iso: string | null) =>

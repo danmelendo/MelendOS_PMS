@@ -55,6 +55,8 @@ import { Route as WebCheckinBookingIdRouteImport } from './routes/web.checkin.$b
 import { Route as WebChatBookingIdRouteImport } from './routes/web.chat.$bookingId'
 import { Route as WebBookingBookingIdRouteImport } from './routes/web.booking.$bookingId'
 import { Route as WebBookRoomIdRouteImport } from './routes/web.book.$roomId'
+import { Route as AppSettingsTravellersRouteImport } from './routes/_app.settings.travellers'
+import { Route as AppSettingsInvoicingRouteImport } from './routes/_app.settings.invoicing'
 import { Route as AppAdminManualRouteImport } from './routes/_app.admin.manual'
 import { Route as WebInvoiceBookingIdInvoiceIdRouteImport } from './routes/web.invoice.$bookingId.$invoiceId'
 
@@ -287,6 +289,16 @@ const WebBookRoomIdRoute = WebBookRoomIdRouteImport.update({
   path: '/book/$roomId',
   getParentRoute: () => WebRoute,
 } as any)
+const AppSettingsTravellersRoute = AppSettingsTravellersRouteImport.update({
+  id: '/settings/travellers',
+  path: '/settings/travellers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsInvoicingRoute = AppSettingsInvoicingRouteImport.update({
+  id: '/settings/invoicing',
+  path: '/settings/invoicing',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminManualRoute = AppAdminManualRouteImport.update({
   id: '/admin/manual',
   path: '/admin/manual',
@@ -336,6 +348,8 @@ export interface FileRoutesByFullPath {
   '/web/mi-reserva': typeof WebMiReservaRoute
   '/web/': typeof WebIndexRoute
   '/admin/manual': typeof AppAdminManualRoute
+  '/settings/invoicing': typeof AppSettingsInvoicingRoute
+  '/settings/travellers': typeof AppSettingsTravellersRoute
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
@@ -384,6 +398,8 @@ export interface FileRoutesByTo {
   '/web/mi-reserva': typeof WebMiReservaRoute
   '/web': typeof WebIndexRoute
   '/admin/manual': typeof AppAdminManualRoute
+  '/settings/invoicing': typeof AppSettingsInvoicingRoute
+  '/settings/travellers': typeof AppSettingsTravellersRoute
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
@@ -435,6 +451,8 @@ export interface FileRoutesById {
   '/web/mi-reserva': typeof WebMiReservaRoute
   '/web/': typeof WebIndexRoute
   '/_app/admin/manual': typeof AppAdminManualRoute
+  '/_app/settings/invoicing': typeof AppSettingsInvoicingRoute
+  '/_app/settings/travellers': typeof AppSettingsTravellersRoute
   '/web/book/$roomId': typeof WebBookRoomIdRoute
   '/web/booking/$bookingId': typeof WebBookingBookingIdRoute
   '/web/chat/$bookingId': typeof WebChatBookingIdRoute
@@ -486,6 +504,8 @@ export interface FileRouteTypes {
     | '/web/mi-reserva'
     | '/web/'
     | '/admin/manual'
+    | '/settings/invoicing'
+    | '/settings/travellers'
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
@@ -534,6 +554,8 @@ export interface FileRouteTypes {
     | '/web/mi-reserva'
     | '/web'
     | '/admin/manual'
+    | '/settings/invoicing'
+    | '/settings/travellers'
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
@@ -584,6 +606,8 @@ export interface FileRouteTypes {
     | '/web/mi-reserva'
     | '/web/'
     | '/_app/admin/manual'
+    | '/_app/settings/invoicing'
+    | '/_app/settings/travellers'
     | '/web/book/$roomId'
     | '/web/booking/$bookingId'
     | '/web/chat/$bookingId'
@@ -935,6 +959,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebBookRoomIdRouteImport
       parentRoute: typeof WebRoute
     }
+    '/_app/settings/travellers': {
+      id: '/_app/settings/travellers'
+      path: '/settings/travellers'
+      fullPath: '/settings/travellers'
+      preLoaderRoute: typeof AppSettingsTravellersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/invoicing': {
+      id: '/_app/settings/invoicing'
+      path: '/settings/invoicing'
+      fullPath: '/settings/invoicing'
+      preLoaderRoute: typeof AppSettingsInvoicingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/admin/manual': {
       id: '/_app/admin/manual'
       path: '/admin/manual'
@@ -976,6 +1014,8 @@ interface AppRouteChildren {
   AppTravellersRoute: typeof AppTravellersRoute
   AppWebsiteRoute: typeof AppWebsiteRoute
   AppAdminManualRoute: typeof AppAdminManualRoute
+  AppSettingsInvoicingRoute: typeof AppSettingsInvoicingRoute
+  AppSettingsTravellersRoute: typeof AppSettingsTravellersRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1002,6 +1042,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppTravellersRoute: AppTravellersRoute,
   AppWebsiteRoute: AppWebsiteRoute,
   AppAdminManualRoute: AppAdminManualRoute,
+  AppSettingsInvoicingRoute: AppSettingsInvoicingRoute,
+  AppSettingsTravellersRoute: AppSettingsTravellersRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
