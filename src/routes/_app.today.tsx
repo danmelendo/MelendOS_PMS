@@ -11,6 +11,8 @@ import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
 import { CancellationRequests } from "@/components/CancellationRequests";
 import { PendingRefunds } from "@/components/PendingRefunds";
 import { HotelAlerts } from "@/components/HotelAlerts";
+import { TravellersDrawer, type StayRef } from "@/components/TravellersDrawer";
+import { ymdInZone } from "@domain/dates.ts";
 import { FolioDrawer } from "@/components/FolioDrawer";
 import {
   ReservationExtrasInfo,
@@ -36,6 +38,18 @@ function TodayPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [folioId, setFolioId] = useState<string | null>(null);
+  // Check-in waits for the traveller register when the hotel sends it to
+  // SES.HOSPEDAJES: reception completes it (or sends the online link) first.
+  const [checkInStay, setCheckInStay] = useState<(StayRef & { tenantId: string }) | null>(null);
+  const { data: sesOn } = useQuery({
+    queryKey: ["ses", "enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("ses_settings").select("tenant_id, enabled");
+      if (error) throw error;
+      return new Set((data ?? []).filter((r) => r.enabled).map((r) => r.tenant_id));
+    },
+    staleTime: 60_000,
+  });
   const { data: rooms } = useRooms();
 
   const today = new Date();
@@ -74,6 +88,51 @@ function TodayPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const checkIn = useMutation({
+    mutationFn: async ({ id, tenantId }: { id: string; tenantId: string }) => {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ status: "in_progress" })
+        .eq("id", id);
+      if (error) throw error;
+      // The traveller report (PV) is queued by the check-in; send it now
+      // instead of waiting for the scheduled run.
+      if (sesOn?.has(tenantId)) {
+        await supabase.functions.invoke("ses-dispatch", { body: { tenant_id: tenantId } });
+      }
+    },
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["reservations"] });
+      qc.invalidateQueries({ queryKey: ["ses"] });
+      setCheckInStay(null);
+      toast.success(
+        sesOn?.has(v.tenantId)
+          ? "Check-in hecho · parte de viajeros enviado a SES.HOSPEDAJES"
+          : "Check-in hecho",
+      );
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const startCheckIn = async (r: NonNullable<typeof stays>[number]) => {
+    if (!sesOn?.has(r.tenant_id)) return checkIn.mutate({ id: r.id, tenantId: r.tenant_id });
+    const { data, error } = await supabase.rpc("list_stay_travellers", { p_reservation: r.id });
+    if (error) return toast.error(error.message);
+    const rows = (data ?? []) as { missing: string[] }[];
+    const complete = rows.filter((t) => t.missing.length === 0).length;
+    if (complete >= r.people && complete === rows.length) {
+      return checkIn.mutate({ id: r.id, tenantId: r.tenant_id });
+    }
+    setCheckInStay({
+      id: r.id,
+      tenantId: r.tenant_id,
+      reference: r.reference ?? "",
+      guestName: r.customers?.name ?? null,
+      checkIn: ymdInZone(r.start_at, "Europe/Madrid"),
+      people: r.people,
+    });
+  };
 
   const inDay = (iso: string) => {
     const t = new Date(iso).getTime();
@@ -229,7 +288,8 @@ function TodayPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => updateStatus.mutate({ id: r.id, status: "in_progress" })}
+                    disabled={checkIn.isPending}
+                    onClick={() => startCheckIn(r)}
                   >
                     <LogIn className="mr-1 h-3.5 w-3.5" /> Check-in
                   </Button>
@@ -273,6 +333,20 @@ function TodayPage() {
       </ListCard>
 
       <FolioDrawer reservationId={folioId} onOpenChange={(o) => !o && setFolioId(null)} />
+
+      <TravellersDrawer
+        stay={checkInStay}
+        onOpenChange={(o) => !o && setCheckInStay(null)}
+        checkIn={
+          checkInStay
+            ? {
+                pending: checkIn.isPending,
+                onCheckIn: () =>
+                  checkIn.mutate({ id: checkInStay.id, tenantId: checkInStay.tenantId }),
+              }
+            : undefined
+        }
+      />
 
       <NewReservationDialog
         open={open}

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Baby, Lock, Pencil, Plus, Trash2, UserRound, X } from "lucide-react";
+import { Baby, LogIn, Lock, Mail, Pencil, Plus, Trash2, UserRound, X } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { countryOptions } from "@domain/countries.ts";
 import {
@@ -37,15 +39,28 @@ export interface StayRef {
 
 const COUNTRIES = countryOptions("es");
 
+/**
+ * Check-in mode: reception pressed «Check-in» and some travellers are missing.
+ * The stay is checked in only once everyone is registered (SES.HOSPEDAJES
+ * needs every guest), either typed here or by the guest from the single-use
+ * online check-in link.
+ */
+export interface CheckInMode {
+  onCheckIn: () => void;
+  pending: boolean;
+}
+
 /** Guests of a stay for the traveller register (SES.HOSPEDAJES). */
 export function TravellersDrawer({
   stay,
   onOpenChange,
   readOnly = false,
+  checkIn,
 }: {
   stay: StayRef | null;
   onOpenChange: (open: boolean) => void;
   readOnly?: boolean;
+  checkIn?: CheckInMode;
 }) {
   return (
     <DialogPrimitive.Root open={!!stay} onOpenChange={onOpenChange}>
@@ -55,18 +70,35 @@ export function TravellersDrawer({
           aria-describedby={undefined}
           className="drawer-panel fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col bg-background shadow-2xl outline-none sm:border-l"
         >
-          {stay && <Body key={stay.id} stay={stay} readOnly={readOnly} />}
+          {stay && <Body key={stay.id} stay={stay} readOnly={readOnly} checkIn={checkIn} />}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }
 
-function Body({ stay, readOnly }: { stay: StayRef; readOnly: boolean }) {
+function Body({
+  stay,
+  readOnly,
+  checkIn,
+}: {
+  stay: StayRef;
+  readOnly: boolean;
+  checkIn?: CheckInMode;
+}) {
   const { data: travellers, isLoading } = useStayTravellers(stay.id);
   const actions = useTravellerActions(stay.id);
   const [editing, setEditing] = useState<TravellerRow | "new" | null>(null);
   const complete = (travellers ?? []).filter((t) => t.missing.length === 0).length;
+  const allIn = complete >= stay.people && complete === (travellers?.length ?? 0);
+  const invite = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("request_checkin_invite", { p_id: stay.id });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => toast.success("Enlace de check-in enviado al huésped"),
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <>
@@ -92,6 +124,37 @@ function Body({ stay, readOnly }: { stay: StayRef; readOnly: boolean }) {
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+        {checkIn && !isLoading && (
+          <div className="space-y-3 rounded-lg border border-info/40 bg-info/5 p-3">
+            <p className="font-medium">
+              {allIn
+                ? "Todos los viajeros están registrados."
+                : `Para hacer el check-in faltan datos: ${complete} de ${stay.people} viajeros completos.`}
+            </p>
+            {!allIn && (
+              <p className="text-xs text-muted-foreground">
+                Envía al huésped el enlace de check-in online (rellena los datos y firma desde su
+                móvil) o introdúcelos aquí con su documento. El parte de viajeros se envía a
+                SES.HOSPEDAJES al hacer el check-in.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {!allIn && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={invite.isPending}
+                  onClick={() => invite.mutate()}
+                >
+                  <Mail className="h-3.5 w-3.5" /> Enviar enlace de check-in online
+                </Button>
+              )}
+              <Button size="sm" disabled={!allIn || checkIn.pending} onClick={checkIn.onCheckIn}>
+                <LogIn className="h-3.5 w-3.5" /> Hacer check-in
+              </Button>
+            </div>
+          </div>
+        )}
         <p className="flex items-start gap-2 rounded-md bg-info/10 px-3 py-2 text-xs text-info-foreground">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           Los datos del documento y del domicilio se envían al Ministerio del Interior y no se
