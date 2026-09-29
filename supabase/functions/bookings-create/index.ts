@@ -4,7 +4,7 @@
 // Creates a *pending* reservation priced on the server (never confirmed here).
 // Anonymous visitors must send guest details; a signed-in guest (Authorization:
 // Bearer <user JWT>) books on their member account.
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, clientIp, corsHeaders, json, overLimit, tooMany } from "../_shared/http.ts";
 import { BookingError, createBookingDraft } from "../_shared/tools/bookings.ts";
 import { supabaseBookingStore } from "../_shared/tools/supabase-store.ts";
 
@@ -35,6 +35,11 @@ Deno.serve(async (req) => {
     const { data } = await db.auth.getUser(token);
     userId = data.user?.id ?? null;
   }
+
+  // Each pending booking holds its room: without a limit a script could block
+  // a whole hotel. 10 an hour per IP is plenty for a person booking.
+  const ip = clientIp(req);
+  if (ip && (await overLimit(db, `bookings:${ip}`, 10, 3600))) return tooMany();
 
   try {
     const draft = await createBookingDraft(supabaseBookingStore(db), body, {

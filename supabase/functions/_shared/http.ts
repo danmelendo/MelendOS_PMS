@@ -43,3 +43,39 @@ export async function verifiedUser(db: ReturnType<typeof adminClient>, jwt: stri
   }
   return { data: { user: aal === "aal2" ? user : null } };
 }
+
+/**
+ * The caller's IP: Cloudflare's cf-connecting-ip, which the client cannot
+ * forge (X-Forwarded-For can be). Empty when unknown.
+ */
+export function clientIp(req: Request): string {
+  return req.headers.get("cf-connecting-ip")?.trim() ?? "";
+}
+
+/**
+ * Abuse limit per key in a fixed window (SQL rate_limit_hit). True when the
+ * caller went over it. An unknown IP or a failed check does not block.
+ */
+export async function overLimit(
+  db: ReturnType<typeof adminClient>,
+  key: string,
+  max: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  const { data, error } = await db.rpc("rate_limit_hit", {
+    p_key: key,
+    p_max: max,
+    p_window_seconds: windowSeconds,
+  });
+  if (error) {
+    console.error(`rate_limit_hit: ${error.message}`);
+    return false;
+  }
+  return data === false;
+}
+
+export const tooMany = () =>
+  json(
+    { error: "Demasiadas peticiones; prueba de nuevo en unos minutos", code: "rate_limited" },
+    429,
+  );

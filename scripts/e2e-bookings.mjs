@@ -121,7 +121,8 @@ try {
       headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
         reservation_id: anon.body.reservation_id,
-        return_url: "https://example.test/pago",
+        return_url: "http://localhost:5173/web/checkout",
+        token: anon.body.access_token,
       }),
     });
     const payBody = await pay.json();
