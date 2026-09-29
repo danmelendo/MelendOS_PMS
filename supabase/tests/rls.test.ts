@@ -3562,4 +3562,53 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(balance.ok).toBe(false);
     });
   });
+
+  describe("payment gateway config (TPV)", () => {
+    it("is set and read only by management, keeps the secret in Vault", async () => {
+      const reception = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.payment_account_status($1) s", [ids.lumen]),
+      );
+      const saveAsReception = await attempt("authenticated", users.lumenReception, () =>
+        client.query(
+          "select public.save_payment_account($1,'redsys',true,$2,'QUJDREVGR0hJSktMTU5PUA==')",
+          [ids.lumen, JSON.stringify({ merchant_code: "999008881", terminal: "1" })],
+        ),
+      );
+      const badCode = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.save_payment_account($1,'redsys',true,$2,'QUJDREVGR0hJSktM')", [
+          ids.lumen,
+          JSON.stringify({ merchant_code: "12", terminal: "1" }),
+        ]),
+      );
+      // Admin saves and reads the status (authenticated); the Vault secret is
+      // then read back as the privileged role. The whole thing is rolled back.
+      await client.query("savepoint pay");
+      await as("authenticated", users.lumenAdmin);
+      await client.query(
+        "select public.save_payment_account($1,'redsys',true,$2,'QUJDREVGR0hJSktMTU5PUA==')",
+        [
+          ids.lumen,
+          JSON.stringify({ merchant_code: "999008881", terminal: "2", bank_name: "BBVA" }),
+        ],
+      );
+      const status = (await client.query("select public.payment_account_status($1) s", [ids.lumen]))
+        .rows[0].s as { has_secret: boolean; public_config: { bank_name: string } };
+      await client.query("reset role");
+      const secret = (
+        await client.query(
+          "select decrypted_secret v from vault.decrypted_secrets where name = 'payments/' || $1 || '/redsys'",
+          [ids.lumen],
+        )
+      ).rows[0]?.v as string | undefined;
+      await client.query("rollback to savepoint pay");
+
+      expect(reception.ok).toBe(false);
+      expect(saveAsReception.ok).toBe(false);
+      expect(badCode.ok).toBe(false);
+      expect(status.has_secret).toBe(true);
+      expect(status.public_config.bank_name).toBe("BBVA");
+      expect(JSON.stringify(status)).not.toContain("QUJD");
+      expect(secret).toBe("QUJDREVGR0hJSktMTU5PUA==");
+    });
+  });
 });

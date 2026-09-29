@@ -1157,6 +1157,53 @@ export type Database = {
           },
         ]
       }
+      hotel_alert_notices: {
+        Row: {
+          attempts: number
+          error: string | null
+          id: string
+          items: number
+          kind: string
+          notified_at: string | null
+          opened_at: string
+          resolved_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          attempts?: number
+          error?: string | null
+          id?: string
+          items: number
+          kind: string
+          notified_at?: string | null
+          opened_at?: string
+          resolved_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          attempts?: number
+          error?: string | null
+          id?: string
+          items?: number
+          kind?: string
+          notified_at?: string | null
+          opened_at?: string
+          resolved_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_alert_notices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidents: {
         Row: {
           category: string
@@ -1840,6 +1887,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rate_limits: {
+        Row: {
+          hits: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          hits?: number
+          key: string
+          window_start?: string
+        }
+        Update: {
+          hits?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       rate_nightly: {
         Row: {
@@ -3324,6 +3389,10 @@ export type Database = {
       delete_channel: { Args: { p_channel: string }; Returns: undefined }
       delete_customer: { Args: { p_customer_id: string }; Returns: string }
       delete_stay_traveller: { Args: { p_id: string }; Returns: undefined }
+      disable_payment_account: {
+        Args: { p_tenant: string }
+        Returns: undefined
+      }
       exchange_simplified_invoice: {
         Args: { p_invoice: string; p_recipient: Json }
         Returns: string
@@ -3581,6 +3650,12 @@ export type Database = {
         Args: { p_days?: number; p_tenant: string }
         Returns: Json
       }
+      hotel_alert_recipients: {
+        Args: { p_tenant: string }
+        Returns: {
+          email: string
+        }[]
+      }
       hotel_alerts: {
         Args: never
         Returns: {
@@ -3591,6 +3666,16 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      hotel_alerts_all: {
+        Args: never
+        Returns: {
+          items: number
+          kind: string
+          oldest: string
+          tenant_id: string
+        }[]
+      }
+      hotel_alerts_scan: { Args: never; Returns: number }
       hotel_cancellation_penalty: {
         Args: { p_tenant: string }
         Returns: string
@@ -3649,6 +3734,15 @@ export type Database = {
           nationality: string
         }[]
       }
+      mark_hotel_alert_notices: {
+        Args: {
+          p_attempt: boolean
+          p_error: string
+          p_ids: string[]
+          p_status: string
+        }
+        Returns: undefined
+      }
       mcp_token_auth: { Args: { p_token_hash: string }; Returns: Json }
       module_package: { Args: { p_feature: string }; Returns: string }
       next_invoice_number: {
@@ -3675,6 +3769,7 @@ export type Database = {
         }
         Returns: string
       }
+      payment_account_status: { Args: { p_tenant: string }; Returns: Json }
       pending_refunds: {
         Args: never
         Returns: {
@@ -3694,6 +3789,10 @@ export type Database = {
       purge_simulated_invoices: {
         Args: { p_reservation: string }
         Returns: number
+      }
+      rate_limit_hit: {
+        Args: { p_key: string; p_max: number; p_window_seconds: number }
+        Returns: boolean
       }
       record_desk_payment: {
         Args: { p_amount: number; p_method: string; p_reservation_id: string }
@@ -3749,6 +3848,7 @@ export type Database = {
         }
         Returns: string
       }
+      request_ip: { Args: never; Returns: string }
       resubmit_invoice: {
         Args: { p_invoice: string; p_recipient?: Json }
         Returns: string
@@ -3774,6 +3874,17 @@ export type Database = {
       save_hotel_web: {
         Args: { p_data: Json; p_tenant: string }
         Returns: Json
+      }
+      save_payment_account: {
+        Args: {
+          p_config: Json
+          p_provider: string
+          p_secret?: string
+          p_secret2?: string
+          p_tenant: string
+          p_test_mode: boolean
+        }
+        Returns: undefined
       }
       save_ses_credentials: {
         Args: {
@@ -3874,6 +3985,10 @@ export type Database = {
           discount_value: number
           id: string
         }[]
+      }
+      vault_upsert: {
+        Args: { p_name: string; p_secret: string }
+        Returns: undefined
       }
       verifactu_certificate: { Args: { p_tenant: string }; Returns: Json }
       verifactu_hash: {

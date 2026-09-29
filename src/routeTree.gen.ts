@@ -34,6 +34,7 @@ import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppRatesRouteImport } from './routes/_app.rates'
 import { Route as AppPromosRouteImport } from './routes/_app.promos'
 import { Route as AppPlanRouteImport } from './routes/_app.plan'
+import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
 import { Route as AppJournalRouteImport } from './routes/_app.journal'
 import { Route as AppInvoicesRouteImport } from './routes/_app.invoices'
@@ -181,6 +182,11 @@ const AppPlanRoute = AppPlanRouteImport.update({
   path: '/plan',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPaymentsRoute = AppPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMessagesRoute = AppMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/invoices': typeof AppInvoicesRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
+  '/payments': typeof AppPaymentsRoute
   '/plan': typeof AppPlanRoute
   '/promos': typeof AppPromosRoute
   '/rates': typeof AppRatesRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/invoices': typeof AppInvoicesRoute
   '/journal': typeof AppJournalRoute
   '/messages': typeof AppMessagesRoute
+  '/payments': typeof AppPaymentsRoute
   '/plan': typeof AppPlanRoute
   '/promos': typeof AppPromosRoute
   '/rates': typeof AppRatesRoute
@@ -408,6 +416,7 @@ export interface FileRoutesById {
   '/_app/invoices': typeof AppInvoicesRoute
   '/_app/journal': typeof AppJournalRoute
   '/_app/messages': typeof AppMessagesRoute
+  '/_app/payments': typeof AppPaymentsRoute
   '/_app/plan': typeof AppPlanRoute
   '/_app/promos': typeof AppPromosRoute
   '/_app/rates': typeof AppRatesRoute
@@ -458,6 +467,7 @@ export interface FileRouteTypes {
     | '/invoices'
     | '/journal'
     | '/messages'
+    | '/payments'
     | '/plan'
     | '/promos'
     | '/rates'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/invoices'
     | '/journal'
     | '/messages'
+    | '/payments'
     | '/plan'
     | '/promos'
     | '/rates'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/_app/invoices'
     | '/_app/journal'
     | '/_app/messages'
+    | '/_app/payments'
     | '/_app/plan'
     | '/_app/promos'
     | '/_app/rates'
@@ -776,6 +788,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPlanRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/payments': {
+      id: '/_app/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof AppPaymentsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/messages': {
       id: '/_app/messages'
       path: '/messages'
@@ -944,6 +963,7 @@ interface AppRouteChildren {
   AppInvoicesRoute: typeof AppInvoicesRoute
   AppJournalRoute: typeof AppJournalRoute
   AppMessagesRoute: typeof AppMessagesRoute
+  AppPaymentsRoute: typeof AppPaymentsRoute
   AppPlanRoute: typeof AppPlanRoute
   AppPromosRoute: typeof AppPromosRoute
   AppRatesRoute: typeof AppRatesRoute
@@ -969,6 +989,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInvoicesRoute: AppInvoicesRoute,
   AppJournalRoute: AppJournalRoute,
   AppMessagesRoute: AppMessagesRoute,
+  AppPaymentsRoute: AppPaymentsRoute,
   AppPlanRoute: AppPlanRoute,
   AppPromosRoute: AppPromosRoute,
   AppRatesRoute: AppRatesRoute,
