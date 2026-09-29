@@ -389,7 +389,7 @@ const createPaymentLink = defineTool({
       throw new ToolError("conflict", "This booking is not awaiting payment");
     }
     const now = ctx.now ?? new Date();
-    if (b.is_prebooking && b.hold_expires_at && new Date(b.hold_expires_at) < now) {
+    if (b.hold_expires_at && new Date(b.hold_expires_at) < now) {
       throw new ToolError("conflict", "The hold on this room has expired");
     }
     // A fresh access token goes in the link (only its hash is stored).

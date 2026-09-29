@@ -131,7 +131,7 @@ describe("createBookingDraft", () => {
     const { store, inserted } = fakeStore();
     const draft = await createBookingDraft(
       store,
-      { ...base, payment_mode: "at_hotel", hold: true },
+      { ...base, payment_mode: "at_hotel" },
       { userId: null, channel: "public", now: NOW },
     );
     expect(draft).toMatchObject({ status: "confirmed", amount_due_now: 0, hold_expires_at: null });
@@ -158,15 +158,22 @@ describe("createBookingDraft", () => {
     });
   });
 
-  it("holds the room for 30 minutes when asked", async () => {
-    const { store, inserted } = fakeStore();
-    const draft = await createBookingDraft(
-      store,
-      { ...base, hold: true },
-      { userId: null, channel: "public", now: NOW },
-    );
-    expect(draft.hold_expires_at).toBe("2026-09-25T10:30:00.000Z");
-    expect(inserted[0].is_prebooking).toBe(true);
+  it("holds the room while the guest pays: 20 minutes on the web, 60 for a link", async () => {
+    const web = fakeStore();
+    const draft = await createBookingDraft(web.store, base, {
+      userId: null,
+      channel: "public",
+      now: NOW,
+    });
+    expect(draft.hold_expires_at).toBe("2026-09-25T10:20:00.000Z");
+    expect(web.inserted[0].is_prebooking).toBe(false);
+    const agent = fakeStore();
+    const link = await createBookingDraft(agent.store, base, {
+      userId: null,
+      channel: "agent",
+      now: NOW,
+    });
+    expect(link.hold_expires_at).toBe("2026-09-25T11:00:00.000Z");
   });
 
   it("prices extras from the database and adds gifts", async () => {

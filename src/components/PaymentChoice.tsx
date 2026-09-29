@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Building2, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
+import { Building2, CreditCard, ShieldCheck } from "lucide-react";
 import { zonedHourToUtc } from "@domain/dates.ts";
 import { cancellationTerms, type PaymentMode } from "@domain/policies.ts";
 import { usePolicies } from "@/lib/features";
@@ -35,7 +35,7 @@ export function PaymentChoice({
   disabled: boolean;
   busy: boolean;
   tone: "web" | "app";
-  onBook: (mode: PaymentMode, hold: boolean) => void;
+  onBook: (mode: PaymentMode) => void;
 }) {
   const policies = usePolicies();
   const { t } = useLang();
@@ -119,7 +119,7 @@ export function PaymentChoice({
       <div className="mt-5 space-y-3">
         <button
           disabled={disabled || busy}
-          onClick={() => onBook(mode, false)}
+          onClick={() => onBook(mode)}
           className="flex w-full items-center justify-center gap-2 bg-[var(--brand)] py-4 font-semibold text-white disabled:opacity-50"
         >
           <ShieldCheck className="h-5 w-5" />
@@ -127,22 +127,6 @@ export function PaymentChoice({
             ? t("Reservar y pagar {amount}", { amount: eur(total) })
             : t("Confirmar reserva")}
         </button>
-        {mode === "prepay" && (
-          <>
-            <button
-              disabled={disabled || busy}
-              onClick={() => onBook(mode, true)}
-              className="flex w-full items-center justify-center gap-2 border border-[var(--brand)]/40 bg-white py-4 font-semibold text-[var(--brand)] disabled:opacity-50"
-            >
-              <Sparkles className="h-5 w-5" /> {t("Guardar 30 min y pagar después")}
-            </button>
-            <p className="text-center text-xs text-neutral-400">
-              {t(
-                "Te guardamos la habitación 30 minutos sin pagar; confírmala antes de que expire.",
-              )}
-            </p>
-          </>
-        )}
       </div>
     </>
   );

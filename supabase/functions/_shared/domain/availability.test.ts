@@ -57,6 +57,24 @@ describe("isBlocking: pending holds", () => {
     expect(isBlocking(fresh, NOW)).toBe(true);
     expect(isBlocking(stale, NOW)).toBe(false);
   });
+
+  it("follows hold_expires_at when the booking has one", () => {
+    const created = "2026-10-01T08:55:00Z";
+    const held = res({
+      id: "h",
+      status: "pending",
+      createdAt: created,
+      holdExpiresAt: "2026-10-01T09:05:00Z",
+    });
+    const lapsed = res({
+      id: "l",
+      status: "pending",
+      createdAt: created,
+      holdExpiresAt: "2026-10-01T08:59:00Z",
+    });
+    expect(isBlocking(held, NOW)).toBe(true);
+    expect(isBlocking(lapsed, NOW)).toBe(false);
+  });
 });
 
 describe("planCleaningShift", () => {

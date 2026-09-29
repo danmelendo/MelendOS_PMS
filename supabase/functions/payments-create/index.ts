@@ -21,6 +21,9 @@ import {
 } from "../_shared/http.ts";
 import { loadGateway } from "../_shared/payments/accounts.ts";
 
+/** Time the bank gets to answer once the guest starts paying. */
+const BANK_MARGIN_MINUTES = 30;
+
 const sha256 = async (text: string) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))]
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -150,8 +153,10 @@ Deno.serve(async (req) => {
     if (res.status !== "pending" || res.deposit_paid) {
       return json({ error: "This reservation is not awaiting payment" }, 409);
     }
-    if (res.is_prebooking && res.hold_expires_at && new Date(res.hold_expires_at) < new Date()) {
-      return json({ error: "The hold on this room has expired" }, 409);
+    // The room is only held while the guest books (20 minutes of inactivity);
+    // an expired hold means booking again.
+    if (res.hold_expires_at && new Date(res.hold_expires_at) < new Date()) {
+      return json({ error: "La reserva de la habitación ha caducado. Vuelve a reservar." }, 409);
     }
     amount = Number(res.deposit_amount);
     if (!(amount > 0)) return json({ error: "Invalid amount" }, 422);
@@ -187,6 +192,17 @@ Deno.serve(async (req) => {
     .select("id")
     .single();
   if (payErr) return json({ error: "Could not create the payment" }, 500);
+  // The guest is at the bank: keep the room until it answers.
+  if (kind === "deposit") {
+    const bankMargin = new Date(Date.now() + BANK_MARGIN_MINUTES * 60_000);
+    if (!res.hold_expires_at || new Date(res.hold_expires_at) < bankMargin) {
+      await db
+        .from("reservations")
+        .update({ hold_expires_at: bankMargin.toISOString() })
+        .eq("id", res.id)
+        .eq("status", "pending");
+    }
+  }
 
   const notifyUrl = new URL(`${Deno.env.get("SUPABASE_URL")}/functions/v1/payments-notify`);
   notifyUrl.searchParams.set("tenant", res.tenant_id);

@@ -44,8 +44,6 @@ export interface CreatePrebookingInput {
   checkIn: string;
   checkOut: string;
   guests: number;
-  /** true = hold without paying (prereserva); false = book straight away. */
-  hold: boolean;
   /** Guest details, required when booking without an account. */
   guest?: { name: string; email: string; phone?: string };
   /** Pay the whole stay online now, or at the hotel (default: the hotel's). */
@@ -118,6 +116,8 @@ export interface PmsConnector {
     returnUrl: string,
     kind?: "deposit" | "balance",
   ): Promise<PaymentRedirect>;
+  /** The guest is still paying: keep the room (20 more minutes). Null = the hold lapsed. */
+  touchHold(id: string): Promise<string | null>;
   cancelPrebooking(id: string, category?: string): Promise<void>;
   listBookings(memberId: string): Promise<Prebooking[]>;
   getBooking(id: string): Promise<Prebooking | null>;
