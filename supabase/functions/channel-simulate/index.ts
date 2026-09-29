@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
         .eq("user_id", auth.user.id)
         .maybeSingle()
     : { data: null };
-  if (!member || !["admin", "group"].includes(member.role)) {
+  if (!member || !["admin", "group", "platform"].includes(member.role)) {
     return json({ error: "Solo dirección" }, 403);
   }
 

@@ -3,14 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 // The hotel's team (Admin → Equipo). Reading goes through list_staff (emails
 // live in auth.users); roles and removals are tenant_members rows (RLS: only
-// management; a trigger keeps at least one admin and leaves "group" alone).
+// management; a trigger keeps at least one admin and leaves "group" and
+// "platform", the Melend/OS support access, alone).
 
-export type StaffRole = "admin" | "reception" | "group";
+export type StaffRole = "admin" | "reception" | "group" | "platform";
 
 export const ROLE_LABELS: Record<StaffRole, string> = {
   admin: "Dirección",
   reception: "Recepción",
   group: "Dirección de grupo",
+  platform: "Administrador (soporte de Melend/OS)",
 };
 
 export interface StaffMember {

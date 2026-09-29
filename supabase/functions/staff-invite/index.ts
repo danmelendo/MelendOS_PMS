@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
         .eq("user_id", callerId)
         .maybeSingle()
     : { data: null };
-  if (caller?.role !== "admin" && caller?.role !== "group") {
+  if (!["admin", "group", "platform"].includes(caller?.role ?? "")) {
     return json({ error: "Solo la dirección del hotel puede invitar al equipo" }, 403);
   }
 

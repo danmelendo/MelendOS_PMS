@@ -206,7 +206,8 @@ function Row({
   onRole: (r: "admin" | "reception") => void;
   onRemove: () => void;
 }) {
-  const group = m.role === "group";
+  // Set up by Melend/OS, not by the hotel: group management and support.
+  const group = m.role === "group" || m.role === "platform";
   return (
     <tr className="border-b last:border-0">
       <td className="p-3">

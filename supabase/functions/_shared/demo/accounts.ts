@@ -7,7 +7,7 @@ export interface DemoAccount {
   label: string;
   kind: "staff" | "guest";
   /** Staff role and hotels (seed keys), for tenant_members. */
-  role?: "admin" | "reception" | "group";
+  role?: "admin" | "reception" | "group" | "platform";
   tenants?: ("lumen" | "albora")[];
 }
 
@@ -46,6 +46,14 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     kind: "staff",
     role: "reception",
     tenants: ["albora"],
+  },
+  {
+    // Melend/OS support: full control of every hotel (platform_admins).
+    email: "soporte@demostays.example",
+    label: "Administrador · soporte de Melend/OS",
+    kind: "staff",
+    role: "platform",
+    tenants: ["lumen", "albora"],
   },
   {
     email: "alex@guest.demostays.example",

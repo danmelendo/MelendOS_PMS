@@ -3126,6 +3126,120 @@ describe.skipIf(!DB_URL)("RLS", () => {
     });
   });
 
+  describe("Melend/OS support role (platform)", () => {
+    const support = "00000000-0000-4000-8000-000000000029";
+
+    it("gives support every hotel, present and future, with full control the hotel cannot touch", async () => {
+      await client.query("savepoint setup");
+      await client.query(
+        "insert into auth.users (id, email, aud, role) values ($1, 'soporte@test.demostays.example', 'authenticated', 'authenticated') on conflict (id) do nothing",
+        [support],
+      );
+      await client.query("insert into public.platform_admins (user_id, note) values ($1, 'test')", [
+        support,
+      ]);
+      const hotels = await count("select count(*) as n from public.tenants");
+      const memberships = () =>
+        count(
+          "select count(*) as n from public.tenant_members where user_id = $1 and role = 'platform'",
+          [support],
+        );
+      const inEveryHotel = await memberships();
+      const newHotel = (
+        await client.query<{ id: string }>(
+          "insert into public.tenants (slug, name) values ('test-platform-hotel', 'Hotel de prueba') returning id",
+        )
+      ).rows[0].id;
+      const inNewHotel = await count(
+        "select count(*) as n from public.tenant_members where tenant_id = $1 and user_id = $2 and role = 'platform'",
+        [newHotel, support],
+      );
+
+      const seesBoth = await attempt(
+        "authenticated",
+        support,
+        async () =>
+          (
+            await client.query(
+              "select count(distinct tenant_id)::int as n from public.reservations where tenant_id in ($1, $2)",
+              [ids.lumen, ids.albora],
+            )
+          ).rows[0].n,
+      );
+      const book = await attempt(
+        "authenticated",
+        support,
+        async () =>
+          (
+            await client.query(
+              `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role)
+               values ($1, $2, now() + interval '640 days', now() + interval '642 days', 'confirmed', 100, 'admin')`,
+              [ids.albora, ids["albora-room-101"]],
+            )
+          ).rowCount,
+      );
+      const roles = await attempt(
+        "authenticated",
+        support,
+        async () =>
+          (
+            await client.query(
+              "select public.has_tenant_role($1, 'admin') as admin, public.has_tenant_role($2, 'reception') as reception",
+              [ids.lumen, ids.albora],
+            )
+          ).rows[0],
+      );
+      const staffList = await attempt("authenticated", users.lumenAdmin, async () =>
+        (await client.query("select * from public.list_staff($1)", [ids.lumen])).rows
+          .filter((r) => r.user_id === support)
+          .map((r) => r.role),
+      );
+      const demote = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query(
+          "update public.tenant_members set role = 'reception' where tenant_id = $1 and user_id = $2",
+          [ids.lumen, support],
+        ),
+      );
+      const remove = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("delete from public.tenant_members where tenant_id = $1 and user_id = $2", [
+          ids.lumen,
+          support,
+        ]),
+      );
+      const grant = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query(
+          "update public.tenant_members set role = 'platform' where tenant_id = $1 and user_id = $2",
+          [ids.lumen, users.lumenReception],
+        ),
+      );
+      const readList = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select * from public.platform_admins"),
+      );
+      const addSelf = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("insert into public.platform_admins (user_id) values ($1)", [
+          users.lumenAdmin,
+        ]),
+      );
+      await client.query("delete from public.platform_admins where user_id = $1", [support]);
+      const afterRemoval = await memberships();
+      await client.query("rollback to savepoint setup");
+
+      expect(inEveryHotel).toBe(hotels);
+      expect(inNewHotel).toBe(1);
+      expect(seesBoth).toEqual({ ok: true, value: 2 });
+      expect(book).toEqual({ ok: true, value: 1 });
+      expect(roles).toEqual({ ok: true, value: { admin: true, reception: true } });
+      expect(staffList).toEqual({ ok: true, value: ["platform"] });
+      for (const [what, r] of Object.entries({ demote, remove, grant })) {
+        expect(r.ok, what).toBe(false);
+        if (!r.ok) expect(r.error, what).toMatch(/soporte de Melend\/OS/);
+      }
+      expect(readList.ok).toBe(false);
+      expect(addSelf.ok).toBe(false);
+      expect(afterRemoval).toBe(0);
+    });
+  });
+
   describe("legal pages of the hotel's web", () => {
     it("give anyone the hotel's legal identity and policies, and nothing else", async () => {
       await client.query("savepoint setup");

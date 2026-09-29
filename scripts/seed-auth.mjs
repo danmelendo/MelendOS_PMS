@@ -43,6 +43,15 @@ async function ensureUser(email) {
 
 for (const s of STAFF) {
   const userId = await ensureUser(s.email);
+  if (s.role === "platform") {
+    // Support access: a trigger gives it a membership in every hotel.
+    const { error } = await admin
+      .from("platform_admins")
+      .upsert({ user_id: userId, note: "demo" }, { onConflict: "user_id" });
+    if (error) throw error;
+    console.log(`staff  platform  ${s.email} (todos los hoteles)`);
+    continue;
+  }
   for (const tenant of s.tenants) {
     const { error } = await admin
       .from("tenant_members")

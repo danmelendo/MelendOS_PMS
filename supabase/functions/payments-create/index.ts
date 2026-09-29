@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
           .select("role")
           .eq("tenant_id", res.tenant_id)
           .eq("user_id", userId)
-          .in("role", ["admin", "reception"])
+          .in("role", ["admin", "reception", "platform"])
           .maybeSingle(),
       ]);
       allowed = !!member || !!staff;
