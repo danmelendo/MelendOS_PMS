@@ -1693,6 +1693,24 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       promo_codes: {
         Row: {
           active: boolean
@@ -4030,7 +4048,7 @@ export type Database = {
         | "rejected"
       room_category: "room" | "suite" | "family"
       room_status: "available" | "occupied" | "cleaning" | "out_of_service"
-      staff_role: "admin" | "reception" | "group"
+      staff_role: "admin" | "reception" | "group" | "platform"
       tenant_status: "trial" | "active" | "suspended"
     }
     CompositeTypes: {
@@ -4182,7 +4200,7 @@ export const Constants = {
       ],
       room_category: ["room", "suite", "family"],
       room_status: ["available", "occupied", "cleaning", "out_of_service"],
-      staff_role: ["admin", "reception", "group"],
+      staff_role: ["admin", "reception", "group", "platform"],
       tenant_status: ["trial", "active", "suspended"],
     },
   },

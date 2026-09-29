@@ -85,7 +85,7 @@ const adminItems: NavItem[] = [
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { isAdmin, isGroup, canOperate, canMessage } = useRoles();
+  const { isAdmin, isGroup, isPlatform, canOperate, canMessage } = useRoles();
   useInboxLive(canMessage);
   const unread = useUnreadCount(canMessage);
   const { data: sesAttention = 0 } = useSesAttention();
@@ -117,11 +117,13 @@ export function AppSidebar() {
               className="h-7 w-auto self-start"
             />
             <span className="pl-0.5 text-xs text-sidebar-foreground/60">
-              {isGroup && !canOperate
-                ? "Dirección de grupo"
-                : isAdmin
-                  ? "Administrador"
-                  : "Recepción"}
+              {isPlatform
+                ? "Administrador"
+                : isGroup && !canOperate
+                  ? "Dirección de grupo"
+                  : isAdmin
+                    ? "Dirección"
+                    : "Recepción"}
             </span>
           </div>
         </div>

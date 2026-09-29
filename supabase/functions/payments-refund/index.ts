@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .maybeSingle()
     : { data: null };
-  if (member?.role !== "admin" && member?.role !== "reception") {
+  if (!["admin", "reception", "platform"].includes(member?.role ?? "")) {
     return json({ error: "Solo recepción o dirección del hotel pueden devolver pagos" }, 403);
   }
 
