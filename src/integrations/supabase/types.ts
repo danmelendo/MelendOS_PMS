@@ -279,25 +279,31 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          purpose: string
           reservation_id: string
           tenant_id: string
           token_hash: string
+          used_at: string | null
         }
         Insert: {
           created_at?: string
           expires_at?: string
           id?: string
+          purpose?: string
           reservation_id: string
           tenant_id: string
           token_hash: string
+          used_at?: string | null
         }
         Update: {
           created_at?: string
           expires_at?: string
           id?: string
+          purpose?: string
           reservation_id?: string
           tenant_id?: string
           token_hash?: string
+          used_at?: string | null
         }
         Relationships: [
           {
@@ -3857,6 +3863,7 @@ export type Database = {
         Args: { p_from: string; p_tenant?: string; p_to: string }
         Returns: Json
       }
+      request_checkin_invite: { Args: { p_id: string }; Returns: undefined }
       request_guest_cancellation: {
         Args: {
           p_category?: string

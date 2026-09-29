@@ -1,13 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
-import { Mail } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Mail, Send } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoles } from "@/lib/roles";
 
-// Emails sent to the guest about this booking (confirmation, cancellation),
-// queued by the database and sent by guest-emails-dispatch.
+// Emails sent to the guest about this booking (confirmation, cancellation,
+// check-in invite), queued by the database and sent by guest-emails-dispatch.
+// Reception can (re)send the single-use online check-in link from here.
 
 const KIND: Record<string, string> = {
   booking_confirmed: "Confirmación",
   booking_cancelled: "Cancelación",
+  checkin_invite: "Check-in online",
 };
 const STATUS: Record<string, { label: string; className: string }> = {
   pending: { label: "en cola", className: "text-muted-foreground" },
@@ -28,6 +32,8 @@ interface GuestEmailRow {
 }
 
 export function GuestEmails({ reservationId }: { reservationId: string }) {
+  const qc = useQueryClient();
+  const { canOperate } = useRoles();
   const { data } = useQuery({
     queryKey: ["guest-emails", reservationId],
     queryFn: async (): Promise<GuestEmailRow[]> => {
@@ -41,13 +47,26 @@ export function GuestEmails({ reservationId }: { reservationId: string }) {
     },
     refetchInterval: (q) => (q.state.data?.some((e) => e.status === "pending") ? 5000 : false),
   });
-  if (!data?.length) return null;
+
+  const invite = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("request_checkin_invite", { p_id: reservationId });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Enlace de check-in enviado al huésped");
+      qc.invalidateQueries({ queryKey: ["guest-emails", reservationId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!data?.length && !canOperate) return null;
   return (
-    <div className="space-y-1.5 rounded-lg border bg-card p-3 text-xs">
+    <div className="space-y-2 rounded-lg border bg-card p-3 text-xs">
       <p className="flex items-center gap-1.5 font-medium text-foreground">
         <Mail className="h-3.5 w-3.5" /> Emails al huésped
       </p>
-      {data.map((e) => {
+      {data?.map((e) => {
         const s = STATUS[e.status] ?? STATUS.pending;
         return (
           <p key={e.id} className="flex flex-wrap gap-x-1.5">
@@ -69,6 +88,26 @@ export function GuestEmails({ reservationId }: { reservationId: string }) {
           </p>
         );
       })}
+      {canOperate && (
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => invite.mutate()}
+            disabled={invite.isPending}
+            className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-medium text-foreground hover:bg-muted disabled:opacity-50"
+          >
+            {invite.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            Enviar enlace de check-in online
+          </button>
+          <p className="mt-1 text-muted-foreground">
+            Enlace de un solo uso: el huésped rellena los datos del viajero y firma desde su móvil.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

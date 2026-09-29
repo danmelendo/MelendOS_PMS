@@ -65,6 +65,18 @@ describe("bookingEmail", () => {
     expect(e.text).not.toContain("check-in online");
   });
 
+  it("invites the guest to a single-use online check-in, without payment lines", () => {
+    const e = bookingEmail({ ...data, kind: "checkin_invite" });
+    expect(e.subject).toBe("Completa tu check-in online · Hotel Lumen");
+    expect(e.text).toContain("Hacer el check-in online");
+    expect(e.text).toContain("un solo uso");
+    expect(e.text).not.toContain("pagado");
+    expect(e.text).not.toContain("Cancelación gratuita");
+    const en = bookingEmail({ ...data, kind: "checkin_invite", lang: "en" });
+    expect(en.subject).toBe("Complete your online check-in · Hotel Lumen");
+    expect(en.text).toContain("single-use link");
+  });
+
   it("writes in English for a guest who booked in English", () => {
     const e = bookingEmail({ ...data, lang: "en" });
     expect(e.subject).toBe("Booking confirmed at Hotel Lumen · AB12CD34");
@@ -106,7 +118,7 @@ describe("dispatchEmails", () => {
 
   function fake(queue: PendingEmail[], found: BookingForEmail | null = booking) {
     const log: string[] = [];
-    const tokens: { hash: string; expires: Date }[] = [];
+    const tokens: { hash: string; expires: Date; purpose: string }[] = [];
     const store: EmailStore = {
       async pending() {
         return queue;
@@ -114,8 +126,8 @@ describe("dispatchEmails", () => {
       async booking() {
         return found;
       },
-      async issueToken(_t, _r, hash, expires) {
-        tokens.push({ hash, expires });
+      async issueToken(_t, _r, hash, expires, purpose) {
+        tokens.push({ hash, expires, purpose });
       },
       async markDone(e, status, d) {
         log.push(`${e.id}:${status}:${d.to ?? d.error ?? ""}`);
@@ -158,6 +170,21 @@ describe("dispatchEmails", () => {
     expect(tokens[0].hash).toMatch(/^[0-9a-f]{64}$/);
     expect(link).not.toContain(tokens[0].hash);
     expect(tokens[0].expires.toISOString()).toBe("2026-10-28T08:00:00.000Z"); // 30 days min
+    expect(tokens[0].purpose).toBe("manage");
+  });
+
+  it("sends the check-in invite with a single-use link to the check-in flow", async () => {
+    outbox.length = 0;
+    const { store, tokens } = fake([pending({ kind: "checkin_invite" })]);
+    await dispatchEmails(store, transport("resend"), {
+      fromAddress: "reservas@melendo.app",
+      now: new Date("2026-09-28T08:00:00Z"),
+    });
+    const link = outbox[0].text.match(/https:\/\/\S+/)![0];
+    expect(link).toMatch(
+      /^https:\/\/reservas\.lumen\.example\/web\/checkin\/r1\?t=[0-9a-f]{48}&hotel=hotel-lumen$/,
+    );
+    expect(tokens[0].purpose).toBe("checkin");
   });
 
   it("keeps simulated emails in the log, skips bookings without email and retries failures", async () => {
