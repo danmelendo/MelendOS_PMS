@@ -22,7 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { eur, STATUS_LABELS, STATUS_COLORS, HOTELS, buildingKey } from "@/lib/data";
+import { eur, STATUS_LABELS, STATUS_COLORS, useRooms } from "@/lib/data";
+import { useStaffHotels } from "@/lib/reports";
+import { ColumnMenu, DateBoundsFilter, ValuesFilter, type SortDir } from "@/components/ColumnMenu";
 import {
   CANCELLATION_CATEGORIES,
   isCancellationCategory,
@@ -42,6 +44,44 @@ import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRoles } from "@/lib/roles";
 
+// Where a booking came from (created_by_role).
+const ORIGINS: Record<string, { label: string; cls: string }> = {
+  admin: {
+    label: "Admin",
+    cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  },
+  reception: {
+    label: "Recepción",
+    cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  },
+  public: {
+    label: "Web pública",
+    cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  },
+  member: { label: "App", cls: "bg-info/10 text-info border-info/30" },
+  agent: { label: "Asistente IA", cls: "bg-info/10 text-info border-info/30" },
+  mcp: { label: "MCP", cls: "bg-info/10 text-info border-info/30" },
+  ota: { label: "OTA", cls: "bg-gold/15 text-gold border-gold/40" },
+  tour_operator: { label: "Touroperador", cls: "bg-gold/15 text-gold border-gold/40" },
+  import: { label: "Importada", cls: "bg-muted text-muted-foreground border-border" },
+};
+const NO_ORIGIN = "none";
+
+type SortCol = "start_at" | "end_at" | "total" | "created_at";
+type Bounds = { from: string; to: string };
+const NO_BOUNDS: Bounds = { from: "", to: "" };
+const LIMIT = 200;
+
+/** Day after a yyyy-MM-dd date (for "to" bounds, inclusive of the whole day). */
+function nextDay(ymd: string) {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+const DATE_FMT: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
+const DAY_MS = 86_400_000;
+
 export const Route = createFileRoute("/_app/reservations")({
   component: ReservationsPage,
 });
@@ -52,8 +92,43 @@ function ReservationsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [buildingFilter, setBuildingFilter] = useState<string>("all");
+  // Spreadsheet-style column menus: sort by one column, filter by several.
+  // Everything is applied in the database, over every booking, not just the
+  // rows already loaded.
+  const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({
+    col: "start_at",
+    dir: "desc",
+  });
+  const [statuses, setStatuses] = useState<string[]>([]);
+  const [origins, setOrigins] = useState<string[]>([]);
+  const [hotels, setHotels] = useState<string[]>([]);
+  const [roomIds, setRoomIds] = useState<string[]>([]);
+  const [arrival, setArrival] = useState<Bounds>(NO_BOUNDS);
+  const [departure, setDeparture] = useState<Bounds>(NO_BOUNDS);
+  const { data: staffHotels } = useStaffHotels();
+  const { data: rooms } = useRooms();
+  // Only people with more than one hotel (group management, Melend/OS support)
+  // see and filter by hotel.
+  const multiHotel = (staffHotels?.length ?? 0) > 1;
+  const hotelName = new Map((staffHotels ?? []).map((h) => [h.id, h.name]));
+  const filters = { statuses, origins, hotels, roomIds, arrival, departure };
+  const filtering =
+    statuses.length +
+      origins.length +
+      hotels.length +
+      roomIds.length +
+      [arrival.from, arrival.to, departure.from, departure.to].filter(Boolean).length >
+    0;
+  const clearFilters = () => {
+    setStatuses([]);
+    setOrigins([]);
+    setHotels([]);
+    setRoomIds([]);
+    setArrival(NO_BOUNDS);
+    setDeparture(NO_BOUNDS);
+  };
+  const sortOf = (col: SortCol) => (sort.col === col ? sort.dir : undefined);
+  const sortBy = (col: SortCol) => (dir: SortDir) => setSort({ col, dir });
   // Cancellation: a reason group (required, for reports and the ML models)
   // and an optional internal note.
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
@@ -73,41 +148,59 @@ function ReservationsPage() {
     return () => clearTimeout(t);
   }, [search]);
   const { data: reservations } = useQuery({
-    queryKey: ["reservations", "list", query],
+    queryKey: ["reservations", "list", query, sort, filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const cols =
         "*, rooms(id,name,building), customers(id,name,phone,email), channels(name), reservation_extras(qty,is_gift,extras(name,category))";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const narrow = <Q extends Record<string, any>>(q: Q): Q => {
+        if (statuses.length) q = q.in("status", statuses);
+        if (hotels.length) q = q.in("tenant_id", hotels);
+        if (roomIds.length) q = q.in("room_id", roomIds);
+        if (origins.length) {
+          const named = origins.filter((o) => o !== NO_ORIGIN);
+          const parts = [
+            ...(named.length ? [`created_by_role.in.(${named.join(",")})`] : []),
+            ...(origins.includes(NO_ORIGIN) ? ["created_by_role.is.null"] : []),
+          ];
+          q = q.or(parts.join(","));
+        }
+        if (arrival.from) q = q.gte("start_at", arrival.from);
+        if (arrival.to) q = q.lt("start_at", nextDay(arrival.to));
+        if (departure.from) q = q.gte("end_at", departure.from);
+        if (departure.to) q = q.lt("end_at", nextDay(departure.to));
+        return q.order(sort.col, { ascending: sort.dir === "asc" });
+      };
       if (!query) {
-        const { data, error } = await supabase
-          .from("reservations")
-          .select(cols)
-          .order("start_at", { ascending: false })
-          .limit(200);
+        const { data, error } = await narrow(supabase.from("reservations").select(cols)).limit(
+          LIMIT,
+        );
         if (error) throw error;
         return data;
       }
       const like = `%${query.replace(/[%_,()]/g, "")}%`;
       const [byRef, byGuest, byRoom] = await Promise.all([
-        supabase
-          .from("reservations")
-          .select(cols)
-          .ilike("reference", `${query.replace(/[^0-9a-f]/gi, "").toUpperCase()}%`)
-          .limit(50),
-        supabase
-          .from("reservations")
-          .select(cols.replace("customers(", "customers!inner("))
-          .or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`, {
-            referencedTable: "customers",
-          })
-          .order("start_at", { ascending: false })
-          .limit(100),
-        supabase
-          .from("reservations")
-          .select(cols.replace("rooms(", "rooms!inner("))
-          .ilike("rooms.name", like)
-          .order("start_at", { ascending: false })
-          .limit(100),
+        narrow(
+          supabase
+            .from("reservations")
+            .select(cols)
+            .ilike("reference", `${query.replace(/[^0-9a-f]/gi, "").toUpperCase()}%`),
+        ).limit(50),
+        narrow(
+          supabase
+            .from("reservations")
+            .select(cols.replace("customers(", "customers!inner("))
+            .or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`, {
+              referencedTable: "customers",
+            }),
+        ).limit(100),
+        narrow(
+          supabase
+            .from("reservations")
+            .select(cols.replace("rooms(", "rooms!inner("))
+            .ilike("rooms.name", like),
+        ).limit(100),
       ]);
       const error = byRef.error ?? byGuest.error ?? byRoom.error;
       if (error) throw error;
@@ -119,7 +212,16 @@ function ReservationsPage() {
       ]) {
         seen.set(r.id, r);
       }
-      return [...seen.values()].sort((a, b) => b.start_at.localeCompare(a.start_at));
+      const sign = sort.dir === "asc" ? 1 : -1;
+      return [...seen.values()].sort((a, b) => {
+        const [x, y] = [a[sort.col], b[sort.col]];
+        return (
+          sign *
+          (typeof x === "number" && typeof y === "number"
+            ? x - y
+            : String(x).localeCompare(String(y)))
+        );
+      });
     },
   });
 
@@ -153,11 +255,14 @@ function ReservationsPage() {
     cancel.mutate({ id: cancelTarget, category: cancelCategory, note: cancelNote.trim() });
   };
 
-  const filtered = reservations?.filter((r) => {
-    if (statusFilter !== "all" && r.status !== statusFilter) return false;
-    if (buildingFilter !== "all" && buildingKey(r.rooms?.building) !== buildingFilter) return false;
-    return true;
-  });
+  const filtered = reservations;
+  const roomOptions = (rooms ?? [])
+    .filter((r) => !hotels.length || hotels.includes(r.tenant_id))
+    .map((r) => ({
+      value: r.id,
+      label: multiHotel ? `${r.name} · ${hotelName.get(r.tenant_id) ?? ""}` : r.name,
+    }));
+  const cols = multiHotel ? 10 : 9;
 
   return (
     <div className="space-y-4">
@@ -182,32 +287,11 @@ function ReservationsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estados</SelectItem>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={buildingFilter} onValueChange={setBuildingFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los hoteles</SelectItem>
-            {HOTELS.map((h) => (
-              <SelectItem key={h.key} value={h.key}>
-                {h.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {filtering && (
+          <Button variant="ghost" onClick={clearFilters}>
+            <X className="mr-1 h-4 w-4" /> Quitar filtros
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -216,12 +300,120 @@ function ReservationsPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr className="text-left">
-                  <th className="p-2 font-medium">Referencia · fecha</th>
-                  <th className="p-2 font-medium">Habitación</th>
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Referencia"
+                      sort={sortOf("created_at")}
+                      sortLabels={["Reservadas antes primero", "Reservadas después primero"]}
+                      onSort={sortBy("created_at")}
+                    />
+                  </th>
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Llegada"
+                      sort={sortOf("start_at")}
+                      sortLabels={["Más antiguas primero", "Más recientes primero"]}
+                      onSort={sortBy("start_at")}
+                      active={!!(arrival.from || arrival.to)}
+                      onClear={() => setArrival(NO_BOUNDS)}
+                    >
+                      <DateBoundsFilter {...arrival} onChange={setArrival} />
+                    </ColumnMenu>
+                  </th>
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Salida"
+                      sort={sortOf("end_at")}
+                      sortLabels={["Más antiguas primero", "Más recientes primero"]}
+                      onSort={sortBy("end_at")}
+                      active={!!(departure.from || departure.to)}
+                      onClear={() => setDeparture(NO_BOUNDS)}
+                    >
+                      <DateBoundsFilter {...departure} onChange={setDeparture} />
+                    </ColumnMenu>
+                  </th>
+                  {multiHotel && (
+                    <th className="p-2 font-medium">
+                      <ColumnMenu
+                        label="Hotel"
+                        active={hotels.length > 0}
+                        onClear={() => setHotels([])}
+                      >
+                        <ValuesFilter
+                          options={(staffHotels ?? []).map((h) => ({ value: h.id, label: h.name }))}
+                          selected={hotels}
+                          onChange={(next) => {
+                            setHotels(next);
+                            // Drop rooms of hotels no longer shown.
+                            const keep = new Set(
+                              (rooms ?? [])
+                                .filter((r) => !next.length || next.includes(r.tenant_id))
+                                .map((r) => r.id),
+                            );
+                            setRoomIds((ids) => ids.filter((id) => keep.has(id)));
+                          }}
+                        />
+                      </ColumnMenu>
+                    </th>
+                  )}
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Habitación"
+                      active={roomIds.length > 0}
+                      onClear={() => setRoomIds([])}
+                    >
+                      <ValuesFilter
+                        options={roomOptions}
+                        selected={roomIds}
+                        onChange={setRoomIds}
+                      />
+                    </ColumnMenu>
+                  </th>
                   <th className="p-2 font-medium">Cliente</th>
-                  <th className="p-2 font-medium">Origen</th>
-                  <th className="p-2 font-medium">Estado</th>
-                  <th className="p-2 font-medium text-right">Total</th>
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Origen"
+                      active={origins.length > 0}
+                      onClear={() => setOrigins([])}
+                    >
+                      <ValuesFilter
+                        options={[
+                          ...Object.entries(ORIGINS).map(([value, o]) => ({
+                            value,
+                            label: o.label,
+                          })),
+                          { value: NO_ORIGIN, label: "Sin origen" },
+                        ]}
+                        selected={origins}
+                        onChange={setOrigins}
+                      />
+                    </ColumnMenu>
+                  </th>
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Estado"
+                      active={statuses.length > 0}
+                      onClear={() => setStatuses([])}
+                    >
+                      <ValuesFilter
+                        options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                          value,
+                          label,
+                        }))}
+                        selected={statuses}
+                        onChange={setStatuses}
+                      />
+                    </ColumnMenu>
+                  </th>
+                  <th className="p-2 font-medium">
+                    <ColumnMenu
+                      label="Total"
+                      align="right"
+                      sort={sortOf("total")}
+                      sortLabels={["De menor a mayor", "De mayor a menor"]}
+                      onSort={sortBy("total")}
+                    />
+                  </th>
                   <th className="p-2"></th>
                 </tr>
               </thead>
@@ -229,6 +421,7 @@ function ReservationsPage() {
                 {filtered?.map((r) => {
                   const s = new Date(r.start_at);
                   const e = new Date(r.end_at);
+                  const nights = Math.max(1, Math.round((e.getTime() - s.getTime()) / DAY_MS));
                   const extraItems = (r as { reservation_extras?: ReservationExtraItem[] })
                     .reservation_extras;
                   const notes = (r as { internal_notes?: string | null }).internal_notes;
@@ -245,15 +438,18 @@ function ReservationsPage() {
                           <div className="font-mono text-xs font-semibold tracking-wide">
                             {r.reference}
                           </div>
-                          <div>{s.toLocaleDateString("es-ES")}</div>
-                          <div className="text-xs text-muted-foreground font-mono">
-                            {s.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}–
-                            {e.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="p-2 whitespace-nowrap tabular-nums">
+                          {s.toLocaleDateString("es-ES", DATE_FMT)}
+                        </td>
+                        <td className="p-2 whitespace-nowrap tabular-nums">
+                          <div>{e.toLocaleDateString("es-ES", DATE_FMT)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {nights} {nights === 1 ? "noche" : "noches"}
                           </div>
                         </td>
-                        <td className="p-2">
-                          {r.rooms?.building} · {r.rooms?.name}
-                        </td>
+                        {multiHotel && <td className="p-2">{hotelName.get(r.tenant_id) ?? "—"}</td>}
+                        <td className="p-2">{r.rooms?.name}</td>
                         <td className="p-2">
                           <div>{r.customers?.name ?? "—"}</div>
                           <div className="text-xs text-muted-foreground">
@@ -263,26 +459,6 @@ function ReservationsPage() {
                         <td className="p-2">
                           {(() => {
                             const role = (r as { created_by_role?: string | null }).created_by_role;
-                            const map: Record<string, { label: string; cls: string }> = {
-                              admin: {
-                                label: "Admin",
-                                cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-                              },
-                              reception: {
-                                label: "Recepción",
-                                cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-                              },
-                              public: {
-                                label: "Web pública",
-                                cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-                              },
-                              member: { label: "App", cls: "bg-info/10 text-info border-info/30" },
-                              agent: {
-                                label: "Asistente IA",
-                                cls: "bg-info/10 text-info border-info/30",
-                              },
-                              mcp: { label: "MCP", cls: "bg-info/10 text-info border-info/30" },
-                            };
                             // Channel bookings show the channel (Booking.com, a tour operator…).
                             const channel = (r as { channels?: { name: string } | null }).channels;
                             const info =
@@ -292,7 +468,7 @@ function ReservationsPage() {
                                     cls: "bg-gold/15 text-gold border-gold/40",
                                   }
                                 : role
-                                  ? map[role]
+                                  ? ORIGINS[role]
                                   : null;
                             return info ? (
                               <Badge variant="outline" className={info.cls}>
@@ -357,7 +533,7 @@ function ReservationsPage() {
                       </tr>
                       {extraItems?.length || notes?.trim() ? (
                         <tr className="border-b last:border-0 bg-muted/10">
-                          <td colSpan={7} className="px-2 pb-2 pt-0">
+                          <td colSpan={cols} className="px-2 pb-2 pt-0">
                             <ReservationExtrasInfo items={extraItems} notes={notes} />
                           </td>
                         </tr>
@@ -367,8 +543,8 @@ function ReservationsPage() {
                 })}
                 {!filtered?.length && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      Sin reservas.
+                    <td colSpan={cols} className="p-8 text-center text-muted-foreground">
+                      {filtering ? "Ninguna reserva cumple los filtros." : "Sin reservas."}
                     </td>
                   </tr>
                 )}
@@ -377,6 +553,12 @@ function ReservationsPage() {
           </div>
         </CardContent>
       </Card>
+      {!query && filtered?.length === LIMIT && (
+        <p className="text-xs text-muted-foreground">
+          Se muestran las {LIMIT} primeras según el orden elegido. Usa los filtros de las columnas o
+          el buscador para encontrar otras.
+        </p>
+      )}
 
       <NewReservationDialog
         open={open}

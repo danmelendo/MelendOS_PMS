@@ -176,19 +176,21 @@ function ReportsPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          <Select value={hotel} onValueChange={setHotel}>
-            <SelectTrigger className="min-w-0 flex-1 sm:w-48 sm:flex-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los hoteles</SelectItem>
-              {hotels?.map((h) => (
-                <SelectItem key={h.id} value={h.id}>
-                  {h.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {hotels && hotels.length > 1 && (
+            <Select value={hotel} onValueChange={setHotel}>
+              <SelectTrigger className="min-w-0 flex-1 sm:w-48 sm:flex-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los hoteles</SelectItem>
+                {hotels.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
             <SelectTrigger className="min-w-0 flex-1 sm:w-56 sm:flex-none">
               <SelectValue />
