@@ -105,6 +105,8 @@ export interface ClientInvoice {
   method: string | null;
   notes: string | null;
   created_at: string;
+  /** VERI*FACTU environment it was issued in (null: without VERI*FACTU). */
+  verifactu_env?: "simulated" | "pre" | "prod" | null;
 }
 
 export const eur = (n: number) =>

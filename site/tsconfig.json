@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node"],
+    // Shared Edge Function code imports supabase-js the Deno way.
+    "paths": { "npm:@supabase/supabase-js@2": ["./node_modules/@supabase/supabase-js"] }
   },
   "include": ["src", "supabase/functions/_shared", "vite.config.ts"]
 }

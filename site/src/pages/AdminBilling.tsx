@@ -39,6 +39,22 @@ const STATUS_TONE: Record<InvoiceStatus, string> = {
 
 type Row = ClientInvoice & { clients: Pick<Client, "name"> | null };
 
+interface VfState {
+  invoice_id: string;
+  kind: "alta" | "anulacion";
+  status: "pending" | "accepted" | "accepted_with_errors" | "rejected";
+  error: string | null;
+  environment: string;
+  seq: number;
+}
+
+const VF_LABEL: Record<VfState["status"], string> = {
+  pending: "pendiente de enviar",
+  accepted: "aceptada por la AEAT",
+  accepted_with_errors: "aceptada con errores",
+  rejected: "rechazada por la AEAT",
+};
+
 export function BillingTab() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -52,10 +68,11 @@ export function BillingTab() {
   const [issuer, setIssuer] = useState<Issuer | null>(null);
   const [viewing, setViewing] = useState<Row | null>(null);
   const [editingIssuer, setEditingIssuer] = useState(false);
+  const [vf, setVf] = useState<Map<string, VfState>>(new Map());
 
   const load = useCallback(async () => {
     const db = sales();
-    const [i, c, s] = await Promise.all([
+    const [i, c, s, v] = await Promise.all([
       db
         .from("client_invoices")
         .select("*, clients(name)")
@@ -63,12 +80,18 @@ export function BillingTab() {
         .limit(2000),
       db.from("clients").select("*").order("name"),
       db.from("sales_settings").select("*").maybeSingle(),
+      db
+        .from("sales_verifactu_records")
+        .select("invoice_id, kind, status, error, environment, seq")
+        .order("seq"),
     ]);
     if (i.error || c.error) return setError((i.error ?? c.error)!.message);
     setError(null);
     setRows(i.data as Row[]);
     setClients(c.data as Client[]);
     setIssuer((s.data as Issuer | null) ?? null);
+    // The latest record of each invoice (alta, or its cancellation).
+    setVf(new Map(((v.data ?? []) as VfState[]).map((r) => [r.invoice_id, r])));
   }, []);
   useEffect(() => {
     load();
@@ -306,6 +329,20 @@ export function BillingTab() {
                           <span className="mt-1 block text-xs text-muted-foreground">
                             {day(r.paid_on)}
                             {r.method && ` · ${r.method}`}
+                          </span>
+                        )}
+                        {vf.get(r.id) && (
+                          <span
+                            className={`mt-1 block text-xs ${vf.get(r.id)!.status === "rejected" ? "text-destructive" : "text-muted-foreground"}`}
+                            title={vf.get(r.id)!.error ?? undefined}
+                          >
+                            VERI*FACTU{vf.get(r.id)!.kind === "anulacion" ? " (anulación)" : ""}:{" "}
+                            {vf.get(r.id)!.environment === "simulated"
+                              ? "simulado"
+                              : VF_LABEL[vf.get(r.id)!.status]}
+                            {vf.get(r.id)!.status === "rejected" && vf.get(r.id)!.error
+                              ? ` · ${vf.get(r.id)!.error}`
+                              : ""}
                           </span>
                         )}
                       </td>
@@ -554,6 +591,7 @@ function IssuerDrawer({
       ...x,
       [k]: k === "payment_days" ? Number(e.target.value) : e.target.value || null,
     }));
+  const env = v.verifactu_environment ?? "off";
   const save = async () => {
     const { data, error } = await sales()
       .from("sales_settings")
@@ -566,6 +604,8 @@ function IssuerDrawer({
         iban: v.iban,
         payment_days: v.payment_days,
         invoice_note: v.invoice_note,
+        verifactu_environment: env,
+        installation_number: v.installation_number || "1",
       })
       .eq("id", true)
       .select()
@@ -646,6 +686,41 @@ function IssuerDrawer({
         <p className="text-xs text-muted-foreground">
           Cada factura guarda estos datos al emitirse: cambiarlos después no altera las ya emitidas.
         </p>
+        <fieldset className="space-y-2 rounded-md border p-3">
+          <legend className="px-1 text-sm font-semibold">VERI*FACTU</legend>
+          <Field label="Entorno">
+            <select
+              className={`${FIELD} w-full`}
+              value={env}
+              onChange={(e) =>
+                setV((x) => ({ ...x, verifactu_environment: e.target.value as typeof env }))
+              }
+            >
+              <option value="off">Apagado (registro interno, sin VERI*FACTU)</option>
+              <option value="simulated">Simulado (no sale nada; series PMOS)</option>
+              <option value="pre">Pruebas de la AEAT (series PMOS)</option>
+              <option value="prod">Producción</option>
+            </select>
+          </Field>
+          <p className="text-xs text-muted-foreground">
+            Con VERI*FACTU, cada factura emitida genera su registro encadenado y lleva el QR
+            tributario; anularla genera el registro de anulación. Hacen falta razón social y NIF, y
+            el NIF del cliente. En producción no se puede volver atrás ni cambiar el NIF.
+            {env !== "off" && env !== "simulated" && !v.has_certificate && (
+              <span className="block pt-1 font-medium text-destructive">
+                Falta el certificado: node --env-file=.env scripts/verifactu-setup.mjs --cert …
+                --key …
+              </span>
+            )}
+          </p>
+          <Field label="Número de instalación">
+            <input
+              className={`${FIELD} w-32`}
+              value={v.installation_number ?? "1"}
+              onChange={set("installation_number")}
+            />
+          </Field>
+        </fieldset>
         <div className="flex items-center gap-3">
           <button type="button" onClick={save} className={BTN_PRIMARY}>
             Guardar
