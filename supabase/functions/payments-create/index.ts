@@ -1,4 +1,4 @@
-// POST /payments-create  { reservation_id, return_url, kind? }
+// POST /payments-create  { reservation_id, return_url, kind?, token? }
 //
 // Starts a payment with the hotel's gateway: the whole stay of a pending
 // booking paid online (kind "deposit", legacy name, the default) or the
@@ -7,14 +7,59 @@
 // from the client. Bookings paid at the hotel are not charged here. Returns the redirect the browser must follow (auto-posted form for
 // Redsys, URL for Stripe). Nothing is confirmed here: confirmation only happens
 // in payments-notify, from the provider's verified notification.
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+// Who may start it: the guest with the booking's access token, the member who
+// owns it, or the hotel's staff (session). The return URL must be one of the
+// platform's own sites (no open redirect). 20 attempts an hour per IP.
+import {
+  adminClient,
+  clientIp,
+  corsHeaders,
+  json,
+  overLimit,
+  tooMany,
+  verifiedUser,
+} from "../_shared/http.ts";
 import { loadGateway } from "../_shared/payments/accounts.ts";
+
+const sha256 = async (text: string) =>
+  [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+/** Sites a payment may return to: the hotel's own, the shared web, and (demo) local ones. */
+function returnAllowed(
+  url: URL,
+  tenant: { domain?: string | null; slug?: string | null },
+): boolean {
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && url.hostname === "localhost"))
+    return false;
+  const host = url.hostname.toLowerCase();
+  const allowed = new Set<string>();
+  if (tenant.domain) allowed.add(tenant.domain.toLowerCase());
+  for (const v of [
+    Deno.env.get("PUBLIC_WEB_URL"),
+    ...(Deno.env.get("APP_ORIGINS") ?? "").split(","),
+  ]) {
+    try {
+      if (v?.trim()) allowed.add(new URL(v.trim()).hostname.toLowerCase());
+    } catch {
+      /* not a URL */
+    }
+  }
+  const platform = Deno.env.get("PLATFORM_DOMAIN")?.toLowerCase();
+  if (platform && tenant.slug && host === `${tenant.slug}.${platform}`) return true;
+  if (allowed.has(host)) return true;
+  // The demo is shown from local servers and quick tunnels.
+  if (Deno.env.get("DEMO_ACCESS") === "true")
+    return host === "localhost" || host.endsWith(".trycloudflare.com");
+  return false;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  let body: { reservation_id?: string; return_url?: string; kind?: string };
+  let body: { reservation_id?: string; return_url?: string; kind?: string; token?: string };
   try {
     body = await req.json();
   } catch {
@@ -33,15 +78,70 @@ Deno.serve(async (req) => {
   }
 
   const db = adminClient();
+  const ip = clientIp(req);
+  if (ip && (await overLimit(db, `payments:${ip}`, 20, 3600))) return tooMany();
+
   const { data: res, error } = await db
     .from("reservations")
     .select(
-      "id, tenant_id, status, payment_mode, deposit_paid, deposit_amount, total, is_prebooking, hold_expires_at, rooms(name), tenants(name, settings)",
+      "id, tenant_id, status, payment_mode, deposit_paid, deposit_amount, total, is_prebooking, hold_expires_at, member_id, access_token_hash, rooms(name), tenants(name, slug, domain, settings)",
     )
     .eq("id", reservationId)
     .maybeSingle();
   if (error) return json({ error: "Could not load the reservation" }, 500);
-  if (!res) return json({ error: "Reservation not found" }, 404);
+  // The same answer for a booking that does not exist and one you cannot pay:
+  // nothing about a booking leaves without its token or a session.
+  const notFound = () => json({ error: "Reservation not found" }, 404);
+  if (!res) return notFound();
+
+  let allowed = false;
+  const token = typeof body.token === "string" ? body.token.trim() : "";
+  if (token) {
+    const hash = await sha256(token);
+    if (res.access_token_hash && res.access_token_hash === hash) allowed = true;
+    else {
+      const { data: t } = await db
+        .from("booking_access_tokens")
+        .select("reservation_id")
+        .eq("reservation_id", res.id)
+        .eq("token_hash", hash)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      allowed = !!t;
+    }
+  }
+  if (!allowed) {
+    const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+    const { data: auth } =
+      jwt.split(".").length === 3 ? await verifiedUser(db, jwt) : { data: { user: null } };
+    const userId = auth.user?.id;
+    if (userId) {
+      const [{ data: member }, { data: staff }] = await Promise.all([
+        res.member_id
+          ? db
+              .from("members")
+              .select("id")
+              .eq("id", res.member_id)
+              .eq("user_id", userId)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        db
+          .from("tenant_members")
+          .select("role")
+          .eq("tenant_id", res.tenant_id)
+          .eq("user_id", userId)
+          .in("role", ["admin", "reception"])
+          .maybeSingle(),
+      ]);
+      allowed = !!member || !!staff;
+    }
+  }
+  if (!allowed) return notFound();
+
+  const tenantInfo = res.tenants as { domain?: string | null; slug?: string | null } | null;
+  if (!returnAllowed(returnUrl, tenantInfo ?? {})) {
+    return json({ error: "return_url is not one of the hotel's sites" }, 400);
+  }
   let amount: number;
   if (kind === "deposit") {
     if (res.payment_mode === "at_hotel") {

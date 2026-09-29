@@ -5,7 +5,7 @@
 // any OpenAI-compatible endpoint set by LLM_BASE_URL / LLM_API_KEY / LLM_MODEL
 // (local Ollama in development, a hosted provider in production). The tools
 // run here with the service role, scoped to the conversation's hotel.
-import { adminClient, corsHeaders, json } from "../_shared/http.ts";
+import { adminClient, clientIp, corsHeaders, json, overLimit, tooMany } from "../_shared/http.ts";
 import { openAiCompatible, type ChatMessage } from "../_shared/agent/llm.ts";
 import { runAgentTurn } from "../_shared/agent/loop.ts";
 import { agentSystemPrompt } from "../_shared/agent/context.ts";
@@ -73,6 +73,9 @@ Deno.serve(async (req) => {
   }
 
   const db = adminClient();
+  // Every message costs model tokens: limits per IP so nobody runs up the bill.
+  const ip = clientIp(req);
+  if (ip && (await overLimit(db, `agent-msg:${ip}`, 30, 600))) return tooMany();
 
   // Conversation: the existing one (its hotel is fixed), or a new one for the
   // hotel of the website the visitor is on.
@@ -95,6 +98,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!t) return json({ error: "Hotel no encontrado" }, 404);
     if (!(await agentEnabled(db, t.id))) return json({ error: NOT_CONTRACTED }, 403);
+    if (ip && (await overLimit(db, `agent-conv:${ip}`, 10, 3600))) return tooMany();
     const { data, error } = await db
       .from("agent_conversations")
       .insert({ tenant_id: t.id, channel: "web_chat" })

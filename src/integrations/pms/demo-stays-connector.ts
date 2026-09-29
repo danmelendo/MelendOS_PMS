@@ -472,7 +472,9 @@ export class DemoStaysConnector implements PmsConnector {
     kind: "deposit" | "balance" = "deposit",
   ): Promise<PaymentRedirect> {
     const { data, error } = await supabase.functions.invoke("payments-create", {
-      body: { reservation_id: id, return_url: returnUrl, kind },
+      // The booking's access token proves it is the guest's (a signed-in
+      // member or the hotel's staff is recognised by the session instead).
+      body: { reservation_id: id, return_url: returnUrl, kind, token: guestToken(id) ?? undefined },
     });
     if (error || !data) throw new Error(await errorMessage(error, "No se pudo iniciar el pago"));
     return (data as { redirect: PaymentRedirect }).redirect;

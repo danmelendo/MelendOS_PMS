@@ -3522,4 +3522,44 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(recipients.ok).toBe(false);
     });
   });
+
+  describe("abuse limits (pentest 29/09)", () => {
+    it("count per client IP, not for the server, and close folio_balance", async () => {
+      await client.query("savepoint setup");
+      const headers = (ip: string) =>
+        client.query("select set_config('request.headers', $1, true)", [
+          JSON.stringify({ "cf-connecting-ip": ip }),
+        ]);
+      // The first ten tries count (no rollback between them)…
+      // (as() clears request.headers, so the IP goes after it.)
+      await as("anon", undefined);
+      await headers("203.0.113.50");
+      for (let i = 0; i < 10; i++)
+        await client.query(
+          "select public.find_guest_booking($1, 'ZZZZZZZZ', 'nadie@example.com')",
+          [ids.lumen],
+        );
+      await client.query("reset role");
+      // …and the eleventh is refused.
+      const eleventh = await attempt("anon", undefined, async () => {
+        await headers("203.0.113.50");
+        return client.query(
+          "select public.find_guest_booking($1, 'ZZZZZZZZ', 'nadie@example.com')",
+          [ids.lumen],
+        );
+      });
+      const limiter = await attempt("anon", undefined, () =>
+        client.query("select public.rate_limit_hit('x', 1, 60)"),
+      );
+      const balance = await attempt("authenticated", users.lumenReception, () =>
+        client.query("select public.folio_balance(gen_random_uuid())"),
+      );
+      await client.query("rollback to savepoint setup");
+
+      expect(eleventh.ok).toBe(false);
+      expect(!eleventh.ok && eleventh.error).toMatch(/Demasiados intentos/);
+      expect(limiter.ok).toBe(false);
+      expect(balance.ok).toBe(false);
+    });
+  });
 });

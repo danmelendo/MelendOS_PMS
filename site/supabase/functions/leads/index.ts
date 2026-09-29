@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
         return json({ error: TAKEN_MSG }, 409);
     }
 
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
+    // Cloudflare's header: the client cannot forge it (X-Forwarded-For it can).
+    const ip = req.headers.get("cf-connecting-ip")?.trim() ?? "";
     const ipHash = ip ? await sha256(ip) : null;
     const since = new Date(now.getTime() - DAY_MS).toISOString();
     const { count: byEmail } = await db

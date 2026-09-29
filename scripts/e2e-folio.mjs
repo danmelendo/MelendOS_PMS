@@ -101,8 +101,9 @@ try {
 
   const pay = await call("payments-create", {
     reservation_id: reservationId,
-    return_url: "https://example.com/back",
+    return_url: "http://localhost:5173/web/booking",
     kind: "balance",
+    token,
   });
   const { data: payment } = await admin
     .from("payments")
@@ -118,7 +119,8 @@ try {
   );
   const secondPayment = await call("payments-create", {
     reservation_id: reservationId,
-    return_url: "https://example.com/back",
+    return_url: "http://localhost:5173/web/booking",
+    token,
   });
   check(
     "no second booking payment on a confirmed stay",

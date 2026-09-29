@@ -3,7 +3,7 @@
 // this independently verifies the deployed implementation. Test reservations
 // are removed at the end.
 // Usage: node --env-file=.env scripts/e2e-payments.mjs
-import { createCipheriv, createHmac } from "node:crypto";
+import { createCipheriv, createHash, createHmac, randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const { SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLISHABLE_KEY } = process.env;
@@ -62,8 +62,14 @@ async function freeNight(roomId, dayOffset) {
   throw new Error("No free night for the test in the next 300 days");
 }
 
+// Each test booking gets an access token, like the ones the web creates
+// (only its hash is stored); payments-create requires it.
+const tokens = new Map();
+const sha256 = (t) => createHash("sha256").update(t).digest("hex");
+
 async function pendingReservation(tenant, roomId, dayOffset) {
   const { start, end } = await freeNight(roomId, dayOffset);
+  const token = randomBytes(24).toString("hex");
   const { data, error } = await admin
     .from("reservations")
     .insert({
@@ -76,21 +82,23 @@ async function pendingReservation(tenant, roomId, dayOffset) {
       status: "pending",
       created_by_role: "public",
       internal_notes: "e2e-payments test",
+      access_token_hash: sha256(token),
     })
     .select("id")
     .single();
   if (error) throw error;
+  tokens.set(data.id, token);
   return data.id;
 }
 
-async function startPayment(reservationId) {
+async function startPayment(
+  reservationId,
+  { token = tokens.get(reservationId), returnUrl = "http://localhost:5173/web/checkout" } = {},
+) {
   const res = await fetch(fn("payments-create"), {
     method: "POST",
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      reservation_id: reservationId,
-      return_url: "https://example.test/pago",
-    }),
+    body: JSON.stringify({ reservation_id: reservationId, return_url: returnUrl, token }),
   });
   return { status: res.status, body: await res.json() };
 }
@@ -109,6 +117,18 @@ try {
   // 1. Happy path
   const r1 = await pendingReservation(tenant, room.id, 60);
   created.push(r1);
+  const noToken = await startPayment(r1, { token: "adivinado" });
+  check(
+    "payments-create refuses a booking without its token",
+    noToken.status === 404,
+    `HTTP ${noToken.status}`,
+  );
+  const evil = await startPayment(r1, { returnUrl: "https://evil.example/pago" });
+  check(
+    "payments-create refuses to return to another site",
+    evil.status === 400,
+    `HTTP ${evil.status}`,
+  );
   const start = await startPayment(r1);
   check(
     "payments-create returns a Redsys form",
