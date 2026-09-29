@@ -639,6 +639,38 @@ describe.skipIf(!DB_URL)("RLS", () => {
       await client.query("rollback to savepoint setup");
     });
 
+    it("consumes a single-use check-in token when the guest signs", async () => {
+      await client.query("savepoint setup");
+      const res = await client.query<{ id: string }>(
+        `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, deposit_amount, created_by_role)
+         values ($1, $2, now() + interval '200 days', now() + interval '201 days', 'confirmed', 100, 0, 'public')
+         returning id`,
+        [ids.lumen, ids["lumen-room-101"]],
+      );
+      const id = res.rows[0].id;
+      await client.query(
+        `insert into public.booking_access_tokens (tenant_id, reservation_id, token_hash, purpose)
+         values ($1, $2, encode(extensions.digest('checkin-token', 'sha256'), 'hex'), 'checkin')`,
+        [ids.lumen, id],
+      );
+      const flow = await attempt("anon", undefined, async () => {
+        const before = (
+          await client.query("select public.get_guest_booking($1, $2) as b", [id, "checkin-token"])
+        ).rows[0].b;
+        await client.query("select public.sign_guest_registration($1, $2, 'Ana Pérez', 'data:x')", [
+          id,
+          "checkin-token",
+        ]);
+        const after = (
+          await client.query("select public.get_guest_booking($1, $2) as b", [id, "checkin-token"])
+        ).rows[0].b;
+        return { openedBefore: before?.room_name ?? null, opensAfter: after };
+      });
+      // The link opens the booking before signing and nothing afterwards.
+      expect(flow).toEqual({ ok: true, value: { openedBefore: "101", opensAfter: null } });
+      await client.query("rollback to savepoint setup");
+    });
+
     it("never works for bookings without a token", async () => {
       const r = await attempt(
         "anon",
@@ -2938,15 +2970,18 @@ describe.skipIf(!DB_URL)("RLS", () => {
       );
       await client.query("rollback to savepoint setup");
 
-      expect(queued).toHaveLength(3);
+      // A confirmation also queues the single-use online check-in invite.
+      expect(queued).toHaveLength(5);
       expect(queued).toEqual(
         expect.arrayContaining([
           { reservation_id: atHotel, kind: "booking_confirmed", status: "pending" },
+          { reservation_id: atHotel, kind: "checkin_invite", status: "pending" },
           { reservation_id: prepaid, kind: "booking_confirmed", status: "pending" },
+          { reservation_id: prepaid, kind: "checkin_invite", status: "pending" },
           { reservation_id: prepaid, kind: "booking_cancelled", status: "pending" },
         ]),
       );
-      expect(staff).toEqual({ ok: true, value: 3 });
+      expect(staff).toEqual({ ok: true, value: 5 });
       expect(other).toEqual({ ok: true, value: 0 });
       // No write policy: only the server marks emails as sent.
       expect(write).toEqual({ ok: true, value: 0 });

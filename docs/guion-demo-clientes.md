@@ -27,6 +27,7 @@ En la pestaña de la **web** (`/web` → Hotel Lumen):
 3. **Reserva**: nombre, email, un extra (desayuno) y un **código promocional** (`OTONO15`, −15 %). Recalca: «el precio y el descuento se calculan en **nuestro servidor**, no en el navegador; el cliente no puede manipularlo».
 4. **Pago**: elige «pagar online». (En la demo es el entorno de pruebas de Redsys; con tarjeta de test se confirma.) O «pagar en el hotel»: se confirma al momento.
 5. Enseña el **email de confirmación** (en la demo sale como «simulado») y el enlace «Mi reserva», donde el huésped **sin cuenta** ve su reserva con referencia + email.
+6. **Check-in online**: enseña que el huésped recibe además un **enlace de un solo uso** para rellenar los **datos del viajero** (SES.HOSPEDAJES) y **firmar desde su móvil** antes de llegar. Cuando llega, el parte ya está hecho; recepción solo lo confirma. «El enlace caduca al firmar: no queda un enlace vivo con los datos del huésped dando vueltas.»
 
 **Frase clave**: «Todo esto ocurre en **vuestra** web o en un subdominio vuestro. No mandáis al cliente a otra marca.»
 
@@ -46,7 +47,8 @@ En `/web`, abre el widget **«¿Te ayudo a reservar?»**:
 Cambia a la pestaña del **panel** (entra como «Recepción · Hotel Lumen»).
 
 1. **«Hoy»**: llegadas, salidas, alojados y ocupación de un vistazo. Están las reservas que creó `demo-cycle`.
-   - Haz un **check-in** de una llegada. Enseña que pide los **datos del viajero** (documento, nacionalidad…) y la **firma**: eso es el parte de SES.HOSPEDAJES, que se envía solo.
+   - Haz un **check-in** de una llegada. Si el huésped ya hizo el check-in online, los **datos del viajero** (documento, nacionalidad…) y la **firma** ya están; recepción solo los confirma y el parte de SES.HOSPEDAJES se envía solo.
+   - **Los imprevistos, contemplados**: «¿Y si llega alguien que no lo hizo online, o un walk-in sin móvil? Recepción hace el mismo check-in en su **propia tablet o móvil**, se lo pasa al huésped para firmar y listo. En un hotel siempre hay imprevistos; están previstos.»
    - Si sale el recuadro **«Necesita tu atención»**, explícalo: «El programa te avisa de lo que tienes que arreglar tú —un parte con datos incompletos, una factura rechazada— aquí y por email a dirección.»
 2. **La cuenta de la estancia (folio)**: abre una reserva alojada, añade un **cargo** (una cena), y enseña el **saldo** y el **pago de la cuenta** al salir.
 3. **Calendario / planning**: habitaciones × días. Arrastra la vista, enseña la ocupación.
@@ -57,7 +59,7 @@ Cambia a la pestaña del **panel** (entra como «Recepción · Hotel Lumen»).
 
 ## 5. Normativa, sin susto (2 min)
 
-- **SES.HOSPEDAJES**: «El parte de viajeros se genera y se envía solo al hacer el check-in. Vosotros solo confirmáis los datos.»
+- **SES.HOSPEDAJES**: «El parte de viajeros se genera y se envía solo al hacer el check-in. El huésped puede adelantarlo online con un **enlace de un solo uso** (datos + firma desde su móvil); si no, lo hacéis en el momento en vuestra tablet. En ambos casos vosotros solo confirmáis.»
 - **VERI\*FACTU**: «Cada factura lleva su huella y su QR, encadenada, como exige Hacienda desde 2026.»
 - **Sé honesto**: «Ambas están **integradas** y probadas en entorno simulado; la puesta en marcha con vuestro certificado y vuestras credenciales es parte de la implantación.» (No prometas que ya emite a producción si aún no se ha verificado contra el ministerio y la AEAT.)
 
@@ -83,6 +85,7 @@ Cambia a la pestaña del **panel** (entra como «Recepción · Hotel Lumen»).
 | «¿Y si ya tengo web?» | Se integra en ella con el widget; no hay que cambiarla. |
 | «¿El dinero pasa por vosotros?» | No. Cobráis con el TPV de vuestro banco; nosotros no tocamos el dinero. |
 | «¿Cumple con el registro de viajeros nuevo?» | Sí, SES.HOSPEDAJES integrado; se envía al hacer el check-in. |
+| «¿El huésped tiene que hacer algo?» | No es obligatorio: recibe un enlace de un solo uso para el check-in online (datos + firma desde el móvil). Si no lo usa, recepción lo completa a la llegada en su tablet. |
 | «¿Y VeriFactu?» | Integrado, con huella y QR. La puesta en marcha con vuestro certificado va en la implantación. |
 | «¿Se conecta con Booking?» | Está preparado (paquete Distribución); la conexión real con cada OTA se acuerda en la implantación. |
 | «¿Qué pasa si se cae?» | Está sobre Supabase (infraestructura profesional); hay copias y alertas automáticas. El SLA se contrata según lo que necesitéis. |

@@ -3,7 +3,7 @@
 // with inline styles so every mail client shows them the same. Pure: the
 // dispatcher loads the data and sends what this returns.
 
-export type BookingEmailKind = "booking_confirmed" | "booking_cancelled";
+export type BookingEmailKind = "booking_confirmed" | "booking_cancelled" | "checkin_invite";
 export type EmailLang = "es" | "en";
 
 export interface BookingEmailData {
@@ -66,6 +66,10 @@ interface Copy {
   until: (date: string, hour: string) => string;
   cta: (confirmed: boolean) => string;
   whatNext: string;
+  checkinSubject: (hotel: string) => string;
+  checkinIntro: (hotel: string) => string;
+  checkinCta: string;
+  checkinNote: string;
 }
 
 const COPY: Record<EmailLang, Copy> = {
@@ -94,6 +98,11 @@ const COPY: Record<EmailLang, Copy> = {
     until: (d, h) => `${d}, hasta las ${h}`,
     cta: (c) => (c ? "Ver o gestionar mi reserva" : "Ver mi reserva"),
     whatNext: "Desde ahí puedes hacer el check-in online, escribir a recepción o cancelar.",
+    checkinSubject: (h) => `Completa tu check-in online · ${h}`,
+    checkinIntro: (h) =>
+      `Adelanta tu llegada a ${h}: registra a los viajeros y firma desde el móvil, en un minuto.`,
+    checkinCta: "Hacer el check-in online",
+    checkinNote: "El enlace es de un solo uso y caduca en cuanto firmas.",
   },
   en: {
     locale: "en-GB",
@@ -120,6 +129,11 @@ const COPY: Record<EmailLang, Copy> = {
     until: (d, h) => `${d}, until ${h}`,
     cta: (c) => (c ? "View or manage my booking" : "View my booking"),
     whatNext: "From there you can check in online, message reception or cancel.",
+    checkinSubject: (h) => `Complete your online check-in · ${h}`,
+    checkinIntro: (h) =>
+      `Get ahead of your arrival at ${h}: register the travellers and sign from your phone, in a minute.`,
+    checkinCta: "Complete online check-in",
+    checkinNote: "This is a single-use link and expires as soon as you sign.",
   },
 };
 
@@ -162,24 +176,29 @@ export function bookingEmail(d: BookingEmailData): RenderedEmail {
   const n = nights(d.checkIn, d.checkOut);
   const hello = L.hello(d.guestName ? d.guestName.split(/\s+/)[0] : null);
   const confirmed = d.kind === "booking_confirmed";
-  const subject = L.subject(confirmed, d.hotelName, d.reference);
+  const checkin = d.kind === "checkin_invite";
+  const subject = checkin
+    ? L.checkinSubject(d.hotelName)
+    : L.subject(confirmed, d.hotelName, d.reference);
 
-  const payment = !confirmed
-    ? d.paid > 0
-      ? L.refunded(eur(d.paid))
-      : L.nothingCharged
-    : d.paymentMode === "at_hotel"
-      ? L.atHotel(eur(d.total))
-      : d.paid >= d.total
-        ? L.paidAll(eur(d.total))
-        : L.paidPart(eur(d.total), eur(d.paid));
+  const payment: string | null = checkin
+    ? null
+    : !confirmed
+      ? d.paid > 0
+        ? L.refunded(eur(d.paid))
+        : L.nothingCharged
+      : d.paymentMode === "at_hotel"
+        ? L.atHotel(eur(d.total))
+        : d.paid >= d.total
+          ? L.paidAll(eur(d.total))
+          : L.paidPart(eur(d.total), eur(d.paid));
   const cancellation = !confirmed
     ? null
     : d.freeCancellationUntil && Date.parse(d.freeCancellationUntil) > 0
       ? L.freeUntil(instant(d.freeCancellationUntil))
       : L.noFree;
 
-  const intro = L.intro(confirmed, d.hotelName);
+  const intro = checkin ? L.checkinIntro(d.hotelName) : L.intro(confirmed, d.hotelName);
   const rows: [string, string][] = [
     [L.rows.reference, d.reference],
     [L.rows.room, d.roomName],
@@ -189,7 +208,8 @@ export function bookingEmail(d: BookingEmailData): RenderedEmail {
     [L.rows.guests, String(d.guests)],
   ];
   const contact = [d.hotelPhone, d.hotelEmail, d.hotelAddress].filter(Boolean) as string[];
-  const cta = L.cta(confirmed);
+  const cta = checkin ? L.checkinCta : L.cta(confirmed);
+  const note = checkin ? L.checkinNote : confirmed ? L.whatNext : null;
 
   const text = [
     hello,
@@ -198,11 +218,11 @@ export function bookingEmail(d: BookingEmailData): RenderedEmail {
     "",
     ...rows.map(([k, v]) => `${k}: ${v}`),
     "",
-    payment,
+    ...(payment ? [payment] : []),
     ...(cancellation ? [cancellation] : []),
     "",
     `${cta}: ${d.manageUrl}`,
-    ...(confirmed ? [L.whatNext] : []),
+    ...(note ? [note] : []),
     "",
     d.hotelName,
     ...contact,
@@ -225,10 +245,10 @@ ${rows
   )
   .join("\n")}
 </table>
-<p style="margin:20px 0 4px;font-size:14px">${esc(payment)}</p>
+${payment ? `<p style="margin:20px 0 4px;font-size:14px">${esc(payment)}</p>` : ""}
 ${cancellation ? `<p style="margin:0 0 4px;font-size:14px;color:#6b7280">${esc(cancellation)}</p>` : ""}
 <p style="margin:24px 0"><a href="${esc(d.manageUrl)}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;font-size:14px">${esc(cta)}</a></p>
-${confirmed ? `<p style="margin:0;font-size:13px;color:#6b7280">${esc(L.whatNext)}</p>` : ""}
+${note ? `<p style="margin:0;font-size:13px;color:#6b7280">${esc(note)}</p>` : ""}
 </td></tr>
 <tr><td style="padding:16px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280">${[d.hotelName, ...contact].map(esc).join(" · ")}</td></tr>
 </table>

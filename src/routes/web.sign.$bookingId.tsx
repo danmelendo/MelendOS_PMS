@@ -21,6 +21,7 @@ function WebSignScreen() {
   const [signature, setSignature] = useState<string | null>(null);
   const [signerName, setSignerName] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [justSigned, setJustSigned] = useState(false);
   const { t } = useLang();
 
   const { data: booking } = useQuery({
@@ -43,14 +44,36 @@ function WebSignScreen() {
         toast.success(t("Documento firmado · sube tu documentación"));
         navigate({ to: "/web/upload/$bookingId", params: { bookingId } });
       } else {
+        // The check-in link is single-use: it is spent now, so we do not send
+        // the guest back to the booking page (that link no longer opens it).
         toast.success(t("Check-in online completado"));
-        navigate({ to: "/web/booking/$bookingId", params: { bookingId } });
+        setJustSigned(true);
       }
     },
     onError: (e: Error) => toast.error(t(e.message || "No se pudo firmar")),
   });
 
   const alreadySigned = existing?.status === "signed";
+
+  if (justSigned) {
+    return (
+      <div className="mx-auto max-w-xl px-5 py-16 text-center">
+        <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-emerald-500" />
+        <h1 className="text-2xl font-bold">{t("Check-in online completado")}</h1>
+        <p className="mt-3 text-neutral-600">
+          {t(
+            "Gracias. Tus datos y tu firma han quedado registrados; ya no necesitas hacer nada más antes de llegar.",
+          )}
+        </p>
+        {booking && (
+          <p className="mt-4 text-sm text-neutral-500">
+            {booking.roomName} · {booking.propertyName} · {formatDateShort(booking.checkIn)}–
+            {formatDateShort(booking.checkOut)}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-xl px-5 py-10">

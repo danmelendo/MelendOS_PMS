@@ -85,12 +85,13 @@ export function supabaseEmailStore(db: SupabaseClient, publicWebUrl: string | nu
       };
       return booking;
     },
-    async issueToken(tenantId, reservationId, tokenHash, expiresAt) {
+    async issueToken(tenantId, reservationId, tokenHash, expiresAt, purpose) {
       const { error } = await db.from("booking_access_tokens").insert({
         tenant_id: tenantId,
         reservation_id: reservationId,
         token_hash: tokenHash,
         expires_at: expiresAt.toISOString(),
+        purpose,
       });
       if (error) throw new Error(error.message);
     },

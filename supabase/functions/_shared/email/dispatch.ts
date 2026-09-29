@@ -24,12 +24,16 @@ export type BookingForEmail = Omit<BookingEmailData, "kind" | "manageUrl"> & {
 export interface EmailStore {
   pending(limit: number): Promise<PendingEmail[]>;
   booking(reservationId: string): Promise<BookingForEmail | null>;
-  /** Stores an extra access token (its hash) for the booking. */
+  /**
+   * Stores an extra access token (its hash) for the booking. A "checkin" token
+   * is single-use: it opens only the check-in flow and is consumed on signing.
+   */
   issueToken(
     tenantId: string,
     reservationId: string,
     tokenHash: string,
     expiresAt: Date,
+    purpose: "manage" | "checkin",
   ): Promise<void>;
   markDone(
     email: PendingEmail,
@@ -98,9 +102,22 @@ export async function dispatchEmails(
           now.getTime() + 30 * 86_400_000,
         ),
       );
+      // A check-in invite carries a single-use link straight to the check-in
+      // flow; the other emails carry the reusable "manage my booking" link.
+      const checkin = email.kind === "checkin_invite";
       const { token, hash } = await newToken();
-      await store.issueToken(email.tenant_id, email.reservation_id, hash, expires);
-      const manageUrl = `${b.webUrl.replace(/\/+$/, "")}/web/booking/${email.reservation_id}?t=${token}&hotel=${encodeURIComponent(b.hotelSlug)}`;
+      await store.issueToken(
+        email.tenant_id,
+        email.reservation_id,
+        hash,
+        expires,
+        checkin ? "checkin" : "manage",
+      );
+      const base = b.webUrl.replace(/\/+$/, "");
+      const query = `?t=${token}&hotel=${encodeURIComponent(b.hotelSlug)}`;
+      const manageUrl = checkin
+        ? `${base}/web/checkin/${email.reservation_id}${query}`
+        : `${base}/web/booking/${email.reservation_id}${query}`;
       const rendered = bookingEmail({ ...b, kind: email.kind, manageUrl });
       const res = await transport.send({
         to: b.to,
