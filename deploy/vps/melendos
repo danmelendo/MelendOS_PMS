@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# melendos: operations of the Melend/OS installations on this VPS.
+#
+#   melendos status                          version of every installation
+#   melendos update <bundle.tar.gz> [inst…]  update to that release (all if none given)
+#   melendos rollback <inst>                 back to the previous release (code only)
+#
+# Layout (docs/vps-bitacora.md):
+#   /opt/melendos/releases/<version>/        one unpacked release, shared: web/, functions/,
+#                                            migrations/, deploy/, VERSION
+#   /opt/melendos/instances/<inst>/          compose + .env of one installation, with
+#     web -> ../../releases/<v>/web          relative links, valid on the host and inside
+#     functions -> ../../releases/<v>/functions  the Caddy container (/srv/…)
+#     backups/                               restore point before each update (pg_dump)
+#     RELEASE, RELEASE.previous              current and previous version
+#
+# An update, for each installation in turn: restore point → pending migrations
+# (each in its own transaction, recorded as the Supabase CLI does) → switch web
+# and functions → smoke test. If the smoke test fails, the code goes back to the
+# previous release and the command fails, so the next installations are not
+# touched. Migrations are not undone automatically: they must keep working with
+# the previous release (expand first, remove later); the restore point is there
+# for a manual restore.
+set -euo pipefail
+
+ROOT=/opt/melendos
+RELEASES=$ROOT/releases
+INSTANCES=$ROOT/instances
+KEEP_RELEASES=4
+KEEP_BACKUPS=2
+
+log() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+envget() { sed -n "s/^$2=//p" "$INSTANCES/$1/.env" | tail -n 1; }
+instances_all() { for d in "$INSTANCES"/*/; do [ -f "$d/.env" ] && basename "$d"; done; }
+current() { cat "$INSTANCES/$1/RELEASE" 2>/dev/null || echo "-"; }
+
+psql_db() { docker exec -i "$1-db" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q "${@:2}"; }
+
+unpack() {
+  local bundle=$1 version
+  [ -f "$bundle" ] || die "no existe $bundle"
+  if [ -f "$bundle.sha256" ]; then
+    (cd "$(dirname "$bundle")" && sha256sum -c --status "$(basename "$bundle").sha256") \
+      || die "la huella de $bundle no coincide"
+  fi
+  version=$(tar -xzOf "$bundle" ./VERSION | head -n 1)
+  [[ "$version" =~ ^v[0-9A-Za-z._-]+$ ]] || die "versión no válida en el paquete: $version"
+  if [ ! -d "$RELEASES/$version" ]; then
+    mkdir -p "$RELEASES/$version.tmp"
+    tar -xzf "$bundle" -C "$RELEASES/$version.tmp"
+    mv "$RELEASES/$version.tmp" "$RELEASES/$version"
+  fi
+  echo "$version"
+}
+
+restore_point() {
+  local inst=$1 version=$2 dir="$INSTANCES/$1/backups" file
+  mkdir -p "$dir"
+  file="$dir/$(date -u +%Y%m%dT%H%M%SZ)-before-$version.dump"
+  docker exec "$inst-db" pg_dump -U postgres -d postgres -Fc >"$file.tmp"
+  mv "$file.tmp" "$file"
+  chmod 600 "$file"
+  ls -1t "$dir"/*.dump 2>/dev/null | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f
+  log "$inst: punto de restauración $(basename "$file") ($(du -h "$file" | cut -f1))"
+}
+
+migrate() {
+  local inst=$1 version=$2 f name ver applied n=0
+  applied=$(psql_db "$inst" -tA -c "select version from supabase_migrations.schema_migrations")
+  for f in "$RELEASES/$version"/migrations/*.sql; do
+    name=$(basename "$f" .sql)
+    ver=${name%%_*}
+    grep -qx "$ver" <<<"$applied" && continue
+    log "$inst: migración $name"
+    {
+      cat "$f"
+      printf '\ninsert into supabase_migrations.schema_migrations (version, name, statements) values (%s, %s, %s);\n' \
+        "'$ver'" "'${name#*_}'" "array[]::text[]"
+    } | psql_db "$inst" --single-transaction >/dev/null
+    n=$((n + 1))
+  done
+  log "$inst: $n migraciones aplicadas"
+}
+
+switch_to() {
+  local inst=$1 version=$2 dir="$INSTANCES/$1"
+  [ -d "$RELEASES/$version" ] || die "la versión $version no está en $RELEASES"
+  for part in web functions; do
+    # First time: the installation still has real folders from the manual install.
+    if [ -e "$dir/$part" ] && [ ! -L "$dir/$part" ]; then
+      rm -rf "$dir/$part.manual" && mv "$dir/$part" "$dir/$part.manual"
+    fi
+    ln -sfn "../../releases/$version/$part" "$dir/$part.new"
+    mv -Tf "$dir/$part.new" "$dir/$part"
+  done
+  # Compose override shipped with the release (e.g. a new service setting).
+  if ! cmp -s "$RELEASES/$version/deploy/instance/docker-compose.override.yml" "$dir/docker-compose.override.yml"; then
+    cp "$RELEASES/$version/deploy/instance/docker-compose.override.yml" "$dir/docker-compose.override.yml"
+    log "$inst: override de compose actualizado"
+  fi
+  (cd "$dir" && docker compose up -d --remove-orphans >/dev/null 2>&1 &&
+    docker compose up -d --force-recreate --no-deps functions >/dev/null 2>&1)
+  [ -f "$dir/RELEASE" ] && [ "$(cat "$dir/RELEASE")" != "$version" ] && cp "$dir/RELEASE" "$dir/RELEASE.previous"
+  echo "$version" >"$dir/RELEASE"
+}
+
+smoke() {
+  local inst=$1 api panel key code body fn i headers
+  api=$(envget "$inst" SUPABASE_PUBLIC_URL)
+  panel=$(envget "$inst" PANEL_HOST)
+  key=$(envget "$inst" SUPABASE_PUBLISHABLE_KEY)
+  # The router answers 404 both for a missing function and for "hotel not
+  # found": check the body, which only our function writes.
+  for i in $(seq 1 20); do
+    body=$(curl -s -X POST "$api/functions/v1/price-calendar" -H "apikey: $key"       -H "Authorization: Bearer $key" -H 'Content-Type: application/json' -d '{}') || true
+    grep -q 'Hotel no encontrado' <<<"$body" && break
+    grep -q 'NOT_FOUND' <<<"$body" && break # missing: no point in waiting
+    sleep 3
+  done
+  grep -q 'Hotel no encontrado' <<<"$body" || { log "$inst: humo: price-calendar: $body"; return 1; }
+  # Every function of the release boots. A GET has no effect in any of them
+  # (they answer 405, or 404 for demo-login outside the demo); a function that
+  # does not start gets the router's error instead (sb-error-code: BOOT_ERROR).
+  # Not OPTIONS: the gateway answers preflights itself.
+  for fn in "$INSTANCES/$inst"/functions/*/; do
+    fn=$(basename "$fn")
+    case "$fn" in _shared | main) continue ;; esac
+    headers=$(curl -s -m 30 -o /dev/null -D - "$api/functions/v1/$fn" -H "apikey: $key") || true
+    code=$(awk 'NR==1 {print $2}' <<<"$headers")
+    if [ -z "$code" ] || [ "$code" -ge 500 ] || grep -qi '^sb-error-code:' <<<"$headers"; then
+      log "$inst: humo: la función $fn no arranca ($code)"
+      return 1
+    fi
+  done
+  code=$(curl -s -o /dev/null -w '%{http_code}' "$api/rest/v1/tenants?select=id&limit=1" -H "apikey: $key")
+  [ "$code" = 200 ] || { log "$inst: humo: API responde $code"; return 1; }
+  code=$(curl -s -o /dev/null -w '%{http_code}' "$api/auth/v1/health" -H "apikey: $key")
+  [ "$code" = 200 ] || { log "$inst: humo: auth responde $code"; return 1; }
+  if [ -n "$panel" ]; then
+    curl -s "https://$panel/" | grep -q 'id="root"' || { log "$inst: humo: el panel no sirve la web"; return 1; }
+    curl -s "https://$panel/config.js" | grep -q '__MELENDOS__' || { log "$inst: humo: falta config.js"; return 1; }
+  fi
+  log "$inst: humo correcto"
+}
+
+update_one() {
+  local inst=$1 version=$2 before
+  [ -f "$INSTANCES/$inst/.env" ] || die "no existe la instalación $inst"
+  before=$(current "$inst")
+  if [ "$before" = "$version" ]; then log "$inst: ya está en $version"; return 0; fi
+  log "$inst: $before → $version"
+  restore_point "$inst" "$version"
+  migrate "$inst" "$version"
+  switch_to "$inst" "$version"
+  if ! smoke "$inst"; then
+    if [ "$before" != "-" ] && [ -d "$RELEASES/$before" ]; then
+      log "$inst: vuelvo a $before"
+      switch_to "$inst" "$before"
+      smoke "$inst" || log "$inst: ¡el humo también falla con $before!"
+    fi
+    die "$inst: la actualización a $version ha fallado"
+  fi
+  log "$inst: actualizada a $version"
+}
+
+prune_releases() {
+  local keep in_use
+  in_use=$(cat "$INSTANCES"/*/RELEASE "$INSTANCES"/*/RELEASE.previous 2>/dev/null | sort -u || true)
+  keep=$(ls -1t "$RELEASES" | grep -v '\.tmp$' | head -n $KEEP_RELEASES || true)
+  for r in $(ls -1 "$RELEASES"); do
+    printf '%s\n%s\n' "$in_use" "$keep" | grep -qx "$r" || {
+      rm -rf "${RELEASES:?}/$r"
+      log "borrada la versión $r"
+    }
+  done
+}
+
+cmd=${1:-status}
+shift || true
+case "$cmd" in
+  status)
+    for i in $(instances_all); do
+      printf '%-16s %-12s (antes: %s)\n' "$i" "$(current "$i")" "$(cat "$INSTANCES/$i/RELEASE.previous" 2>/dev/null || echo -)"
+    done
+    ;;
+  update)
+    bundle=${1:?uso: melendos update <paquete.tar.gz> [instalación…]}
+    shift
+    mkdir -p "$RELEASES"
+    version=$(unpack "$bundle")
+    targets=("$@")
+    [ ${#targets[@]} -gt 0 ] || mapfile -t targets < <(instances_all)
+    for i in "${targets[@]}"; do update_one "$i" "$version"; done
+    prune_releases
+    ;;
+  rollback)
+    inst=${1:?uso: melendos rollback <instalación>}
+    prev=$(cat "$INSTANCES/$inst/RELEASE.previous" 2>/dev/null) || die "$inst no tiene versión anterior"
+    log "$inst: vuelvo a $prev (solo el código; la base se queda como está)"
+    switch_to "$inst" "$prev"
+    smoke "$inst"
+    ;;
+  *) die "orden desconocida: $cmd (status | update | rollback)" ;;
+esac
