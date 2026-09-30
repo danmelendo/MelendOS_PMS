@@ -1,7 +1,15 @@
-import { createContext, useContext, useMemo, useState, type ComponentProps } from "react";
-import type { DateRange, DayButton } from "react-day-picker";
-import { useQuery } from "@tanstack/react-query";
 import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+} from "react";
+import type { DateRange, DayButton } from "react-day-picker";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  addMonths,
   differenceInCalendarDays,
   endOfMonth,
   format,
@@ -31,18 +39,38 @@ export interface PickerPricing {
   guests?: number;
 }
 
-function usePriceNights(pricing: PickerPricing | undefined, month: Date) {
+/** The nights of one month to price (from today when it is the current month). */
+function monthWindow(month: Date) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const first = isBefore(startOfMonth(month), today) ? today : startOfMonth(month);
   const days = differenceInCalendarDays(endOfMonth(month), first) + 1;
-  const enabled = !!pricing && (!!pricing.roomId || !!pricing.propertyId || !!pricing.tenantId);
-  const q = useQuery({
-    queryKey: ["price-calendar", pricing, ymd(first), days],
-    enabled: enabled && days > 0,
+  return { from: ymd(first), days };
+}
+
+const priceQuery = (pricing: PickerPricing, month: Date) => {
+  const { from, days } = monthWindow(month);
+  return {
+    queryKey: ["price-calendar", pricing, from, days],
     staleTime: 60_000,
-    queryFn: () => pms.getPriceCalendar({ ...pricing, from: ymd(first), days }),
+    queryFn: () => pms.getPriceCalendar({ ...pricing, from, days }),
+  };
+};
+
+// Prices load as soon as the picker is on the page (not when it opens) and the
+// next month is fetched ahead, so opening the calendar or moving forward a
+// month shows the prices without waiting for the server.
+function usePriceNights(pricing: PickerPricing | undefined, month: Date) {
+  const enabled = !!pricing && (!!pricing.roomId || !!pricing.propertyId || !!pricing.tenantId);
+  const { days } = monthWindow(month);
+  const qc = useQueryClient();
+  const q = useQuery({
+    ...priceQuery(pricing ?? {}, month),
+    enabled: enabled && days > 0,
   });
+  useEffect(() => {
+    if (enabled && pricing) void qc.prefetchQuery(priceQuery(pricing, addMonths(month, 1)));
+  }, [enabled, pricing, month, qc]);
   return useMemo(() => {
     const byDate = new Map<string, PriceCalendarNight>();
     for (const n of q.data ?? []) byDate.set(n.date, n);
@@ -108,7 +136,7 @@ export function DateRangePicker({
   const [draft, setDraft] = useState<DateRange | undefined>(undefined);
   const [hover, setHover] = useState<Date | null>(null);
   const [month, setMonth] = useState<Date>(() => (checkIn ? parseISO(checkIn) : new Date()));
-  const prices = usePriceNights(open ? pricing : undefined, month);
+  const prices = usePriceNights(pricing, month);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

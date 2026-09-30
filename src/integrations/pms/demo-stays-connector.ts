@@ -12,7 +12,7 @@
 
 import { t } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateNightlyPrice } from "@/lib/pricing";
+import { loadPricingContext, priceFromContext } from "@/lib/pricing";
 import { bookingReference } from "@domain/reference.ts";
 import { CHECKIN_HOUR, CHECKOUT_HOUR } from "@/lib/data";
 import type {
@@ -359,7 +359,25 @@ export class DemoStaysConnector implements PmsConnector {
 
   /** Shared availability + occupancy pricing used by both methods above, so the
    *  preview and the bookable offers always agree on the price. */
-  private async computeAvailability(query: AvailabilityQuery): Promise<{
+  // The hotel page asks for the same availability twice at once (room list and
+  // price preview): both share one computation for a few seconds.
+  private availabilityMemo = new Map<
+    string,
+    { at: number; result: ReturnType<DemoStaysConnector["computeAvailabilityNow"]> }
+  >();
+
+  private computeAvailability(query: AvailabilityQuery) {
+    const key = JSON.stringify(query);
+    const hit = this.availabilityMemo.get(key);
+    if (hit && Date.now() - hit.at < 5_000) return hit.result;
+    const result = this.computeAvailabilityNow(query);
+    this.availabilityMemo.set(key, { at: Date.now(), result });
+    result.catch(() => this.availabilityMemo.delete(key));
+    if (this.availabilityMemo.size > 50) this.availabilityMemo.clear();
+    return result;
+  }
+
+  private async computeAvailabilityNow(query: AvailabilityQuery): Promise<{
     offers: RoomOffer[];
     occupancyPct: number;
     surchargePct: number;
@@ -374,14 +392,32 @@ export class DemoStaysConnector implements PmsConnector {
     ]);
     const start = startIso(query.checkIn);
     const end = endIso(query.checkOut);
-    // Busy windows (cleaning included) of the hotel's rooms; no guest data.
-    const { data: busy } = property
-      ? await sb.rpc("room_busy_windows", {
-          p_tenant: property.tenantId,
-          p_from: new Date(start).toISOString(),
-          p_to: new Date(end).toISOString(),
-        })
-      : { data: [] };
+    // Busy windows (cleaning included) of the hotel's rooms, with no guest
+    // data, and the stay's price per rate group: all at once. Rooms of the same
+    // type share the price, so each rate group is priced once (it used to be
+    // two round trips per room, one room after another).
+    const groups = nights > 0 ? [...new Set(rooms.map((r) => r.rateGroupId).filter(Boolean))] : [];
+    const [{ data: busy }, pricing] = await Promise.all([
+      property
+        ? sb.rpc("room_busy_windows", {
+            p_tenant: property.tenantId,
+            p_from: new Date(start).toISOString(),
+            p_to: new Date(end).toISOString(),
+          })
+        : Promise.resolve({ data: [] as Row[] }),
+      property && groups.length
+        ? loadPricingContext({
+            tenantId: property.tenantId,
+            rateGroupIds: groups as string[],
+            checkIn: new Date(start),
+            checkOut: new Date(end),
+          })
+        : Promise.resolve(null),
+    ]);
+    const groupPrices = (groups as string[]).map(
+      (g) => [g, pricing ? priceFromContext(pricing, g).total : 0] as const,
+    );
+    const priceOf = new Map<string, number>(groupPrices);
     const startMs = new Date(start).getTime();
     const endMs = new Date(end).getTime();
     const blockedRooms = new Set<string>();
@@ -400,16 +436,7 @@ export class DemoStaysConnector implements PmsConnector {
 
     const offers: RoomOffer[] = [];
     for (const room of rooms) {
-      let price = 0;
-      if (room.rateGroupId && nights > 0) {
-        const breakdown = await calculateNightlyPrice({
-          rateGroupId: room.rateGroupId,
-          checkIn: new Date(start),
-          checkOut: new Date(end),
-          extras: [],
-        });
-        price = breakdown.total;
-      }
+      const price = room.rateGroupId ? (priceOf.get(room.rateGroupId) ?? 0) : 0;
       offers.push({
         room,
         available: !blockedRooms.has(room.id) && room.capacity >= query.guests,

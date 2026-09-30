@@ -7,6 +7,8 @@ export type { PriceBreakdown };
 export { round2 };
 
 export interface NightlyPriceInput {
+  /** The hotel: rules, gifts and occupancy are the hotel's own. */
+  tenantId: string;
   rateGroupId: string;
   checkIn: Date; // first night
   checkOut: Date; // departure day (not slept)
@@ -17,26 +19,36 @@ export interface NightlyPriceInput {
 // must NOT inflate occupancy, otherwise the surcharge fires when rooms are free.
 const OCCUPYING_STATUSES = ["confirmed", "in_progress", "completed"] as const;
 
-// Loads everything the pricing engine needs from the data client and delegates
-// the calculation to the pure domain function (@domain/pricing.ts), which the
-// Edge Functions reuse.
-export async function calculateNightlyPrice(input: NightlyPriceInput): Promise<PriceBreakdown> {
-  const checkIn = localYmd(input.checkIn);
-  const checkOut = localYmd(input.checkOut);
-  const extrasTotal = input.extras.reduce((s, e) => s + e.qty * e.price, 0);
+/** What pricing a stay needs, loaded once for a hotel and a range of dates. */
+export interface PricingContext {
+  checkIn: string;
+  checkOut: string;
+  rates: Map<string, { price: number; weekendPrice: number | null }>;
+  rules: DynamicRule[];
+  gifts: { minExtrasTotal: number; giftExtraId: string }[];
+  occupied: { checkIn: string; checkOut: string }[];
+  totalRooms: number;
+}
 
+// Loads everything the pricing engine needs, for several room types at once
+// and scoped to the hotel (rules, gifts and occupancy of other hotels must not
+// leak into the price), in two rounds of parallel queries at most. The
+// calculation itself is the pure domain function (@domain/pricing.ts), which
+// the Edge Functions reuse; the price charged is always the server's.
+export async function loadPricingContext(q: {
+  tenantId: string;
+  rateGroupIds: string[];
+  checkIn: Date;
+  checkOut: Date;
+}): Promise<PricingContext> {
+  const ids = [...new Set(q.rateGroupIds)];
   const [rateRes, rulesRes, giftsRes] = await Promise.all([
     supabase
       .from("rate_nightly")
-      .select("price, weekend_price")
-      .eq("rate_group_id", input.rateGroupId)
-      .maybeSingle(),
-    supabase.from("dynamic_rules").select("*").eq("active", true),
-    supabase
-      .from("gift_thresholds")
-      .select("*")
-      .eq("active", true)
-      .lte("min_extras_total", extrasTotal),
+      .select("rate_group_id, price, weekend_price")
+      .in("rate_group_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+    supabase.from("dynamic_rules").select("*").eq("tenant_id", q.tenantId).eq("active", true),
+    supabase.from("gift_thresholds").select("*").eq("tenant_id", q.tenantId).eq("active", true),
   ]);
   if (rateRes.error) throw rateRes.error;
   if (rulesRes.error) throw rulesRes.error;
@@ -61,10 +73,15 @@ export async function calculateNightlyPrice(input: NightlyPriceInput): Promise<P
       supabase
         .from("reservations")
         .select("start_at, end_at")
-        .lt("start_at", input.checkOut.toISOString())
-        .gt("end_at", input.checkIn.toISOString())
+        .eq("tenant_id", q.tenantId)
+        .lt("start_at", q.checkOut.toISOString())
+        .gt("end_at", q.checkIn.toISOString())
         .in("status", [...OCCUPYING_STATUSES]),
-      supabase.from("rooms").select("id", { count: "exact", head: true }).eq("active", true),
+      supabase
+        .from("rooms")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", q.tenantId)
+        .eq("active", true),
     ]);
     if (occError) throw occError;
     if (roomsError) throw roomsError;
@@ -75,22 +92,54 @@ export async function calculateNightlyPrice(input: NightlyPriceInput): Promise<P
     totalRooms = Math.max(count ?? 1, 1);
   }
 
-  return priceStay({
-    checkIn,
-    checkOut,
-    rate: {
-      price: Number(rateRes.data?.price ?? 0),
-      weekendPrice: rateRes.data?.weekend_price != null ? Number(rateRes.data.weekend_price) : null,
-    },
+  const rates = new Map<string, { price: number; weekendPrice: number | null }>();
+  for (const r of rateRes.data ?? []) {
+    rates.set(r.rate_group_id, {
+      price: Number(r.price ?? 0),
+      weekendPrice: r.weekend_price != null ? Number(r.weekend_price) : null,
+    });
+  }
+  return {
+    checkIn: localYmd(q.checkIn),
+    checkOut: localYmd(q.checkOut),
+    rates,
     rules,
-    occupied,
-    totalRooms,
-    extras: input.extras,
     gifts: (giftsRes.data ?? []).map((g) => ({
       minExtrasTotal: Number(g.min_extras_total),
       giftExtraId: g.gift_extra_id,
     })),
+    occupied,
+    totalRooms,
+  };
+}
+
+/** Price of a stay for one room type, from a loaded context (no queries). */
+export function priceFromContext(
+  ctx: PricingContext,
+  rateGroupId: string,
+  extras: NightlyPriceInput["extras"] = [],
+): PriceBreakdown {
+  const extrasTotal = extras.reduce((s, e) => s + e.qty * e.price, 0);
+  return priceStay({
+    checkIn: ctx.checkIn,
+    checkOut: ctx.checkOut,
+    rate: ctx.rates.get(rateGroupId) ?? { price: 0, weekendPrice: null },
+    rules: ctx.rules,
+    occupied: ctx.occupied,
+    totalRooms: ctx.totalRooms,
+    extras,
+    gifts: ctx.gifts.filter((g) => g.minExtrasTotal <= extrasTotal),
   });
+}
+
+export async function calculateNightlyPrice(input: NightlyPriceInput): Promise<PriceBreakdown> {
+  const ctx = await loadPricingContext({
+    tenantId: input.tenantId,
+    rateGroupIds: [input.rateGroupId],
+    checkIn: input.checkIn,
+    checkOut: input.checkOut,
+  });
+  return priceFromContext(ctx, input.rateGroupId, input.extras);
 }
 
 export type ReservationWithRoom = Reservation & {
