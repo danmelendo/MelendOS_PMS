@@ -45,7 +45,7 @@ Para el hotel que ya tiene su web (WordPress, Wix…): Admin → Web y dominio �
 
 ## Conectar el dominio propio
 
-Hay que crear en el DNS del hotel un registro `CNAME` con el nombre `reservas` y el valor `VITE_PLATFORM_CNAME`. El panel muestra el registro exacto y lo comprueba con DNS público (Cloudflare DNS over HTTPS, desde el navegador). El certificado HTTPS lo emite el alojamiento del frontend al añadir el dominio.
+Hay que crear en el DNS del hotel un registro `CNAME` con el nombre `reservas` y el valor `VITE_PLATFORM_CNAME`. El panel muestra el registro exacto y lo comprueba con DNS público (Cloudflare DNS over HTTPS, desde el navegador). Debajo, «Guía paso a paso, con imágenes» (`src/components/DnsTutorial.tsx`) explica dónde está el DNS en los proveedores habituales, cómo rellenar el registro (ilustraciones genéricas con los valores reales del hotel, no capturas de un proveedor concreto), los errores típicos (nombre completo duplicado, registro previo, proxy de Cloudflare, dominio raíz) y cómo enlazar el botón «Reservar». El certificado HTTPS lo emite el alojamiento del frontend al añadir el dominio.
 
 ## Pendiente para producción
 
