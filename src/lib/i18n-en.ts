@@ -202,11 +202,17 @@ export const EN: Record<string, string> = {
   "Sin eventos todavía.": "No events yet.",
   "Reserva creada": "Booking created",
   "Prereserva creada": "Hold created",
-  "Habitación reservada para ti · caduca en {time} sin actividad":
-    "Room held for you · expires in {time} without activity",
-  "La reserva de la habitación ha caducado por inactividad. Vuelve a reservar: si sigue libre, será tuya.":
-    "Your room hold expired after a period of inactivity. Book again: if it is still free, it is yours.",
   "Volver a la habitación": "Back to the room",
+  "Habitación reservada para ti · tu sesión caduca en {time}":
+    "Room held for you · your session expires in {time}",
+  "Tu sesión va a caducar · quedan {time} para completar el pago":
+    "Your session is about to expire · {time} left to complete the payment",
+  "Tu sesión va a caducar en {n} minutos. Completa el pago o tendrás que volver a reservar.":
+    "Your session expires in {n} minutes. Complete the payment or you will have to book again.",
+  "Tu sesión va a caducar en 1 minuto. Completa el pago o tendrás que volver a reservar.":
+    "Your session expires in 1 minute. Complete the payment or you will have to book again.",
+  "Tu sesión de reserva ha caducado. Vuelve a reservar: si la habitación sigue libre, será tuya.":
+    "Your booking session has expired. Book again: if the room is still free, it is yours.",
   "La reserva de la habitación ha caducado. Vuelve a reservar.":
     "Your room hold has expired. Please book again.",
   "Check-out realizado": "Checked out",

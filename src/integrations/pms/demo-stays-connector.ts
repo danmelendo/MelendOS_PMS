@@ -467,15 +467,6 @@ export class DemoStaysConnector implements PmsConnector {
     return (data as Row | null) ?? null;
   }
 
-  async touchHold(id: string): Promise<string | null> {
-    const { data, error } = await sb.rpc("touch_booking_hold", {
-      p_id: id,
-      p_token: guestToken(id) ?? null,
-    });
-    if (error) throw new Error(error.message);
-    return (data as string | null) ?? null;
-  }
-
   async startPayment(
     id: string,
     returnUrl: string,

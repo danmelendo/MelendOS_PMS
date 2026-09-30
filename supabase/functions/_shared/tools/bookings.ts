@@ -25,9 +25,9 @@ import {
 
 export const MAX_NIGHTS = 30;
 /**
- * An unpaid (online payment) booking holds its room this long. From the web the
- * checkout page extends it while the guest is active (touch_booking_hold), so
- * it lapses after this much inactivity. Links sent by the assistant or through
+ * An unpaid (online payment) booking holds its room this long: the booking
+ * session, fixed and never extended (only the bank gets a margin once the guest
+ * starts paying, in payments-create). Links sent by the assistant or through
  * MCP get longer: the guest is not on the page yet.
  */
 export const HOLD_MINUTES = 20;
