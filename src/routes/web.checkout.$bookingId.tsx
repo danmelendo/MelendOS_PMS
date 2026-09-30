@@ -102,8 +102,7 @@ function WebCheckoutScreen() {
       </div>
 
       {booking.status === "held" && !awaitingNotification && (
-        <HoldKeeper
-          bookingId={bookingId}
+        <SessionTimer
           until={booking.holdExpiresAt}
           onLapse={() => qc.invalidateQueries({ queryKey: ["pms", "booking", bookingId] })}
         />
@@ -163,7 +162,7 @@ function WebCheckoutScreen() {
           <div className="space-y-3 bg-rose-50 px-4 py-4 text-center text-sm font-medium text-rose-600">
             <p>
               {t(
-                "La reserva de la habitación ha caducado por inactividad. Vuelve a reservar: si sigue libre, será tuya.",
+                "Tu sesión de reserva ha caducado. Vuelve a reservar: si la habitación sigue libre, será tuya.",
               )}
             </p>
             <button
@@ -208,65 +207,73 @@ function WebCheckoutScreen() {
   );
 }
 
+/** Warn when this much of the session is left (seconds). */
+const WARN_AT = [5 * 60, 60];
+
 /**
- * The room is held for the guest while they are on this page: any activity
- * (at most once a minute) pushes the hold 20 minutes forward on the server.
- * After 20 minutes without activity it lapses and the guest books again.
+ * The booking session: the room is held for 20 minutes from when the guest
+ * started booking (30 once they are at the bank), fixed by the server and never
+ * extended. The countdown shows what is left and warns at 5 minutes and at 1
+ * minute; when it runs out the guest has to book again.
  */
-function HoldKeeper({
-  bookingId,
-  until,
-  onLapse,
-}: {
-  bookingId: string;
-  until: string | null;
-  onLapse: () => void;
-}) {
+function SessionTimer({ until, onLapse }: { until: string | null; onLapse: () => void }) {
   const { t } = useLang();
-  const [expiry, setExpiry] = useState(until);
   const [left, setLeft] = useState(() => remaining(until));
-  const lastTouch = useRef(0);
+  const warned = useRef(new Set<number>());
   const lapse = useRef(onLapse);
   lapse.current = onLapse;
 
-  useEffect(() => setExpiry(until), [until]);
   useEffect(() => {
-    const touch = () => {
-      if (Date.now() - lastTouch.current < 60_000) return;
-      lastTouch.current = Date.now();
-      pms
-        .touchHold(bookingId)
-        .then((next) => (next ? setExpiry(next) : lapse.current()))
-        .catch(() => {});
-    };
-    const events = ["pointerdown", "pointermove", "keydown", "scroll", "focus"] as const;
-    for (const e of events) window.addEventListener(e, touch, { passive: true });
-    touch();
-    return () => {
-      for (const e of events) window.removeEventListener(e, touch);
-    };
-  }, [bookingId]);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const l = remaining(expiry);
+    const tick = () => {
+      const l = remaining(until);
       setLeft(l);
+      // One warning per threshold (the first one right away if the page was
+      // opened with less time left).
+      const due = WARN_AT.filter((w) => l > 0 && l <= w && !warned.current.has(w));
+      if (due.length) {
+        for (const w of WARN_AT) if (l <= w) warned.current.add(w);
+        const minutes = Math.max(1, Math.ceil(l / 60));
+        toast.warning(
+          minutes === 1
+            ? t(
+                "Tu sesión va a caducar en 1 minuto. Completa el pago o tendrás que volver a reservar.",
+              )
+            : t(
+                "Tu sesión va a caducar en {n} minutos. Completa el pago o tendrás que volver a reservar.",
+                { n: minutes },
+              ),
+          { duration: 20_000 },
+        );
+      }
       if (l <= 0) {
         clearInterval(timer);
         lapse.current();
       }
-    }, 1000);
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
     return () => clearInterval(timer);
-  }, [expiry]);
+  }, [until, t]);
 
   if (left <= 0) return null;
   const m = Math.floor(left / 60);
   const s = left % 60;
+  const urgent = left <= WARN_AT[0];
   return (
-    <div className="mb-4 flex items-center justify-center gap-2 bg-amber-50 px-3 py-3 text-center text-sm font-medium text-amber-700">
+    <div
+      role="timer"
+      aria-live={urgent ? "assertive" : "off"}
+      className={`mb-4 flex items-center justify-center gap-2 px-3 py-3 text-center text-sm font-medium ${
+        urgent ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"
+      }`}
+    >
       <Clock className="h-4 w-4 shrink-0" />{" "}
-      {t("Habitación reservada para ti · caduca en {time} sin actividad", {
-        time: `${m}:${String(s).padStart(2, "0")}`,
-      })}
+      {t(
+        urgent
+          ? "Tu sesión va a caducar · quedan {time} para completar el pago"
+          : "Habitación reservada para ti · tu sesión caduca en {time}",
+        { time: `${m}:${String(s).padStart(2, "0")}` },
+      )}
     </div>
   );
 }

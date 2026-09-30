@@ -116,8 +116,6 @@ export interface PmsConnector {
     returnUrl: string,
     kind?: "deposit" | "balance",
   ): Promise<PaymentRedirect>;
-  /** The guest is still paying: keep the room (20 more minutes). Null = the hold lapsed. */
-  touchHold(id: string): Promise<string | null>;
   cancelPrebooking(id: string, category?: string): Promise<void>;
   listBookings(memberId: string): Promise<Prebooking[]>;
   getBooking(id: string): Promise<Prebooking | null>;
