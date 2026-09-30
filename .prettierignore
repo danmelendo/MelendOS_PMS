@@ -12,3 +12,4 @@ src/integrations/supabase/types.ts
 lake/out
 site
 negocio
+public/email-templates
