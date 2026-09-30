@@ -64,6 +64,13 @@ function WebCheckoutScreen() {
     }
   }, [auto, booking?.status, confirm]);
 
+  // The hold lapsed with the gateway still open (30 minutes at the bank without
+  // an answer): close it, the guest has to book again.
+  const lapsed = booking?.status === "expired" && payment !== "ok";
+  useEffect(() => {
+    if (lapsed) setRedirect(null);
+  }, [lapsed]);
+
   // Inside the payment iframe we only report the result up (above) and show a
   // spinner; the real page is the parent one.
   if (framed)
