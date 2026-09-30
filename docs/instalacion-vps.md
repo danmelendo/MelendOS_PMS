@@ -1,6 +1,6 @@
 # Plan: Melend/OS empaquetado para instalar en un VPS
 
-_30/09/2026. Plan de trabajo; nada de esto está construido todavía. Después se hará una prueba con un VPS real (sección 9)._
+_30/09/2026, ampliado el mismo día con las copias en el propio VPS y el asistente de alta. Plan de trabajo; nada de esto está construido todavía. Después se hará una prueba con un VPS real (sección 10)._
 
 ## 1. Objetivo
 
@@ -10,6 +10,17 @@ Instalar Melend/OS completo en un servidor (un VPS) con un solo instalador y act
 - **Nuestra propia nube en VPS**: varios hoteles en una instalación, como alternativa a Supabase Cloud, si sale más barato o nos da más control.
 
 La app ya es multi-hotel, así que los dos casos son la misma instalación con uno o con varios hoteles dados de alta. Se mantiene la regla de siempre: **entre entornos solo cambia la configuración, nunca el código.**
+
+### Cómo lo vamos a construir: primero a mano, después el instalador
+
+(Dan, 30/09/2026: «demos de alta en un VPS para que veas exactamente cuál es el proceso, anotes qué errores te encuentras… y así trabajamos sobre algo que ya se ha realizado».)
+
+1. **Instalación a mano en un VPS real, con bitácora.** Se sigue este plan paso a paso en un VPS de pruebas y se anota todo en `docs/vps-bitacora.md`: cada orden ejecutada, lo que tardó, cada error con su causa y su arreglo, y lo que hubo que cambiar en el código. Termina con un hotel ficticio funcionando como en producción: pagos de prueba, emails, check-in, copias y vuelta atrás.
+2. **El paquete y el comando `melendos` salen de la bitácora.** Cada paso que funcionó a mano se convierte en un paso del instalador, y cada error encontrado, en una comprobación previa o en un arreglo automático. Nada se escribe «de memoria».
+3. **El asistente del panel de gestión** (sección 6) ejecuta ese mismo instalador en remoto.
+4. **Prueba final en un VPS limpio** (sección 10): el instalador tiene que dejarlo todo funcionando sin intervención. Si hay que tocar algo a mano, se vuelve al punto 2.
+
+Las secciones 4 a 9 son lo que esperamos encontrar; la bitácora dirá qué sobra y qué falta.
 
 ## 2. Qué hay que instalar
 
@@ -29,10 +40,10 @@ Es el `docker compose` oficial de Supabase autoalojado, más nuestras piezas enc
 
 ## 3. Requisitos del servidor
 
-- **Mínimo razonable**: 4 vCPU, 8 GB de RAM y 80 GB de SSD. Supabase autoalojado pide unos 4 GB solo para arrancar, así que con 4 GB va justo. Medirlo en la prueba.
+- **Mínimo razonable**: 4 vCPU, 8 GB de RAM y 160 GB de SSD. Supabase autoalojado pide unos 4 GB solo para arrancar, así que con 4 GB va justo. El disco va doble porque las copias para volver atrás se guardan en el propio VPS (sección 8); mejor en un volumen aparte del disco del sistema, que la mayoría de proveedores venden por separado. Medirlo en la prueba.
 - **Sistema**: Ubuntu 24.04 LTS, Docker Engine y el plugin de Compose.
 - **Ubicación en la UE** (datos personales, SES.HOSPEDAJES): Hetzner (Alemania/Finlandia), OVH (Francia) o un proveedor español (IONOS, Arsys) si el cliente lo pide. Hay que confirmar precios en cada proveedor; en la gama de 4 vCPU/8 GB suelen rondar las decenas de euros al mes.
-- **DNS**: un dominio con tres nombres apuntando al VPS (sección 6).
+- **DNS**: un dominio con tres nombres apuntando al VPS (sección 7).
 - **Salida a internet** hacia Redsys/Stripe, Resend, la AEAT, el Ministerio del Interior y el proveedor de IA. **Entrada** solo por los puertos 80 y 443.
 
 ## 4. Cambios en el código antes de empaquetar
@@ -77,14 +88,75 @@ Todo en `deploy/vps/` del repo, versionado con el producto:
 | `melendos install`                     | Comprueba requisitos, genera secretos, pide dominio y correo, arranca la pila, aplica migraciones, programa los cron, crea la cuenta de soporte (`platform`) y deja el sistema listo |
 | `melendos hotel add hotel.json`        | Alta de un hotel con `scripts/create-hotel.ts`, que ya existe e invita a dirección por email                                                                                         |
 | `melendos update [versión]`            | Copia de seguridad, descarga de las imágenes nuevas, migraciones, reinicio y prueba de humo; si la prueba falla, vuelve a la versión anterior                                        |
-| `melendos backup` / `melendos restore` | Ver sección 7                                                                                                                                                                        |
+| `melendos backup` / `melendos restore` | Ver sección 8                                                                                                                                                                        |
+| `melendos rollback`                    | Vuelve a la versión y a los datos del último punto de restauración (sección 8)                                                                                                       |
 | `melendos doctor`                      | `prod-check` en modo autoalojado, `smoke.mjs`, espacio en disco, certificados, colas atascadas                                                                                       |
 | `melendos logs [servicio]`             | Registros                                                                                                                                                                            |
 | `melendos support on/off`              | Abre o cierra el acceso de soporte de Melend/OS (rol «Administrador» y clave SSH), con constancia en `audit_log`                                                                     |
 
 Lo exclusivo de la demo queda fuera por defecto: `DEMO_ACCESS`, `seed-auth`, simulador de historial y semillas.
 
-## 6. Cómo queda una instalación
+## 6. Asistente de alta: el instalador completo
+
+Cada hotel o cliente nuevo no debería pedir trabajo manual. El asistente es un formulario del panel de gestión: se rellena una vez y se encarga de todo lo demás, del servidor vacío al hotel funcionando. El comando `melendos` (sección 5) sigue siendo el motor; el asistente lo ejecuta en remoto y deja constancia de cada paso.
+
+### Dónde vive
+
+- **En el panel de gestión** (`/site/admin`, proyecto de ventas), pestaña nueva **«Instalaciones»**, junto a Clientes y Facturación. Cada instalación cuelga de un cliente y rellena sola sus hoteles (`client_hotels`), enlaces y registro de accesos.
+- **Lo ejecuta un orquestador**, porque un navegador no puede conectarse por SSH a un servidor:
+  - **Al principio: un workflow de GitHub Actions** que el panel lanza con los datos del formulario. No hace falta otro servidor, deja el registro de cada paso y las altas son pocas (gasta pocos minutos).
+  - **Más adelante, si hay muchas altas**: un pequeño servicio propio en un VPS de Melend/OS que haga lo mismo.
+- Solo pueden lanzarlo sesiones de confianza del panel de gestión (equipos aprobados y verificación en dos pasos, como ya exige el panel). Antes de tocar un servidor que ya tiene datos, pide confirmación expresa.
+
+### Tres usos
+
+1. **Cliente nuevo con su VPS**: instala todo y da de alta su primer hotel.
+2. **Hotel nuevo en una instalación que ya existe**: una cadena que abre otro hotel, o un hotel más en nuestra nube multi-hotel. Solo hace el alta (paso 9 de abajo), con su punto de restauración previo.
+3. **Mantenimiento** desde la misma pestaña: ver versión y estado de cada instalación, actualizar, volver atrás y restaurar.
+
+### Qué se rellena
+
+| Bloque             | Datos                                                                                                                                                                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cliente            | Uno de los clientes del panel (contrato, plan y paquetes ya están ahí)                                                                                                                                                                                                                    |
+| Servidores         | Una o varias IPs, puerto SSH y usuario administrador. Cada servidor es una instalación; si un cliente tiene varios, se instalan uno tras otro                                                                                                                                             |
+| Acceso             | **Preferido:** el asistente enseña nuestra clave pública y un comando de una línea para autorizarla en el VPS. **Alternativa:** la contraseña de administración, de un solo uso: se usa para instalar nuestra clave, se desactiva el acceso por contraseña y no se guarda en ningún sitio |
+| Dominio            | Dominio del cliente y nombres para panel, reservas y API; comprobación de que ya apuntan a la IP                                                                                                                                                                                          |
+| Servicios externos | Email de envío (Resend) e IA: los nuestros o los del cliente                                                                                                                                                                                                                              |
+| Hotel              | Lo mismo que hoy lleva `scripts/hotel.example.json`: nombre, horas de entrada y salida, formas de pago, cancelación, marca, establecimientos, tipos de habitación y tarifas, y emails de dirección y recepción                                                                            |
+| Datos anteriores   | Excel/CSV de habitaciones y de reservas del sistema anterior (los lectores ya existen: `_shared/onboarding/csv.ts` y `reservations-csv.ts`). Se validan antes de instalar y se enseñan los errores por fila                                                                               |
+
+Las credenciales del hotel (TPV del banco, SES.HOSPEDAJES, certificado de VERI\*FACTU) **no se piden en el asistente**: las mete el propio hotel en su panel (Configuración). Así nunca pasan por nosotros, y el email de bienvenida le dice qué le falta.
+
+### Qué hace, paso a paso
+
+Cada paso se ve en la pantalla con su estado y su registro. Si uno falla, se corrige y se relanza desde ahí sin repetir lo hecho: todos los pasos se pueden repetir sin duplicar nada.
+
+1. Comprueba el acceso y el servidor: sistema, RAM, disco, puertos libres y DNS.
+2. Endurece el servidor: usuario `melendos` con nuestra clave, sin acceso por contraseña ni de root, cortafuegos, `fail2ban` y actualizaciones automáticas del sistema.
+3. Instala Docker.
+4. Descarga el paquete de la versión elegida, genera los secretos y escribe el `.env`.
+5. Arranca los servicios y espera a que respondan.
+6. Monta la base de datos: migraciones, tareas programadas, Vault y la cuenta de soporte (rol «Administrador»).
+7. Obtiene los certificados HTTPS.
+8. Crea el primer punto de restauración (sección 8).
+9. Da de alta el hotel (`create-hotel`) e importa habitaciones y reservas, con un punto de restauración justo antes.
+10. Pasa `melendos doctor` y la prueba de humo.
+11. Apunta el resultado en el panel de gestión: URLs, IP, versión y dónde está cada acceso (nunca el secreto, como ya hace el registro de accesos).
+12. Envía las invitaciones a dirección y recepción y el email de bienvenida con lo que queda por configurar.
+
+### Credenciales
+
+- En los servidores solo está nuestra **clave pública**, con un usuario limitado.
+- La **clave privada de despliegue** vive en los secretos del orquestador (una por entorno, se puede rotar) y nunca en el panel ni en la base.
+- Las contraseñas que se escriban en el formulario se usan una vez y se descartan.
+- Todo esto encaja con la decisión del panel de gestión: registrar dónde está cada credencial, no guardarla.
+
+### Más adelante
+
+Si el VPS lo contratamos nosotros, el asistente puede crearlo con la API del proveedor (Hetzner la tiene). Entonces ni siquiera hay que escribir la IP: se elige el tamaño y la ubicación y el resto sigue igual.
+
+## 7. Cómo queda una instalación
 
 Ejemplo con un cliente que tiene `hotelsol.es`:
 
@@ -103,21 +175,42 @@ Auth (en el `.env`):
 - Registro público cerrado.
 - TOTP activado.
 
-## 7. Copias de seguridad
+## 8. Copias de seguridad y vuelta atrás
 
 En autoalojado no hay PITR de Supabase: es lo que más cambia y hay que tratarlo como bloqueante.
 
-- **Base de datos:**
-  - `pg_dump` completo cada noche;
-  - archivado continuo de WAL con `pgBackRest` o `wal-g`, para poder volver a un minuto concreto, que es lo más parecido a PITR.
-- **Ficheros**: el volumen de Storage (fotos, lake) y el `.env` con los secretos, cifrado.
-- **Fuera del servidor**: `restic` hacia un almacenamiento S3 compatible de la UE (Backblaze B2, Hetzner Storage Box, OVH Object Storage), cifrado con una clave que guardamos nosotros y el cliente.
-- **Retención**: 14 diarias, 8 semanales y 12 mensuales. Ajustable.
+### En el propio VPS, para volver atrás al momento
+
+Las copias se guardan en el servidor, en `/var/backups/melendos`, a ser posible en un volumen aparte del disco del sistema. Así cualquier vuelta atrás es inmediata y no depende de descargar nada.
+
+- **Puntos de restauración automáticos:**
+  - antes de cada `melendos update`;
+  - antes de cada alta de hotel o importación.
+  - Cada punto guarda la base entera, los ficheros de Storage, el `.env` y la versión de las imágenes.
+- **Copia diaria** completa de la base, más el **registro continuo de cambios** (archivado de WAL con `pgBackRest`). Con él se puede volver a cualquier minuto de los últimos días, lo más parecido al PITR de Supabase.
+- **Retención local**: 7 días de registro continuo, 7 copias diarias y los 5 últimos puntos de restauración. Si el disco pasa del 80 %, avisa antes de borrar nada.
+- **Órdenes:**
+  - `melendos rollback`: vuelve a la versión anterior y a los datos del último punto.
+  - `melendos restore --at "2026-10-02 14:30"`: vuelve a un minuto concreto.
+  - `melendos restore --point <id>`: vuelve a un punto de restauración concreto.
+  - Las tres piden confirmación y crean antes un punto con el estado actual, por si hay que deshacer la vuelta atrás.
+
+### Además, una copia fuera del VPS (recomendado)
+
+Una copia que solo está en el VPS se pierde con el VPS: el proveedor falla o lo borra, alguien entra y cifra el disco, o se acaba el espacio. Por eso propongo mantener también una copia diaria fuera:
+
+- `restic` hacia un almacenamiento S3 compatible de la UE (Backblaze B2, Hetzner Storage Box, OVH Object Storage);
+- cifrada con una clave que guardamos nosotros y el cliente;
+- retención de 14 diarias, 8 semanales y 12 mensuales.
+
+Las vueltas atrás del día a día salen de la copia local; la de fuera es para desastres.
+
+### Siempre
+
 - **Simulacro de restauración** en un VPS limpio antes de dar la instalación por buena, y después cada trimestre. Sin simulacro, la copia no cuenta.
+- **Vault**: las credenciales de pasarelas, SES y el certificado de VERI\*FACTU están cifradas con una clave de la instalación. La copia de la base no sirve sin esa clave; el instalador la guarda en el `.env` y cada copia la incluye, cifrada.
 
-Ojo con Vault: las credenciales de pasarelas, SES y el certificado de VERI\*FACTU están cifradas con una clave de la instalación. La copia de la base no sirve sin esa clave; el instalador la guarda en el `.env` y la copia cifrada la incluye.
-
-## 8. Seguridad y operación
+## 9. Seguridad y operación
 
 - **Cortafuegos** (`ufw`):
   - solo 22, 80 y 443 abiertos;
@@ -131,31 +224,34 @@ Ojo con Vault: las credenciales de pasarelas, SES y el certificado de VERI\*FACT
   - Si el VPS es nuestro, somos encargados y el proveedor del VPS, subencargado.
   - Hay que reflejarlo en el contrato; ya estaba pendiente mencionar el acceso de soporte.
 
-## 9. Prueba con un VPS
+## 10. Prueba con un VPS
 
 Objetivo: instalar desde cero en un VPS nuevo, dejar un hotel funcionando como en producción y medir lo que cuesta.
 
+Esta es la prueba del instalador terminado, sobre un VPS limpio. Antes va la instalación a mano con bitácora (sección 1), en otro VPS o en el mismo, reinstalado.
+
 **Preparación** (antes de contratar el VPS):
 
-1. Hacer los cambios de la sección 4 y el paquete de la sección 5, con su PR y su CI.
+1. Hacer los cambios de la sección 4, el paquete de la sección 5 y el asistente de la sección 6, con su PR y su CI.
 2. Elegir el proveedor y un dominio de pruebas; por ejemplo, subdominios de `melendo.app`.
 
 **Día de la prueba:**
 
-| Paso | Qué                                                                                               | Se da por bueno si…                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 1    | VPS Ubuntu 24.04, 4 vCPU/8 GB, en la UE. DNS de `panel`, `reservas` y `api` apuntando a él        | Resuelven                                                                                 |
-| 2    | `melendos install`                                                                                | Termina solo en menos de 20 min y con HTTPS válido en los tres nombres                    |
-| 3    | `melendos hotel add` con un hotel ficticio (`scripts/hotel.example.json`) y `melendos support on` | Llega la invitación a dirección y entra con 2FA                                           |
-| 4    | `melendos doctor`                                                                                 | Sin bloqueantes (salvo los esperados de una prueba: pagos y normativa en modo pruebas)    |
-| 5    | Reserva con pago en el entorno de pruebas de Redsys                                               | La notificación de Redsys llega a `api.` y confirma la reserva; llega el email al huésped |
-| 6    | Check-in con viajeros, SES en modo simulado, factura VERI\*FACTU simulada, chat, emails           | Las colas se vacían solas (cron)                                                          |
-| 7    | `scripts/e2e-*.mjs` y `smoke.mjs` apuntando al VPS                                                | Todo en verde                                                                             |
-| 8    | Dominio propio de prueba (CNAME) para la web del hotel                                            | Caddy emite el certificado solo; un dominio no dado de alta no obtiene certificado        |
-| 9    | Copia de seguridad y **restauración en un segundo VPS**                                           | El segundo VPS arranca con los mismos datos y las credenciales de Vault funcionan         |
-| 10   | `melendos update` a una versión nueva (aunque solo cambie un texto)                               | Sin corte apreciable y con vuelta atrás probada                                           |
-| 11   | Medir: RAM, CPU y disco en reposo y con uso; tiempos de respuesta                                 | Se decide el tamaño mínimo y el precio del alojamiento                                    |
-| 12   | Borrar los dos VPS                                                                                | Sin restos de datos                                                                       |
+| Paso | Qué                                                                                                                                                      | Se da por bueno si…                                                                                     |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 1    | VPS Ubuntu 24.04, 4 vCPU/8 GB, en la UE. DNS de `panel`, `reservas` y `api` apuntando a él                                                               | Resuelven                                                                                               |
+| 2    | **Asistente de alta** desde el panel de gestión, con la IP y la contraseña de un solo uso                                                                | Termina solo en menos de 30 min, con HTTPS válido en los tres nombres y el cliente apuntado en el panel |
+| 3    | El mismo asistente da de alta un hotel ficticio con un CSV de habitaciones y otro de reservas                                                            | Llega la invitación a dirección, entra con 2FA y ve sus habitaciones y reservas importadas              |
+| 4    | `melendos doctor`                                                                                                                                        | Sin bloqueantes (salvo los esperados de una prueba: pagos y normativa en modo pruebas)                  |
+| 5    | Reserva con pago en el entorno de pruebas de Redsys                                                                                                      | La notificación de Redsys llega a `api.` y confirma la reserva; llega el email al huésped               |
+| 6    | Check-in con viajeros, SES en modo simulado, factura VERI\*FACTU simulada, chat, emails                                                                  | Las colas se vacían solas (cron)                                                                        |
+| 7    | `scripts/e2e-*.mjs` y `smoke.mjs` apuntando al VPS                                                                                                       | Todo en verde                                                                                           |
+| 8    | Dominio propio de prueba (CNAME) para la web del hotel                                                                                                   | Caddy emite el certificado solo; un dominio no dado de alta no obtiene certificado                      |
+| 9    | **Vuelta atrás local**: borrar un hotel a propósito y `melendos restore --at` al minuto anterior; después, restaurar la copia de fuera en un segundo VPS | Vuelve todo como estaba; el segundo VPS arranca con los mismos datos y Vault funciona                   |
+| 10   | Actualizar a una versión nueva desde el asistente (aunque solo cambie un texto) y `melendos rollback`                                                    | Sin corte apreciable; el rollback deja la versión y los datos de antes                                  |
+| 11   | Medir: RAM, CPU y disco en reposo y con uso; tiempos de respuesta                                                                                        | Se decide el tamaño mínimo y el precio del alojamiento                                                  |
+| 12   | Segundo hotel en la misma instalación, desde el asistente (uso 2)                                                                                        | Solo hace el alta, con su punto de restauración previo                                                  |
+| 13   | Borrar los dos VPS                                                                                                                                       | Sin restos de datos                                                                                     |
 
 **Qué sale de la prueba:**
 
@@ -164,20 +260,24 @@ Objetivo: instalar desde cero en un VPS nuevo, dejar un hotel funcionando como e
 - el coste mensual;
 - la lista de ajustes del paquete.
 
-## 10. Esfuerzo estimado
+## 11. Esfuerzo estimado
 
-| Bloque                                                                | Días     |
-| --------------------------------------------------------------------- | -------- |
-| Configuración en tiempo de ejecución del frontend (4.1)               | 0,5      |
-| Funciones en `edge-runtime` autoalojado y secretos (4.2, 4.3)         | 1–2      |
-| Scripts de cron, `prod-check` autoalojado, alertas y lake (4.4–4.6)   | 1–1,5    |
-| `docker-compose`, imágenes y publicación en GHCR desde la CI          | 1,5      |
-| Comando `melendos` (install, update, backup/restore, doctor, support) | 2        |
-| Caddy con _on-demand TLS_ y comprobación de dominios                  | 0,5      |
-| Prueba con el VPS (sección 9) y guía final                            | 1,5–2    |
-| **Total**                                                             | **8–10** |
+| Bloque                                                                            | Días      |
+| --------------------------------------------------------------------------------- | --------- |
+| Configuración en tiempo de ejecución del frontend (4.1)                           | 0,5       |
+| Funciones en `edge-runtime` autoalojado y secretos (4.2, 4.3)                     | 1–2       |
+| Scripts de cron, `prod-check` autoalojado, alertas y lake (4.4–4.6)               | 1–1,5     |
+| `docker-compose`, imágenes y publicación en GHCR desde la CI                      | 1,5       |
+| Comando `melendos` (install, update, rollback, restore, doctor, support)          | 2         |
+| Instalación a mano con bitácora (sección 1)                                       | 2–3       |
+| Copias locales con puntos de restauración y registro continuo (sección 8)         | 1,5       |
+| Asistente en el panel de gestión: formulario, validación de CSV, estado por pasos | 2         |
+| Orquestador (workflow que ejecuta los pasos por SSH, reanudable)                  | 2         |
+| Caddy con _on-demand TLS_ y comprobación de dominios                              | 0,5       |
+| Prueba con el VPS (sección 9) y guía final                                        | 1,5–2     |
+| **Total**                                                                         | **16–19** |
 
-## 11. Riesgos
+## 12. Riesgos
 
 - **Funciones con `deno.json` propio en `edge-runtime` autoalojado.** Es lo menos probado. Si da guerra, la salida es empaquetar cada función con sus dependencias (`deno bundle`/`esbuild`) en la CI.
 - **Certificado de cliente de VERI\*FACTU (TLS mutuo) desde `edge-runtime`.** Ya estaba pendiente de verificar en la nube; en el VPS se puede comprobar con más control.
@@ -185,7 +285,7 @@ Objetivo: instalar desde cero en un VPS nuevo, dejar un hotel funcionando como e
 - **Actualizaciones de Supabase autoalojado**: hay que fijar versiones y probarlas en la demo, igual que las migraciones.
 - **Operación**: cada instalación dedicada es un servidor más que mantener. Conviene cobrar la implantación y un mantenimiento, y limitar las dedicadas a clientes que lo necesiten. El resto, en nuestra nube multi-hotel.
 
-## 12. Decisiones para Dan
+## 13. Decisiones para Dan
 
 1. **Modelo**:
    - ¿Solo instalaciones dedicadas por cliente, o también mover nuestra nube multi-hotel a VPS?
@@ -198,3 +298,7 @@ Objetivo: instalar desde cero en un VPS nuevo, dejar un hotel funcionando como e
    - ¿Las lanzamos nosotros (con acceso SSH) o el cliente con `melendos update`?
    - Propuesta: nosotros, en una ventana acordada.
 5. **Proveedor para la prueba**: propuesta, Hetzner (barato, UE, API para automatizar); o uno español si algún cliente lo va a pedir.
+6. **VPS para la instalación a mano**: hace falta uno con Ubuntu 24.04 (4 vCPU, 8 GB, 160 GB) y acceso de administrador, y tres nombres de un dominio de pruebas apuntando a él (por ejemplo `panel-prueba`, `reservas-prueba` y `api-prueba` de `melendo.app`).
+7. **Copia fuera del VPS**: las copias van en el VPS, como pediste. ¿Añadimos también la copia diaria fuera (sección 8)? Recomiendo que sí: sin ella, perder el VPS es perderlo todo.
+8. **Orquestador**: propuesta, un workflow de GitHub Actions lanzado desde el panel de gestión; un servicio propio solo si hay muchas altas.
+9. **Credenciales del hotel** (TPV, SES, certificado): propuesta, que las meta el hotel en su panel y no pasen por el asistente.
