@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { verifyCode } from "@/lib/mfa";
+import { t } from "@/lib/i18n";
 
 /** Second step of signing in: the code of the authenticator app. */
 export function MfaCodeForm({
@@ -30,10 +31,11 @@ export function MfaCodeForm({
     >
       <p className="flex items-start gap-2 text-sm text-muted-foreground">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-info" />
-        Escribe el código de 6 cifras de tu app de verificación.
+
+        {t("Escribe el código de 6 cifras de tu app de verificación.")}
       </p>
       <div className="space-y-2">
-        <Label htmlFor="mfa-code">Código</Label>
+        <Label htmlFor="mfa-code">{t("Código")}</Label>
         <Input
           id="mfa-code"
           inputMode="numeric"
@@ -54,14 +56,14 @@ export function MfaCodeForm({
         className="w-full"
         disabled={busy || code.replace(/\s/g, "").length < 6}
       >
-        {busy ? "Comprobando…" : "Verificar"}
+        {busy ? t("Comprobando…") : t("Verificar")}
       </Button>
       <button
         type="button"
         className="w-full text-center text-xs text-muted-foreground hover:underline"
         onClick={onCancel}
       >
-        Cerrar sesión
+        {t("Cerrar sesión")}
       </button>
     </form>
   );

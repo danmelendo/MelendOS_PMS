@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useSesActions, type SesSettings } from "@/lib/ses";
+import { t } from "@/lib/i18n";
 
 const ENVIRONMENTS: Record<SesSettings["environment"], string> = {
   simulated: "Simulado (no sale del PMS)",
@@ -45,11 +46,11 @@ export function SesSettingsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Conexión con el ministerio</CardTitle>
+        <CardTitle className="text-base">{t("Conexión con el ministerio")}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Los códigos y las credenciales se obtienen al dar de alta la empresa y sus
-          establecimientos en la Sede Electrónica del Ministerio del Interior
-          (hospedajes.ses.mir.es).
+          {t(
+            "Los códigos y las credenciales se obtienen al dar de alta la empresa y sus establecimientos en la Sede Electrónica del Ministerio del Interior (hospedajes.ses.mir.es).",
+          )}
         </p>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
@@ -59,10 +60,11 @@ export function SesSettingsCard({
               checked={form.enabled}
               onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
             />
-            Comunicar reservas y partes de viajeros
+
+            {t("Comunicar reservas y partes de viajeros")}
           </label>
           <div className="space-y-1">
-            <Label>Entorno</Label>
+            <Label>{t("Entorno")}</Label>
             <Select
               value={form.environment}
               onValueChange={(v) =>
@@ -82,7 +84,7 @@ export function SesSettingsCard({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ses-landlord">Código de arrendador</Label>
+            <Label htmlFor="ses-landlord">{t("Código de arrendador")}</Label>
             <Input
               id="ses-landlord"
               className="font-mono"
@@ -92,7 +94,7 @@ export function SesSettingsCard({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ses-app">Nombre de la aplicación</Label>
+            <Label htmlFor="ses-app">{t("Nombre de la aplicación")}</Label>
             <Input
               id="ses-app"
               maxLength={50}
@@ -103,14 +105,14 @@ export function SesSettingsCard({
         </div>
 
         <div className="space-y-2">
-          <p className="font-medium">Código de establecimiento</p>
+          <p className="font-medium">{t("Código de establecimiento")}</p>
           {properties.map((p) => (
             <div key={p.id} className="flex items-center gap-2">
               <span className="w-48 shrink-0 truncate">{p.name}</span>
               <Input
                 className="h-8 font-mono text-xs"
                 maxLength={10}
-                placeholder="Sin registrar"
+                placeholder={t("Sin registrar")}
                 value={form.establishments[p.id] ?? ""}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -134,38 +136,39 @@ export function SesSettingsCard({
                 ),
               },
               {
-                onSuccess: () => toast.success("Configuración guardada"),
-                onError: (e) => toast.error(e.message),
+                onSuccess: () => toast.success(t("Configuración guardada")),
+                onError: (e) => toast.error(t(e.message)),
               },
             )
           }
         >
-          Guardar configuración
+          {t("Guardar configuración")}
         </Button>
 
         <div className="space-y-3 border-t pt-4">
           <p className="flex items-center gap-2 font-medium">
-            <KeyRound className="h-4 w-4" /> Credenciales del servicio web
+            <KeyRound className="h-4 w-4" /> {t("Credenciales del servicio web")}
             {settings?.has_credentials && (
               <Badge variant="secondary" className="font-normal">
-                Guardadas
+                {t("Guardadas")}
               </Badge>
             )}
           </p>
           <p className="text-xs text-muted-foreground">
-            Se guardan cifradas y solo las usa el servidor; nadie puede volver a verlas. Guardarlas
-            de nuevo las sustituye.
+            {t(
+              "Se guardan cifradas y solo las usa el servidor; nadie puede volver a verlas. Guardarlas de nuevo las sustituye.",
+            )}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              placeholder="Usuario"
+              placeholder={t("Usuario")}
               autoComplete="off"
               value={creds.user}
               onChange={(e) => setCreds((c) => ({ ...c, user: e.target.value }))}
             />
             <Input
               type="password"
-              placeholder="Contraseña"
+              placeholder={t("Contraseña")}
               autoComplete="new-password"
               value={creds.password}
               onChange={(e) => setCreds((c) => ({ ...c, password: e.target.value }))}
@@ -173,7 +176,7 @@ export function SesSettingsCard({
           </div>
           <textarea
             className="min-h-20 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-            placeholder="Certificado del servicio (PEM), solo si el ministerio lo exige"
+            placeholder={t("Certificado del servicio (PEM), solo si el ministerio lo exige")}
             value={creds.caCert}
             onChange={(e) => setCreds((c) => ({ ...c, caCert: e.target.value }))}
           />
@@ -183,14 +186,14 @@ export function SesSettingsCard({
             onClick={() =>
               actions.saveCredentials.mutate(creds, {
                 onSuccess: () => {
-                  toast.success("Credenciales guardadas");
+                  toast.success(t("Credenciales guardadas"));
                   setCreds({ user: "", password: "", caCert: "" });
                 },
-                onError: (e) => toast.error(e.message),
+                onError: (e) => toast.error(t(e.message)),
               })
             }
           >
-            Guardar credenciales
+            {t("Guardar credenciales")}
           </Button>
         </div>
       </CardContent>

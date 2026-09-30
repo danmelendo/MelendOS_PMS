@@ -48,6 +48,7 @@ import { useInboxLive, useUnreadCount } from "@/lib/chat";
 import { useSesAttention } from "@/lib/ses";
 import { useAnyHotelHas } from "@/lib/features";
 import type { Feature } from "@domain/features.ts";
+import { t } from "@/lib/i18n";
 
 // `feature`: shown only if one of the staff member's hotels has the module.
 type NavItem = { to: string; label: string; icon: typeof Calendar; feature?: Feature };
@@ -115,12 +116,12 @@ export function AppSidebar() {
       <SidebarMenuButton
         asChild
         isActive={path === item.to || path.startsWith(item.to + "/")}
-        tooltip={item.label}
+        tooltip={t(item.label)}
         className={ACTIVE_ITEM}
       >
         <Link to={item.to} className="flex items-center gap-2">
           <item.icon className="h-4 w-4" />
-          <span>{item.label}</span>
+          <span>{t(item.label)}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -133,25 +134,25 @@ export function AppSidebar() {
           {/* Collapsed: only the icon. Both variants are for the navy sidebar. */}
           <img
             src="/brand/isotipo-dark.webp"
-            alt="Melend/OS"
+            alt={t("Melend/OS")}
             className="hidden h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:block"
           />
           <div className="flex min-w-0 flex-col gap-1 leading-tight group-data-[collapsible=icon]:hidden">
             <img
               src="/brand/logo-dark.webp"
-              alt="Melend/OS"
+              alt={t("Melend/OS")}
               width={583}
               height={96}
               className="h-7 w-auto self-start"
             />
             <span className="pl-0.5 text-xs text-sidebar-foreground/60">
               {isPlatform
-                ? "Administrador"
+                ? t("Administrador")
                 : isGroup && !canOperate
-                  ? "Dirección de grupo"
+                  ? t("Dirección de grupo")
                   : isAdmin
-                    ? "Dirección"
-                    : "Recepción"}
+                    ? t("Dirección")
+                    : t("Recepción")}
             </span>
           </div>
         </div>
@@ -159,7 +160,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Operativa</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("Operativa")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.filter(visible).map((item) => {
@@ -169,12 +170,12 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      tooltip={item.label}
+                      tooltip={t(item.label)}
                       className={ACTIVE_ITEM}
                     >
                       <Link to={item.to} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <span>{t(item.label)}</span>
                         {item.to === "/travellers" && sesAttention > 0 && (
                           <span
                             className="ml-auto min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-semibold text-white"
@@ -202,12 +203,12 @@ export function AppSidebar() {
 
         {isAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Gestión</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("Gestión")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {manageItems.filter(visible).map(navItem)}
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Web pública">
+                  <SidebarMenuButton asChild tooltip={t("Web pública")}>
                     <a
                       href="/web"
                       target="_blank"
@@ -215,7 +216,7 @@ export function AppSidebar() {
                       className="flex items-center gap-2"
                     >
                       <Globe className="h-4 w-4" />
-                      <span>Web pública</span>
+                      <span>{t("Web pública")}</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -226,7 +227,7 @@ export function AppSidebar() {
 
         {isAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Configuración</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("Configuración")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>{settingsItems.filter(visible).map(navItem)}</SidebarMenu>
             </SidebarGroupContent>
@@ -235,7 +236,7 @@ export function AppSidebar() {
 
         {isPlatform && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administrar y configuración</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("Administrar y configuración")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>{platformItems.filter(visible).map(navItem)}</SidebarMenu>
             </SidebarGroupContent>
@@ -247,7 +248,9 @@ export function AppSidebar() {
         {/* Demo on the real backend: switch profile to see each hotel's data. */}
         {DEMO_ACCESS && (
           <label className="px-2 group-data-[collapsible=icon]:hidden">
-            <span className="mb-1 block text-[11px] text-sidebar-foreground/60">Ver como</span>
+            <span className="mb-1 block text-[11px] text-sidebar-foreground/60">
+              {t("Ver como")}
+            </span>
             <select
               value={user?.email ?? ""}
               onChange={async (e) => {
@@ -258,7 +261,7 @@ export function AppSidebar() {
                   qc.resetQueries();
                   navigate({ to: "/today" });
                 } catch (err) {
-                  toast.error((err as Error).message);
+                  toast.error(t((err as Error).message));
                 }
               }}
               className="w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-foreground"
@@ -275,7 +278,7 @@ export function AppSidebar() {
           <Link
             to="/account"
             className="text-xs text-sidebar-foreground/60 truncate flex-1 hover:text-sidebar-foreground hover:underline"
-            title="Mi cuenta"
+            title={t("Mi cuenta")}
           >
             {user?.email}
           </Link>
@@ -285,15 +288,15 @@ export function AppSidebar() {
           variant="ghost"
           size="sm"
           className="justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-          title="Cerrar sesión"
-          aria-label="Cerrar sesión"
+          title={t("Cerrar sesión")}
+          aria-label={t("Cerrar sesión")}
           onClick={async () => {
             await signOut();
             navigate({ to: "/login" });
           }}
         >
           <LogOut className="mr-2 h-4 w-4 shrink-0 group-data-[collapsible=icon]:mr-0" />
-          <span className="group-data-[collapsible=icon]:hidden">Cerrar sesión</span>
+          <span className="group-data-[collapsible=icon]:hidden">{t("Cerrar sesión")}</span>
         </Button>
       </SidebarFooter>
     </Sidebar>

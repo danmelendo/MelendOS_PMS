@@ -17,6 +17,7 @@ import {
   useStayInvoices,
   type InvoiceWithRecord,
 } from "@/lib/invoices";
+import { t } from "@/lib/i18n";
 
 export function RecordBadge({ inv }: { inv: InvoiceWithRecord }) {
   if (!inv.record) return null;
@@ -24,7 +25,7 @@ export function RecordBadge({ inv }: { inv: InvoiceWithRecord }) {
   return (
     <Badge className={`${TONE[s.tone]} border-0`} title={inv.record.error ?? undefined}>
       {inv.record.kind === "anulacion" && inv.record.status === "accepted"
-        ? "Anulación registrada"
+        ? t("Anulación registrada")
         : s.label}
     </Badge>
   );
@@ -51,7 +52,7 @@ export function StayInvoices({
   const total = preview?.totals.total ?? 0;
   const simplifiedOk = simplifiedAllowed(total, Number(settings.simplified_limit));
   const done = (id: string) => {
-    toast.success("Factura emitida y enviada a la AEAT");
+    toast.success(t("Factura emitida y enviada a la AEAT"));
     setMode(null);
     openInvoice(id);
   };
@@ -59,7 +60,7 @@ export function StayInvoices({
   return (
     <section className="space-y-3">
       <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <FileText className="h-4 w-4" /> Factura
+        <FileText className="h-4 w-4" /> {t("Factura")}
       </h3>
 
       {invoices?.map((i) => (
@@ -69,10 +70,10 @@ export function StayInvoices({
         >
           <div className="min-w-0 flex-1">
             <p className="font-medium">
-              {INVOICE_TYPES[i.type]} <span className="font-mono text-xs">{i.number}</span>
+              {t(INVOICE_TYPES[i.type])} <span className="font-mono text-xs">{i.number}</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              {eur(Number(i.total))} · {INVOICE_STATUS[i.status]}
+              {eur(Number(i.total))} · {t(INVOICE_STATUS[i.status])}
               {i.recipient ? ` · ${i.recipient.name}` : ""}
             </p>
             {i.record?.error && i.record.status !== "accepted" && (
@@ -84,11 +85,11 @@ export function StayInvoices({
           </div>
           <RecordBadge inv={i} />
           <Button size="sm" variant="outline" onClick={() => openInvoice(i.id)}>
-            <ExternalLink className="h-4 w-4" /> Ver
+            <ExternalLink className="h-4 w-4" /> {t("Ver")}
           </Button>
           {canOperate && i.status === "issued" && i.type === "F2" && (
             <Button size="sm" variant="ghost" onClick={() => setMode("exchange")}>
-              Pasar a completa
+              {t("Pasar a completa")}
             </Button>
           )}
           {canOperate &&
@@ -102,13 +103,13 @@ export function StayInvoices({
                   actions.resubmit.mutate(
                     { invoiceId: i.id },
                     {
-                      onSuccess: () => toast.success("Reenviada a la AEAT"),
-                      onError: (e) => toast.error(e.message),
+                      onSuccess: () => toast.success(t("Reenviada a la AEAT")),
+                      onError: (e) => toast.error(t(e.message)),
                     },
                   )
                 }
               >
-                <RotateCcw className="h-4 w-4" /> Reenviar
+                <RotateCcw className="h-4 w-4" /> {t("Reenviar")}
               </Button>
             )}
         </div>
@@ -122,7 +123,7 @@ export function StayInvoices({
           onSubmit={(recipient) =>
             actions.exchange.mutate(
               { invoiceId: live.id, recipient },
-              { onSuccess: done, onError: (e) => toast.error(e.message) },
+              { onSuccess: done, onError: (e) => toast.error(t(e.message)) },
             )
           }
         />
@@ -131,7 +132,7 @@ export function StayInvoices({
       {!live && canOperate && preview && (
         <div className="space-y-3 rounded-md border p-3 text-sm">
           <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">A facturar (IVA incluido)</span>
+            <span className="text-muted-foreground">{t("A facturar (IVA incluido)")}</span>
             <span className="text-lg font-semibold tabular-nums">{eur(total)}</span>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -141,7 +142,8 @@ export function StayInvoices({
           </p>
           {preview.pending_charges > 0 && (
             <p className="text-xs text-destructive">
-              Hay {preview.pending_charges} cargo(s) pedidos por el huésped sin confirmar.
+              {t("Hay")} {preview.pending_charges}{" "}
+              {t("cargo(s) pedidos por el huésped sin confirmar.")}
             </p>
           )}
           {mode === "full" ? (
@@ -152,7 +154,7 @@ export function StayInvoices({
               onSubmit={(recipient) =>
                 actions.issue.mutate(
                   { reservationId, recipient },
-                  { onSuccess: done, onError: (e) => toast.error(e.message) },
+                  { onSuccess: done, onError: (e) => toast.error(t(e.message)) },
                 )
               }
             />
@@ -174,23 +176,24 @@ export function StayInvoices({
                 onClick={() =>
                   actions.issue.mutate(
                     { reservationId, recipient: null },
-                    { onSuccess: done, onError: (e) => toast.error(e.message) },
+                    { onSuccess: done, onError: (e) => toast.error(t(e.message)) },
                   )
                 }
               >
-                Factura simplificada
+                {t("Factura simplificada")}
               </Button>
               <Button
                 disabled={total <= 0 || preview.pending_charges > 0}
                 onClick={() => setMode("full")}
               >
-                Factura con datos del cliente
+                {t("Factura con datos del cliente")}
               </Button>
             </div>
           )}
           {!simplifiedOk && (
             <p className="text-xs text-muted-foreground">
-              Por encima de {eur(Number(settings.simplified_limit))} hace falta factura completa.
+              {t("Por encima de")} {eur(Number(settings.simplified_limit))}{" "}
+              {t("hace falta factura completa.")}
             </p>
           )}
         </div>

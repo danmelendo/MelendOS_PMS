@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { demoAccounts, demoSignIn } from "@/lib/demo-access";
+import { t } from "@/lib/i18n";
 
 /**
  * "Enter as…" for the demo: a list of fictitious accounts instead of a
@@ -26,7 +27,7 @@ export function DemoAccountPicker({
       await demoSignIn(email);
       onSignedIn?.();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(t((e as Error).message));
     } finally {
       setBusy(false);
     }
@@ -43,7 +44,7 @@ export function DemoAccountPicker({
               : "mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400"
           }
         >
-          Entrar como
+          {t("Entrar como")}
         </span>
         <select
           value={email}
@@ -71,10 +72,12 @@ export function DemoAccountPicker({
             : "flex w-full items-center justify-center gap-2 bg-[var(--brand)] py-3 font-semibold text-white disabled:opacity-50"
         }
       >
-        <LogIn className="h-4 w-4" /> {busy ? "Entrando…" : "Entrar"}
+        <LogIn className="h-4 w-4" /> {busy ? t("Entrando…") : t("Entrar")}
       </button>
       <p className={panel ? "text-xs text-muted-foreground" : "text-xs text-neutral-400"}>
-        Acceso de demostración con datos ficticios. En producción se entra con email y contraseña.
+        {t(
+          "Acceso de demostración con datos ficticios. En producción se entra con email y contraseña.",
+        )}
       </p>
     </div>
   );

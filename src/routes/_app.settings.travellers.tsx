@@ -3,6 +3,7 @@ import { SesSettingsCard } from "@/components/settings/SesSettingsCard";
 import { SettingsHeader, useSettingsHotel } from "@/components/settings/SettingsHotel";
 import { AdminOnly } from "@/components/settings/AdminOnly";
 import { useSesActions, useSesSettings } from "@/lib/ses";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/settings/travellers")({
   component: TravellersSettingsPage,
@@ -16,13 +17,14 @@ function TravellersSettingsPage() {
     <AdminOnly>
       <div className="space-y-6">
         <SettingsHeader
-          title="SES.HOSPEDAJES"
+          title={t("SES.HOSPEDAJES")}
           description={
             <>
-              Credenciales de la Sede Electrónica, entorno y códigos de establecimiento. Las
-              comunicaciones se siguen en{" "}
+              {t(
+                "Credenciales de la Sede Electrónica, entorno y códigos de establecimiento. Las comunicaciones se siguen en",
+              )}{" "}
               <Link to="/travellers" className="underline">
-                Registro de viajeros
+                {t("Registro de viajeros")}
               </Link>
               .
             </>

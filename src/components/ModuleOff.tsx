@@ -3,6 +3,7 @@ import { Boxes } from "lucide-react";
 import { MODULES, PACKAGES, type Feature } from "@domain/features.ts";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRoles } from "@/lib/roles";
+import { t } from "@/lib/i18n";
 
 /** Shown instead of a page when the selected hotel has not got the module. */
 export function ModuleOff({ feature, hotel }: { feature: Feature; hotel: string }) {
@@ -14,16 +15,16 @@ export function ModuleOff({ feature, hotel }: { feature: Feature; hotel: string 
         <Boxes className="mt-0.5 h-5 w-5 shrink-0 text-info" />
         <div className="space-y-1 text-sm">
           <p className="font-medium">
-            {m.name} no está activo en {hotel}
+            {m.name} {t("no está activo en")} {hotel}
           </p>
           <p className="text-muted-foreground">
-            {m.description} Forma parte del paquete {PACKAGES[m.package].name}.{" "}
+            {m.description} {t("Forma parte del paquete")} {t(PACKAGES[m.package].name)}.{" "}
             {isPlatform ? (
               <Link to="/plan" className="font-medium text-foreground underline">
-                Ver plan y módulos
+                {t("Ver plan y módulos")}
               </Link>
             ) : (
-              "Para activarlo, contacta con Melend/OS."
+              t("Para activarlo, contacta con Melend/OS.")
             )}
           </p>
         </div>

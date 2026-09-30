@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { LifeBuoy, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRoles } from "@/lib/roles";
+import { t } from "@/lib/i18n";
 
 /**
  * Page guard for the sidebar sections: «Configuración» is for hotel management
@@ -14,8 +15,8 @@ export function AdminOnly({ children }: { children: ReactNode }) {
   if (loading) return null;
   if (!isAdmin)
     return (
-      <Notice icon={Lock} title="Solo para dirección">
-        Esta configuración la gestiona la dirección del hotel.
+      <Notice icon={Lock} title={t("Solo para dirección")}>
+        {t("Esta configuración la gestiona la dirección del hotel.")}
       </Notice>
     );
   return <>{children}</>;
@@ -26,9 +27,10 @@ export function PlatformOnly({ children }: { children: ReactNode }) {
   if (loading) return null;
   if (!isPlatform)
     return (
-      <Notice icon={LifeBuoy} title="Lo configura el equipo de Melend/OS">
-        Esta sección la gestiona el soporte de Melend/OS. Si necesitas un cambio, escríbenos y lo
-        hacemos por ti.
+      <Notice icon={LifeBuoy} title={t("Lo configura el equipo de Melend/OS")}>
+        {t(
+          "Esta sección la gestiona el soporte de Melend/OS. Si necesitas un cambio, escríbenos y lo hacemos por ti.",
+        )}
       </Notice>
     );
   return <>{children}</>;

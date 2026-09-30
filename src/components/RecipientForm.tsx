@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { t } from "@/lib/i18n";
 
 const names = new Intl.DisplayNames(["es"], { type: "region" });
 const FOREIGN = COUNTRIES.map(([a2]) => a2)
@@ -63,12 +64,12 @@ export function RecipientForm({
             variant={foreign === x ? "secondary" : "ghost"}
             onClick={() => setForeign(x)}
           >
-            {x ? "Cliente extranjero" : "NIF español"}
+            {x ? t("Cliente extranjero") : t("NIF español")}
           </Button>
         ))}
       </div>
       <div className="space-y-1">
-        <Label htmlFor="rc-name">Nombre o razón social</Label>
+        <Label htmlFor="rc-name">{t("Nombre o razón social")}</Label>
         <Input
           id="rc-name"
           maxLength={120}
@@ -79,7 +80,7 @@ export function RecipientForm({
       {foreign ? (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1">
-            <Label>País</Label>
+            <Label>{t("País")}</Label>
             <Select value={f.country} onValueChange={(v) => setF({ ...f, country: v })}>
               <SelectTrigger>
                 <SelectValue />
@@ -94,7 +95,7 @@ export function RecipientForm({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Documento</Label>
+            <Label>{t("Documento")}</Label>
             <Select
               value={f.id_type}
               onValueChange={(v) => setF({ ...f, id_type: v as typeof f.id_type })}
@@ -105,14 +106,14 @@ export function RecipientForm({
               <SelectContent>
                 {Object.entries(FOREIGN_ID_TYPES).map(([v, l]) => (
                   <SelectItem key={v} value={v}>
-                    {l}
+                    {t(l)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="rc-id">Número</Label>
+            <Label htmlFor="rc-id">{t("Número")}</Label>
             <Input
               id="rc-id"
               maxLength={20}
@@ -123,7 +124,7 @@ export function RecipientForm({
         </div>
       ) : (
         <div className="space-y-1">
-          <Label htmlFor="rc-nif">NIF / CIF</Label>
+          <Label htmlFor="rc-nif">{t("NIF / CIF")}</Label>
           <Input
             id="rc-nif"
             maxLength={9}
@@ -134,7 +135,7 @@ export function RecipientForm({
         </div>
       )}
       <div className="space-y-1">
-        <Label htmlFor="rc-addr">Dirección (opcional)</Label>
+        <Label htmlFor="rc-addr">{t("Dirección (opcional)")}</Label>
         <Input
           id="rc-addr"
           maxLength={200}
@@ -151,7 +152,7 @@ export function RecipientForm({
       )}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          Cancelar
+          {t("Cancelar")}
         </Button>
         <Button
           disabled={busy}
@@ -160,7 +161,7 @@ export function RecipientForm({
             if (!issues.length) onSubmit(recipient);
           }}
         >
-          {busy ? "Emitiendo…" : submitLabel}
+          {busy ? t("Emitiendo…") : submitLabel}
         </Button>
       </div>
     </div>

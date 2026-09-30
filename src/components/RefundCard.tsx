@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { eur } from "@/lib/data";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 // Money paid online for a booking and what can still be given back through
 // the hotel's gateway (payments-refund). Reception and management only.
@@ -60,7 +61,7 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
       setConfirming(false);
       setAmount("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["refundable", reservationId] });
       qc.invalidateQueries({ queryKey: ["pending_refunds"] });
@@ -75,20 +76,20 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
   return (
     <div className="space-y-2 rounded-lg border bg-card p-3 text-xs">
       <p className="flex items-center gap-1.5 font-medium text-foreground">
-        <Undo2 className="h-3.5 w-3.5" /> Pagos online y devoluciones
+        <Undo2 className="h-3.5 w-3.5" /> {t("Pagos online y devoluciones")}
       </p>
       {payments.map((p) => (
         <p key={p.id} className="flex flex-wrap justify-between gap-x-2">
           <span>
-            {p.provider === "redsys" ? "Redsys" : "Stripe"} ·{" "}
-            {new Date(p.created_at).toLocaleDateString("es-ES")}
+            {p.provider === "redsys" ? t("Redsys") : t("Stripe")} ·{" "}
+            {new Date(p.created_at).toLocaleDateString(currentLocale())}
           </span>
           <span className="tabular-nums">
             {eur(Number(p.amount))}
             {Number(p.refunded_amount) > 0 && (
               <span className="text-muted-foreground">
                 {" "}
-                · devueltos {eur(Number(p.refunded_amount))}
+                {t("· devueltos")} {eur(Number(p.refunded_amount))}
               </span>
             )}
           </span>
@@ -98,17 +99,19 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
         <div className="space-y-2 border-t pt-2">
           {confirming ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span>¿Devolver {eur(value)} a la tarjeta? No se puede deshacer.</span>
+              <span>
+                {t("¿Devolver")} {eur(value)} {t("a la tarjeta? No se puede deshacer.")}
+              </span>
               <Button
                 size="sm"
                 variant="destructive"
                 disabled={refund.isPending}
                 onClick={() => refund.mutate(value)}
               >
-                {refund.isPending ? "Devolviendo…" : "Devolver"}
+                {refund.isPending ? t("Devolviendo…") : t("Devolver")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-                No
+                {t("No")}
               </Button>
             </div>
           ) : (
@@ -119,7 +122,7 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
                 placeholder={refundable.toFixed(2)}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                aria-label="Importe a devolver"
+                aria-label={t("Importe a devolver")}
               />
               <Button
                 size="sm"
@@ -127,9 +130,11 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
                 disabled={!valid}
                 onClick={() => setConfirming(true)}
               >
-                Devolver
+                {t("Devolver")}
               </Button>
-              <span className="text-muted-foreground">máx. {eur(refundable)}</span>
+              <span className="text-muted-foreground">
+                {t("máx.")} {eur(refundable)}
+              </span>
             </div>
           )}
         </div>

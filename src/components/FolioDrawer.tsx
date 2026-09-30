@@ -19,9 +19,10 @@ import { eur } from "@/lib/data";
 import { SERVICE_CATEGORIES, useFolioActions, useStaffFolio, type StayService } from "@/lib/folio";
 import { useRoles } from "@/lib/roles";
 import { StayInvoices } from "@/components/StayInvoices";
+import { t, currentLocale } from "@/lib/i18n";
 
 const day = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  new Date(iso).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" });
 
 /**
  * Reception's view of a stay's bill: confirm or void what the guest ordered,
@@ -90,7 +91,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
     }
   };
 
-  const onError = (e: Error) => toast.error(e.message);
+  const onError = (e: Error) => toast.error(t(e.message));
   const r = folio?.reservation;
   const live = folio?.charges.filter((c) => c.status !== "void") ?? [];
   const voided = folio?.charges.filter((c) => c.status === "void") ?? [];
@@ -100,21 +101,21 @@ function FolioBody({ reservationId }: { reservationId: string }) {
       <div className="flex items-center justify-between gap-4 border-b bg-card px-6 py-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-foreground">
-            Cuenta de la estancia
+            {t("Cuenta de la estancia")}
           </p>
           <DialogPrimitive.Title className="truncate text-lg font-semibold tracking-tight">
             {r
               ? `${r.customers?.name ?? "Huésped"} · ${r.rooms?.name ?? ""} ${r.rooms?.building ?? ""}`
-              : "Cargando…"}
+              : t("Cargando…")}
           </DialogPrimitive.Title>
           {r && (
             <p className="text-xs text-muted-foreground">
-              {day(r.start_at)} → {day(r.end_at)} · Ref. {bookingReference(r.id)}
+              {day(r.start_at)} → {day(r.end_at)} {t("· Ref.")} {bookingReference(r.id)}
             </p>
           )}
         </div>
         <DialogPrimitive.Close asChild>
-          <Button variant="ghost" size="icon" aria-label="Cerrar">
+          <Button variant="ghost" size="icon" aria-label={t("Cerrar")}>
             <X className="h-5 w-5" />
           </Button>
         </DialogPrimitive.Close>
@@ -126,11 +127,13 @@ function FolioBody({ reservationId }: { reservationId: string }) {
           {folio.extensions.map((x) => (
             <div key={x.id} className="rounded-md border border-gold/50 bg-gold/5 p-3 text-sm">
               <p className="font-medium">
-                Pide ampliar hasta el {day(`${x.new_check_out}T12:00:00Z`)} · {x.nights}{" "}
+                {t("Pide ampliar hasta el")} {day(`${x.new_check_out}T12:00:00Z`)} · {x.nights}{" "}
                 {x.nights === 1 ? "noche" : "noches"} · {eur(Number(x.amount))}
               </p>
               <p className="text-xs text-muted-foreground">
-                Precio calculado con la tarifa del día; la habitación estaba libre al pedirlo.
+                {t(
+                  "Precio calculado con la tarifa del día; la habitación estaba libre al pedirlo.",
+                )}
               </p>
               <div className="mt-2 flex gap-2">
                 <Button
@@ -139,11 +142,11 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                   onClick={() =>
                     actions.decideExtension.mutate(
                       { id: x.id, approve: true },
-                      { onSuccess: () => toast.success("Estancia ampliada"), onError },
+                      { onSuccess: () => toast.success(t("Estancia ampliada")), onError },
                     )
                   }
                 >
-                  <Check className="mr-1 h-3.5 w-3.5" /> Aprobar
+                  <Check className="mr-1 h-3.5 w-3.5" /> {t("Aprobar")}
                 </Button>
                 <Button
                   size="sm"
@@ -153,7 +156,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                     actions.decideExtension.mutate({ id: x.id, approve: false }, { onError })
                   }
                 >
-                  Rechazar
+                  {t("Rechazar")}
                 </Button>
               </div>
             </div>
@@ -162,11 +165,11 @@ function FolioBody({ reservationId }: { reservationId: string }) {
           {/* Bill */}
           <section>
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-              <Receipt className="h-4 w-4" /> Cuenta
+              <Receipt className="h-4 w-4" /> {t("Cuenta")}
             </h3>
             <div className="divide-y rounded-md border text-sm">
               <div className="flex justify-between gap-3 px-3 py-2">
-                <span>Reserva (alojamiento y extras)</span>
+                <span>{t("Reserva (alojamiento y extras)")}</span>
                 <span className="tabular-nums">{eur(Number(r.total))}</span>
               </div>
               {live.map((c) => (
@@ -179,7 +182,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {SERVICE_CATEGORIES[c.category] ?? c.category} · {day(c.created_at)}
-                        {c.source === "guest" ? " · pedido por el huésped" : ""}
+                        {c.source === "guest" ? t(" · pedido por el huésped") : ""}
                         {c.note ? ` · «${c.note}»` : ""}
                       </p>
                     </div>
@@ -194,7 +197,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                       <Input
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
-                        placeholder="Motivo de la anulación"
+                        placeholder={t("Motivo de la anulación")}
                         className="h-8"
                         autoFocus
                       />
@@ -215,10 +218,10 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                           )
                         }
                       >
-                        Anular
+                        {t("Anular")}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setVoiding(null)}>
-                        Volver
+                        {t("Volver")}
                       </Button>
                     </div>
                   ) : (
@@ -230,12 +233,12 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                           className="h-7"
                           onClick={() =>
                             actions.post.mutate(c.id, {
-                              onSuccess: () => toast.success("Cargo confirmado"),
+                              onSuccess: () => toast.success(t("Cargo confirmado")),
                               onError,
                             })
                           }
                         >
-                          <Check className="mr-1 h-3.5 w-3.5" /> Confirmar pedido
+                          <Check className="mr-1 h-3.5 w-3.5" /> {t("Confirmar pedido")}
                         </Button>
                       )}
                       <button
@@ -246,29 +249,32 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                           setReason(c.status === "requested" ? "No se ha servido" : "");
                         }}
                       >
-                        {c.status === "requested" ? "Rechazar" : "Anular"}
+                        {c.status === "requested" ? t("Rechazar") : t("Anular")}
                       </button>
                     </div>
                   )}
                 </div>
               ))}
               <div className="flex justify-between gap-3 px-3 py-2 text-muted-foreground">
-                <span>Pagado</span>
+                <span>{t("Pagado")}</span>
                 <span className="tabular-nums">−{eur(Number(r.paid_amount))}</span>
               </div>
               <div className="flex justify-between gap-3 bg-muted/40 px-3 py-2 font-semibold">
-                <span>Pendiente</span>
+                <span>{t("Pendiente")}</span>
                 <span className="tabular-nums">{eur(Math.max(folio.balance, 0))}</span>
               </div>
             </div>
             {live.some((c) => c.status === "requested") && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Los pedidos sin confirmar no suman al pendiente.
+                {t("Los pedidos sin confirmar no suman al pendiente.")}
               </p>
             )}
             {voided.length > 0 && (
               <details className="mt-2 text-xs text-muted-foreground">
-                <summary>Anulados ({voided.length})</summary>
+                <summary>
+                  {t("Anulados (")}
+                  {voided.length})
+                </summary>
                 <ul className="mt-1 space-y-0.5">
                   {voided.map((c) => (
                     <li key={c.id} className="line-through">
@@ -283,17 +289,17 @@ function FolioBody({ reservationId }: { reservationId: string }) {
           {/* Add a charge */}
           <section className="space-y-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <Plus className="h-4 w-4" /> Cargar a la habitación
+              <Plus className="h-4 w-4" /> {t("Cargar a la habitación")}
             </h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Servicio</Label>
+                <Label>{t("Servicio")}</Label>
                 <Select value={serviceId} onValueChange={pickService}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="custom">Otro concepto…</SelectItem>
+                    <SelectItem value="custom">{t("Otro concepto…")}</SelectItem>
                     {services?.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         {s.name} · {eur(Number(s.price))}/{s.unit}
@@ -305,16 +311,16 @@ function FolioBody({ reservationId }: { reservationId: string }) {
               {serviceId === "custom" && (
                 <>
                   <div className="space-y-1.5">
-                    <Label>Concepto</Label>
+                    <Label>{t("Concepto")}</Label>
                     <Input
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       maxLength={200}
-                      placeholder="Ej. Botella de vino"
+                      placeholder={t("Ej. Botella de vino")}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Tipo</Label>
+                    <Label>{t("Tipo")}</Label>
                     <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger>
                         <SelectValue />
@@ -322,7 +328,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                       <SelectContent>
                         {Object.entries(SERVICE_CATEGORIES).map(([k, label]) => (
                           <SelectItem key={k} value={k}>
-                            {label}
+                            {t(label)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -331,7 +337,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                 </>
               )}
               <div className="space-y-1.5">
-                <Label>Cantidad</Label>
+                <Label>{t("Cantidad")}</Label>
                 <Input
                   type="number"
                   min={0.5}
@@ -341,7 +347,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Precio unitario (€)</Label>
+                <Label>{t("Precio unitario (€)")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -370,7 +376,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                   },
                   {
                     onSuccess: () => {
-                      toast.success("Cargo añadido");
+                      toast.success(t("Cargo añadido"));
                       pickService("custom");
                       setQty("1");
                     },
@@ -379,7 +385,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                 )
               }
             >
-              Añadir cargo
+              {t("Añadir cargo")}
             </Button>
           </section>
 
@@ -387,11 +393,11 @@ function FolioBody({ reservationId }: { reservationId: string }) {
           {folio.balance > 0 && (
             <section className="space-y-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <CreditCard className="h-4 w-4" /> Cobrar en recepción
+                <CreditCard className="h-4 w-4" /> {t("Cobrar en recepción")}
               </h3>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1.5">
-                  <Label>Importe (€)</Label>
+                  <Label>{t("Importe (€)")}</Label>
                   <Input
                     type="number"
                     min={0.01}
@@ -412,7 +418,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                         { amount: Number(payAmount || folio.balance), method },
                         {
                           onSuccess: () => {
-                            toast.success("Cobro registrado");
+                            toast.success(t("Cobro registrado"));
                             setPayAmount("");
                           },
                           onError,
@@ -420,7 +426,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
                       )
                     }
                   >
-                    {method === "card" ? "Tarjeta (TPV)" : "Efectivo"}
+                    {method === "card" ? t("Tarjeta (TPV)") : t("Efectivo")}
                   </Button>
                 ))}
               </div>
@@ -428,7 +434,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
           )}
           {folio.balance <= 0 && (
             <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-              <Check className="h-4 w-4" /> Cuenta saldada.
+              <Check className="h-4 w-4" /> {t("Cuenta saldada.")}
             </p>
           )}
 

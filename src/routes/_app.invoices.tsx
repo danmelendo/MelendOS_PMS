@@ -28,6 +28,7 @@ import {
   type InvoiceWithRecord,
 } from "@/lib/invoices";
 import { useRoles } from "@/lib/roles";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/invoices")({
   component: InvoicesPage,
@@ -65,11 +66,12 @@ function InvoicesPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <FileText className="h-5 w-5 text-info" /> Facturas
+            <FileText className="h-5 w-5 text-info" /> {t("Facturas")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Facturación VERI*FACTU: cada factura se registra encadenada y se envía a la Agencia
-            Tributaria al momento. Se emiten desde la cuenta de cada estancia.
+            {t(
+              "Facturación VERI*FACTU: cada factura se registra encadenada y se envía a la Agencia Tributaria al momento. Se emiten desde la cuenta de cada estancia.",
+            )}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -97,19 +99,19 @@ function InvoicesPage() {
                       ? toast.error(r.error)
                       : r.waiting
                         ? toast.info(
-                            "La AEAT pide esperar entre envíos: se enviará en unos segundos",
+                            t("La AEAT pide esperar entre envíos: se enviará en unos segundos"),
                           )
                         : toast.success(
                             `Enviados ${r.sent} · registrados ${r.accepted}` +
                               (r.withErrors ? ` · ${r.withErrors} con errores` : "") +
                               (r.rejected ? ` · ${r.rejected} rechazados` : ""),
                           ),
-                  onError: (e) => toast.error(e.message),
+                  onError: (e) => toast.error(t(e.message)),
                 })
               }
             >
               <Send className="h-4 w-4" />{" "}
-              {actions.dispatch.isPending ? "Enviando…" : "Enviar ahora"}
+              {actions.dispatch.isPending ? t("Enviando…") : t("Enviar ahora")}
             </Button>
           )}
         </div>
@@ -119,23 +121,25 @@ function InvoicesPage() {
         <p className="flex items-start gap-2 rounded-md bg-gold/15 px-3 py-2 text-sm text-gold-foreground">
           <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" />
           {settings.environment === "simulated"
-            ? "Modo simulado: las facturas se numeran en una serie de pruebas («P…», sin validez fiscal) y la AEAT se simula en el servidor. Cambia a producción cuando tengas el certificado."
-            : "Entorno de pruebas de la AEAT: las facturas no tienen validez fiscal."}
+            ? t(
+                "Modo simulado: las facturas se numeran en una serie de pruebas («P…», sin validez fiscal) y la AEAT se simula en el servidor. Cambia a producción cuando tengas el certificado.",
+              )
+            : t("Entorno de pruebas de la AEAT: las facturas no tienen validez fiscal.")}
         </p>
       )}
       {!settingsLoading && !settings?.enabled && (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            La facturación VERI*FACTU no está activada en este hotel.
+            {t("La facturación VERI*FACTU no está activada en este hotel.")}
             {isAdmin ? (
               <>
                 {" "}
                 <Link to="/settings/invoicing" className="font-medium text-foreground underline">
-                  Configurarla
+                  {t("Configurarla")}
                 </Link>
               </>
             ) : (
-              " Pídeselo a dirección."
+              t(" Pídeselo a dirección.")
             )}
           </CardContent>
         </Card>
@@ -145,18 +149,22 @@ function InvoicesPage() {
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             <Stat
-              label="Facturado este mes"
+              label={t("Facturado este mes")}
               value={eur(thisMonth.reduce((s, i) => s + Number(i.total), 0))}
             />
-            <Stat label="Pendientes de envío" value={String(pending)} />
-            <Stat label="Rechazadas o con errores" value={String(problems)} alert={problems > 0} />
+            <Stat label={t("Pendientes de envío")} value={String(pending)} />
+            <Stat
+              label={t("Rechazadas o con errores")}
+              value={String(problems)}
+              alert={problems > 0}
+            />
           </div>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-              <CardTitle className="text-base">Emitidas</CardTitle>
+              <CardTitle className="text-base">{t("Emitidas")}</CardTitle>
               <Input
-                placeholder="Buscar número o cliente"
+                placeholder={t("Buscar número o cliente")}
                 className="h-8 max-w-56"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -165,7 +173,7 @@ function InvoicesPage() {
             <CardContent className="p-0">
               {!invoices?.length ? (
                 <p className="px-6 pb-6 text-sm text-muted-foreground">
-                  Aún no hay facturas. Se emiten desde «Cuenta» en cada estancia.
+                  {t("Aún no hay facturas. Se emiten desde «Cuenta» en cada estancia.")}
                 </p>
               ) : (
                 <div className="divide-y">
@@ -184,8 +192,8 @@ function InvoicesPage() {
                           actions.resubmit.mutate(
                             { invoiceId: i.id },
                             {
-                              onSuccess: () => toast.success("Se reenviará a la AEAT"),
-                              onError: (e) => toast.error(e.message),
+                              onSuccess: () => toast.success(t("Se reenviará a la AEAT")),
+                              onError: (e) => toast.error(t(e.message)),
                             },
                           )
                         }
@@ -205,7 +213,7 @@ function InvoicesPage() {
                                       setOpen(null);
                                       openInvoice(id);
                                     },
-                                    onError: (e) => toast.error(e.message),
+                                    onError: (e) => toast.error(t(e.message)),
                                   },
                                 )
                               }
@@ -223,7 +231,7 @@ function InvoicesPage() {
                                       setOpen(null);
                                       openInvoice(id);
                                     },
-                                    onError: (e) => toast.error(e.message),
+                                    onError: (e) => toast.error(t(e.message)),
                                   },
                                 )
                               }
@@ -240,10 +248,10 @@ function InvoicesPage() {
                                     onSuccess: () => {
                                       setOpen(null);
                                       toast.success(
-                                        "Factura anulada; la anulación se envía a la AEAT",
+                                        t("Factura anulada; la anulación se envía a la AEAT"),
                                       );
                                     },
-                                    onError: (e) => toast.error(e.message),
+                                    onError: (e) => toast.error(t(e.message)),
                                   },
                                 )
                               }
@@ -262,9 +270,9 @@ function InvoicesPage() {
 
       {isAdmin && settings?.enabled && (
         <p className="text-sm text-muted-foreground">
-          Datos fiscales, entorno y certificado:{" "}
+          {t("Datos fiscales, entorno y certificado:")}{" "}
           <Link to="/settings/invoicing" className="font-medium text-foreground underline">
-            Configuración → Facturación
+            {t("Configuración → Facturación")}
           </Link>
         </p>
       )}
@@ -309,11 +317,11 @@ function Row({
         <p className="font-medium">
           <span className="font-mono">{i.number}</span>{" "}
           <span className="text-xs font-normal text-muted-foreground">
-            {INVOICE_TYPES[i.type]} · {date(i.issue_date)}
+            {t(INVOICE_TYPES[i.type])} · {date(i.issue_date)}
           </span>
         </p>
         <p className="text-xs text-muted-foreground">
-          {i.recipient?.name ?? "Sin destinatario (simplificada)"} · {i.description}
+          {i.recipient?.name ?? t("Sin destinatario (simplificada)")} · {i.description}
         </p>
         {i.record?.error && i.record.status !== "accepted" && (
           <p className="mt-1 text-xs text-destructive">
@@ -328,27 +336,29 @@ function Row({
       <div className="flex shrink-0 flex-col items-end gap-1">
         <span className="font-semibold tabular-nums">{eur(Number(i.total))}</span>
         <div className="flex gap-1">
-          {i.status !== "issued" && <Badge variant="secondary">{INVOICE_STATUS[i.status]}</Badge>}
+          {i.status !== "issued" && (
+            <Badge variant="secondary">{t(INVOICE_STATUS[i.status])}</Badge>
+          )}
           <RecordBadge inv={i} />
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap gap-1">
         <Button size="sm" variant="outline" onClick={() => openInvoice(i.id)}>
-          <ExternalLink className="h-4 w-4" /> Ver
+          <ExternalLink className="h-4 w-4" /> {t("Ver")}
         </Button>
         {canOperate && live && i.type === "F2" && (
           <Button size="sm" variant="ghost" onClick={() => onOpen("exchange")}>
-            Pasar a completa
+            {t("Pasar a completa")}
           </Button>
         )}
         {canOperate && live && ["F1", "F2", "F3"].includes(i.type) && (
           <Button size="sm" variant="ghost" onClick={() => onOpen("rectify")}>
-            Rectificar
+            {t("Rectificar")}
           </Button>
         )}
         {canOperate && refused && (
           <Button size="sm" variant="ghost" onClick={onResubmit}>
-            <RotateCcw className="h-4 w-4" /> Reenviar
+            <RotateCcw className="h-4 w-4" /> {t("Reenviar")}
           </Button>
         )}
         {isAdmin && canOperate && live && (
@@ -358,7 +368,7 @@ function Row({
             className="text-destructive"
             onClick={() => onOpen("cancel")}
           >
-            Anular
+            {t("Anular")}
           </Button>
         )}
       </div>
@@ -390,12 +400,13 @@ function RectifyForm({
   return (
     <div className="space-y-3 rounded-md border border-info/40 bg-info/5 p-4 text-sm">
       <p className="text-xs text-muted-foreground">
-        Factura rectificativa por diferencias: el importe (IVA incluido) se suma a la factura
-        original; en negativo, se descuenta (una devolución, un error de precio).
+        {t(
+          "Factura rectificativa por diferencias: el importe (IVA incluido) se suma a la factura original; en negativo, se descuenta (una devolución, un error de precio).",
+        )}
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="space-y-1 sm:col-span-2">
-          <Label>Concepto</Label>
+          <Label>{t("Concepto")}</Label>
           <Input
             value={f.description}
             maxLength={200}
@@ -403,7 +414,7 @@ function RectifyForm({
           />
         </div>
         <div className="space-y-1">
-          <Label>Importe (€)</Label>
+          <Label>{t("Importe (€)")}</Label>
           <Input
             inputMode="decimal"
             placeholder="-25,00"
@@ -427,7 +438,7 @@ function RectifyForm({
           </Select>
         </div>
         <div className="space-y-1 sm:col-span-2">
-          <Label>Motivo</Label>
+          <Label>{t("Motivo")}</Label>
           <Input
             value={f.reason}
             maxLength={300}
@@ -437,7 +448,7 @@ function RectifyForm({
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          Cancelar
+          {t("Cancelar")}
         </Button>
         <Button
           disabled={
@@ -462,7 +473,7 @@ function RectifyForm({
             })
           }
         >
-          {busy ? "Emitiendo…" : "Emitir rectificativa"}
+          {busy ? t("Emitiendo…") : t("Emitir rectificativa")}
         </Button>
       </div>
     </div>
@@ -482,24 +493,24 @@ function CancelForm({
   return (
     <div className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm">
       <p className="text-xs text-muted-foreground">
-        Anular es para una factura expedida por error, sin venta real. Si hay que corregir un
-        importe, emite una rectificativa. La anulación queda registrada y se envía a la AEAT; no se
-        puede deshacer.
+        {t(
+          "Anular es para una factura expedida por error, sin venta real. Si hay que corregir un importe, emite una rectificativa. La anulación queda registrada y se envía a la AEAT; no se puede deshacer.",
+        )}
       </p>
       <div className="space-y-1">
-        <Label>Motivo</Label>
+        <Label>{t("Motivo")}</Label>
         <Input value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          Volver
+          {t("Volver")}
         </Button>
         <Button
           variant="destructive"
           disabled={busy || !reason.trim()}
           onClick={() => onSubmit(reason.trim())}
         >
-          Anular factura
+          {t("Anular factura")}
         </Button>
       </div>
     </div>

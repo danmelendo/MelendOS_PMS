@@ -36,6 +36,7 @@ import {
 import { eur, useRooms } from "@/lib/data";
 import { CHANNELS, PERIODS, periodRange, useStayFacts, type Period } from "@/lib/reports";
 import { CANCELLATION_CATEGORIES, isCancellationCategory } from "@domain/cancellations.ts";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/reports")({
   component: ReportsPage,
@@ -52,7 +53,7 @@ const C = {
 
 const eurCompact = (v: number) =>
   v >= 100_000
-    ? new Intl.NumberFormat("es-ES", {
+    ? new Intl.NumberFormat(currentLocale(), {
         style: "currency",
         currency: "EUR",
         notation: "compact",
@@ -61,9 +62,15 @@ const eurCompact = (v: number) =>
     : eur(v);
 const pct = (v: number, digits = 0) => `${(v * 100).toFixed(digits)} %`;
 const monthLabel = (m: string) =>
-  new Date(`${m}-01T12:00:00Z`).toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
+  new Date(`${m}-01T12:00:00Z`).toLocaleDateString(currentLocale(), {
+    month: "short",
+    year: "2-digit",
+  });
 const dayLabel = (d: string) =>
-  new Date(`${d}T12:00:00Z`).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  new Date(`${d}T12:00:00Z`).toLocaleDateString(currentLocale(), {
+    day: "numeric",
+    month: "short",
+  });
 
 function ReportsPage() {
   const [period, setPeriod] = useState<Period>("12m");
@@ -169,10 +176,10 @@ function ReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Informes</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("Informes")}</h1>
           <p className="text-sm text-muted-foreground">
-            Ocupación, ingresos y comportamiento de reserva
-            {period === "ahead" ? " · reservas ya confirmadas" : ""}
+            {t("Ocupación, ingresos y comportamiento de reserva")}
+            {period === "ahead" ? t(" · reservas ya confirmadas") : ""}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -182,7 +189,7 @@ function ReportsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los hoteles</SelectItem>
+                <SelectItem value="all">{t("Todos los hoteles")}</SelectItem>
                 {hotels.map((h) => (
                   <SelectItem key={h.id} value={h.id}>
                     {h.name}
@@ -198,7 +205,7 @@ function ReportsPage() {
             <SelectContent>
               {Object.entries(PERIODS).map(([k, label]) => (
                 <SelectItem key={k} value={k}>
-                  {label}
+                  {t(label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -207,14 +214,14 @@ function ReportsPage() {
       </div>
 
       {error ? (
-        <p className="text-sm text-destructive">No se pudieron cargar los datos.</p>
+        <p className="text-sm text-destructive">{t("No se pudieron cargar los datos.")}</p>
       ) : isPending || !view ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">Calculando…</p>
+        <p className="py-16 text-center text-sm text-muted-foreground">{t("Calculando…")}</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6 [&>*]:min-w-0">
             <Kpi
-              label="Ocupación"
+              label={t("Ocupación")}
               value={pct(view.now.occupancy, 1)}
               delta={view.ly && (view.now.occupancy - view.ly.occupancy) * 100}
               unit="pts"
@@ -222,36 +229,36 @@ function ReportsPage() {
             />
             <Kpi
               label="ADR"
-              hint="Precio medio por noche vendida"
+              hint={t("Precio medio por noche vendida")}
               value={eur(view.now.adr)}
               delta={view.ly && relative(view.now.adr, view.ly.adr)}
             />
             <Kpi
-              label="RevPAR"
-              hint="Ingreso por habitación disponible"
+              label={t("RevPAR")}
+              hint={t("Ingreso por habitación disponible")}
               value={eur(view.now.revpar)}
               delta={view.ly && relative(view.now.revpar, view.ly.revpar)}
             />
             <Kpi
-              label="Ingresos alojamiento"
+              label={t("Ingresos alojamiento")}
               value={eurCompact(view.now.revenue)}
               delta={view.ly && relative(view.now.revenue, view.ly.revenue)}
             />
             <Kpi
-              label="Reservas hechas"
+              label={t("Reservas hechas")}
               value={String(view.now.bookings)}
               hint={`${pct(view.now.cancelRate)} canceladas`}
               delta={view.ly && relative(view.now.bookings, view.ly.bookings)}
             />
             <Kpi
-              label="Antelación media"
+              label={t("Antelación media")}
               value={`${Math.round(view.now.avgLeadDays)} días`}
               hint={`Estancia media ${view.now.avgLengthOfStay.toFixed(1)} noches`}
             />
           </div>
 
           <ChartCard
-            title={view.smooth > 1 ? "Ocupación (media de 7 días)" : "Ocupación diaria"}
+            title={view.smooth > 1 ? t("Ocupación (media de 7 días)") : t("Ocupación diaria")}
             legend={[
               { color: C.navy, label: period === "ahead" ? "En cartera" : "Este periodo" },
               { color: C.gold, label: "Año anterior", dashed: true },
@@ -316,7 +323,7 @@ function ReportsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
             <ChartCard
-              title="ADR y RevPAR por mes"
+              title={t("ADR y RevPAR por mes")}
               legend={[
                 { color: C.sky, label: "RevPAR" },
                 { color: C.navy, label: "ADR" },
@@ -365,7 +372,7 @@ function ReportsPage() {
             </ChartCard>
 
             <ChartCard
-              title="Reservas y cancelaciones por mes de reserva"
+              title={t("Reservas y cancelaciones por mes de reserva")}
               legend={[
                 { color: C.navy, label: "Reservas" },
                 { color: C.gold, label: "Canceladas" },
@@ -407,7 +414,7 @@ function ReportsPage() {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Con cuánta antelación reservan">
+            <ChartCard title={t("Con cuánta antelación reservan")}>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={view.lead} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                   <CartesianGrid stroke={C.grid} vertical={false} />
@@ -434,7 +441,7 @@ function ReportsPage() {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Canal de reserva">
+            <ChartCard title={t("Canal de reserva")}>
               <div className="space-y-3 py-2">
                 {channels.map((c) => (
                   <div key={c.name}>
@@ -453,13 +460,15 @@ function ReportsPage() {
                   </div>
                 ))}
                 {!channels.length && (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Sin reservas.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    {t("Sin reservas.")}
+                  </p>
                 )}
               </div>
             </ChartCard>
           </div>
 
-          <ChartCard title="Motivos de cancelación">
+          <ChartCard title={t("Motivos de cancelación")}>
             <div className="grid gap-x-8 gap-y-3 py-2 md:grid-cols-2">
               {cancelReasons.map((c) => (
                 <div key={c.name}>
@@ -479,7 +488,7 @@ function ReportsPage() {
               ))}
               {!cancelReasons.length && (
                 <p className="py-6 text-center text-sm text-muted-foreground md:col-span-2">
-                  Sin cancelaciones en el periodo.
+                  {t("Sin cancelaciones en el periodo.")}
                 </p>
               )}
             </div>
@@ -487,17 +496,17 @@ function ReportsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Habitaciones por ingresos</CardTitle>
+              <CardTitle className="text-base">{t("Habitaciones por ingresos")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[28rem] text-sm">
                   <thead className="border-y bg-muted/30">
                     <tr>
-                      <th className="p-2 pl-4 text-left">Habitación</th>
-                      <th className="p-2 text-right">Noches</th>
-                      <th className="p-2 text-right">Ocupación</th>
-                      <th className="p-2 pr-4 text-right">Ingresos</th>
+                      <th className="p-2 pl-4 text-left">{t("Habitación")}</th>
+                      <th className="p-2 text-right">{t("Noches")}</th>
+                      <th className="p-2 text-right">{t("Ocupación")}</th>
+                      <th className="p-2 pr-4 text-right">{t("Ingresos")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -514,7 +523,7 @@ function ReportsPage() {
                     {!topRooms.length && (
                       <tr>
                         <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                          Sin datos.
+                          {t("Sin datos.")}
                         </td>
                       </tr>
                     )}
@@ -559,7 +568,7 @@ function Kpi({
                   ? "font-medium text-emerald-700 dark:text-emerald-400"
                   : "font-medium text-red-600 dark:text-red-400"
               }
-              title="Frente al mismo periodo del año anterior"
+              title={t("Frente al mismo periodo del año anterior")}
             >
               {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)} {unit === "pts" ? "pts" : "%"}
             </span>
@@ -598,7 +607,7 @@ function ChartCard({
                     borderRadius: 2,
                   }}
                 />
-                {l.label}
+                {t(l.label)}
               </span>
             ))}
           </div>

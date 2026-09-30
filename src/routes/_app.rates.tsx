@@ -28,6 +28,7 @@ import { useRoles } from "@/lib/roles";
 import { Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/rates")({
   component: RatesPage,
@@ -42,16 +43,16 @@ function RatesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tarifas</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Tarifas")}</h1>
         <p className="text-sm text-muted-foreground">
-          Precio por noche de cada tipo de habitación y reglas de precio dinámico
+          {t("Precio por noche de cada tipo de habitación y reglas de precio dinámico")}
         </p>
       </div>
 
       <Tabs defaultValue="nightly">
         <TabsList>
-          <TabsTrigger value="nightly">Por noche</TabsTrigger>
-          <TabsTrigger value="dynamic">Dinámicas</TabsTrigger>
+          <TabsTrigger value="nightly">{t("Por noche")}</TabsTrigger>
+          <TabsTrigger value="dynamic">{t("Dinámicas")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nightly">
@@ -91,9 +92,9 @@ function NightlyTable() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rate_nightly"] });
-      toast.success("Tarifa guardada");
+      toast.success(t("Tarifa guardada"));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   return (
@@ -102,9 +103,9 @@ function NightlyTable() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b">
             <tr>
-              <th className="p-2 text-left">Tipo de habitación</th>
-              <th className="p-2 text-right">Dom–jue (€/noche)</th>
-              <th className="p-2 text-right">Vie–sáb (€/noche)</th>
+              <th className="p-2 text-left">{t("Tipo de habitación")}</th>
+              <th className="p-2 text-right">{t("Dom–jue (€/noche)")}</th>
+              <th className="p-2 text-right">{t("Vie–sáb (€/noche)")}</th>
             </tr>
           </thead>
           <tbody>
@@ -129,7 +130,7 @@ function NightlyTable() {
                         <Input
                           type="number"
                           defaultValue={r.weekend_price ?? ""}
-                          placeholder="Igual"
+                          placeholder={t("Igual")}
                           className="h-8 text-right tabular-nums max-w-[110px] ml-auto"
                           onBlur={(e) =>
                             update.mutate({
@@ -144,7 +145,7 @@ function NightlyTable() {
                     </>
                   ) : (
                     <td colSpan={2} className="p-2 text-right text-muted-foreground">
-                      Sin tarifa por noche
+                      {t("Sin tarifa por noche")}
                     </td>
                   )}
                 </tr>
@@ -183,9 +184,9 @@ function DynamicRulesPanel() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dynamic_rules"] });
       setOpen(false);
-      toast.success("Regla creada");
+      toast.success(t("Regla creada"));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const toggle = useMutation({
@@ -207,10 +208,12 @@ function DynamicRulesPanel() {
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Se aplican noche a noche sobre la tarifa base. Las de fecha y ocupación se acumulan.
+          {t(
+            "Se aplican noche a noche sobre la tarifa base. Las de fecha y ocupación se acumulan.",
+          )}
         </p>
         <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Nueva regla
+          <Plus className="mr-2 h-4 w-4" /> {t("Nueva regla")}
         </Button>
       </div>
 
@@ -220,7 +223,9 @@ function DynamicRulesPanel() {
           return (
             <Card key={r.id}>
               <CardContent className="p-3 flex items-center gap-3 flex-wrap">
-                <Badge variant="outline">{r.type === "occupancy" ? "Ocupación" : "Fecha"}</Badge>
+                <Badge variant="outline">
+                  {r.type === "occupancy" ? t("Ocupación") : t("Fecha")}
+                </Badge>
                 <div className="font-medium">{r.name}</div>
                 <div className="text-sm text-muted-foreground">
                   {r.type === "occupancy"
@@ -249,7 +254,7 @@ function DynamicRulesPanel() {
         {!data?.length && (
           <Card>
             <CardContent className="p-6 text-center text-sm text-muted-foreground">
-              Sin reglas. Crea la primera.
+              {t("Sin reglas. Crea la primera.")}
             </CardContent>
           </Card>
         )}
@@ -258,31 +263,31 @@ function DynamicRulesPanel() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nueva regla dinámica</DialogTitle>
+            <DialogTitle>{t("Nueva regla dinámica")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Tipo</Label>
+              <Label>{t("Tipo")}</Label>
               <Select value={type} onValueChange={(v) => setType(v as "occupancy" | "date")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="occupancy">Por ocupación</SelectItem>
-                  <SelectItem value="date">Por fecha</SelectItem>
+                  <SelectItem value="occupancy">{t("Por ocupación")}</SelectItem>
+                  <SelectItem value="date">{t("Por fecha")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Nombre</Label>
+              <Label>{t("Nombre")}</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ej. Temporada alta, Alta ocupación"
+                placeholder={t("Ej. Temporada alta, Alta ocupación")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Recargo (%)</Label>
+              <Label>{t("Recargo (%)")}</Label>
               <Input
                 type="number"
                 value={multiplier}
@@ -291,7 +296,7 @@ function DynamicRulesPanel() {
             </div>
             {type === "occupancy" ? (
               <div className="space-y-1.5">
-                <Label>Umbral de ocupación (%)</Label>
+                <Label>{t("Umbral de ocupación (%)")}</Label>
                 <Input
                   type="number"
                   value={threshold}
@@ -301,11 +306,11 @@ function DynamicRulesPanel() {
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <Label>Desde</Label>
+                  <Label>{t("Desde")}</Label>
                   <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Hasta</Label>
+                  <Label>{t("Hasta")}</Label>
                   <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
                 </div>
               </div>
@@ -313,10 +318,10 @@ function DynamicRulesPanel() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
+              {t("Cancelar")}
             </Button>
             <Button onClick={() => create.mutate()} disabled={!name}>
-              Crear
+              {t("Crear")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRoles } from "@/lib/roles";
 import { Wand2 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/admin/manual")({
   component: ManualReservationPage,
@@ -20,10 +21,11 @@ function ManualReservationPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Reserva manual</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Reserva manual")}</h1>
         <p className="text-sm text-muted-foreground">
-          Crea reservas con salida y precio editables. Para excepciones que recepción no puede hacer
-          desde el flujo normal.
+          {t(
+            "Crea reservas con salida y precio editables. Para excepciones que recepción no puede hacer desde el flujo normal.",
+          )}
         </p>
       </div>
 
@@ -31,18 +33,19 @@ function ManualReservationPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wand2 className="h-5 w-5 text-gold" />
-            ¿Qué puedes hacer aquí?
+
+            {t("¿Qué puedes hacer aquí?")}
           </CardTitle>
-          <CardDescription>Sólo administradores</CardDescription>
+          <CardDescription>{t("Sólo administradores")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <ul className="text-sm space-y-1.5 list-disc pl-5 text-muted-foreground">
-            <li>Definir una hora de salida libre (por ejemplo, un late checkout).</li>
-            <li>Sobrescribir el total final con el precio que quieras.</li>
-            <li>Saltarse la separación obligatoria de 15 min entre reservas.</li>
+            <li>{t("Definir una hora de salida libre (por ejemplo, un late checkout).")}</li>
+            <li>{t("Sobrescribir el total final con el precio que quieras.")}</li>
+            <li>{t("Saltarse la separación obligatoria de 15 min entre reservas.")}</li>
           </ul>
           <Button onClick={() => setOpen(true)}>
-            <Wand2 className="mr-2 h-4 w-4" /> Crear reserva manual
+            <Wand2 className="mr-2 h-4 w-4" /> {t("Crear reserva manual")}
           </Button>
         </CardContent>
       </Card>

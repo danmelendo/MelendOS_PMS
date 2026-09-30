@@ -8,6 +8,7 @@ import { useExtras, eur, EXTRA_CATEGORY_LABELS } from "@/lib/data";
 import { useRoles } from "@/lib/roles";
 import { Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/extras")({
   component: ExtrasPage,
@@ -33,7 +34,7 @@ function ExtrasPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["extras"] });
-      toast.success("Guardado");
+      toast.success(t("Guardado"));
     },
   });
 
@@ -45,22 +46,22 @@ function ExtrasPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Extras</h1>
-        <p className="text-sm text-muted-foreground">Catálogo editable de extras</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Extras")}</h1>
+        <p className="text-sm text-muted-foreground">{t("Catálogo editable de extras")}</p>
       </div>
 
       {cats.map((c) => (
         <Card key={c}>
           <CardHeader>
-            <CardTitle className="text-base">{CATEGORY_LABELS[c]}</CardTitle>
+            <CardTitle className="text-base">{t(CATEGORY_LABELS[c])}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="bg-muted/30 border-y">
                 <tr>
-                  <th className="p-2 text-left">Nombre</th>
-                  <th className="p-2 text-right">Precio</th>
-                  <th className="p-2 text-right">Activo</th>
+                  <th className="p-2 text-left">{t("Nombre")}</th>
+                  <th className="p-2 text-right">{t("Precio")}</th>
+                  <th className="p-2 text-right">{t("Activo")}</th>
                 </tr>
               </thead>
               <tbody>

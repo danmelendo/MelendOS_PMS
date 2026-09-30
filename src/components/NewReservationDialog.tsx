@@ -33,6 +33,7 @@ import { calculateNightlyPrice, type PriceBreakdown } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BedDouble, CalendarIcon, Gift, Minus, Plus, ShieldAlert, Users, X } from "lucide-react";
+import { t, currentLocale } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -432,7 +433,7 @@ export function NewReservationDialog({
       qc.invalidateQueries({ queryKey: ["reservations"] });
       onOpenChange(false);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   // Total shown to the user: the manual override (if a valid number is set)
@@ -452,7 +453,7 @@ export function NewReservationDialog({
     extras?.filter((e) => breakdown?.giftedExtraIds.includes(e.id) && !extraQty[e.id]) ?? [];
   const nightsLabel = `${nightsCount} ${nightsCount === 1 ? "noche" : "noches"}`;
   const fmtDay = (d: Date) =>
-    d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
+    d.toLocaleDateString(currentLocale(), { weekday: "short", day: "numeric", month: "short" });
   const selectedDate = date ? new Date(`${date}T00:00:00`) : undefined;
   const canSave = !!roomId && !!startAt && !create.isPending;
 
@@ -468,14 +469,14 @@ export function NewReservationDialog({
           <div className="flex items-center justify-between gap-4 border-b bg-card px-6 py-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-foreground">
-                {isEdit ? "Editar reserva" : isAdmin ? "Reserva manual" : "Nueva reserva"}
+                {isEdit ? t("Editar reserva") : isAdmin ? t("Reserva manual") : t("Nueva reserva")}
               </p>
               <DialogPrimitive.Title className="truncate text-lg font-semibold tracking-tight">
-                {room ? `${room.name} · ${room.building}` : "Selecciona fechas y habitación"}
+                {room ? `${room.name} · ${room.building}` : t("Selecciona fechas y habitación")}
               </DialogPrimitive.Title>
             </div>
             <DialogPrimitive.Close asChild>
-              <Button variant="ghost" size="icon" aria-label="Cerrar">
+              <Button variant="ghost" size="icon" aria-label={t("Cerrar")}>
                 <X className="h-5 w-5" />
               </Button>
             </DialogPrimitive.Close>
@@ -487,37 +488,37 @@ export function NewReservationDialog({
               {canOverride && (
                 <div className="space-y-3 rounded-lg border border-gold/50 bg-gold/10 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-gold-foreground">
-                    <ShieldAlert className="h-4 w-4" /> Override de administración
+                    <ShieldAlert className="h-4 w-4" /> {t("Override de administración")}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Salida (opcional)">
+                    <Field label={t("Salida (opcional)")}>
                       <Input
                         type="datetime-local"
                         value={overrideEnd}
                         onChange={(e) => setOverrideEnd(e.target.value)}
                       />
                     </Field>
-                    <Field label="Total final € (opcional)">
+                    <Field label={t("Total final € (opcional)")}>
                       <Input
                         inputMode="decimal"
-                        placeholder="Calculado automáticamente"
+                        placeholder={t("Calculado automáticamente")}
                         value={overrideTotal}
                         onChange={(e) => setOverrideTotal(e.target.value)}
                       />
                     </Field>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    La reserva se marca como manual y se salta la separación de limpieza.
+                    {t("La reserva se marca como manual y se salta la separación de limpieza.")}
                   </p>
                 </div>
               )}
 
               <Section
-                title="Estancia"
+                title={t("Estancia")}
                 hint={`Check-in ${CHECKIN_HOUR}:00 · check-out ${CHECKOUT_HOUR}:00`}
               >
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Entrada">
+                  <Field label={t("Entrada")}>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -529,7 +530,7 @@ export function NewReservationDialog({
                           {selectedDate ? (
                             fmtDay(selectedDate)
                           ) : (
-                            <span className="text-muted-foreground">Selecciona fecha</span>
+                            <span className="text-muted-foreground">{t("Selecciona fecha")}</span>
                           )}
                         </Button>
                       </PopoverTrigger>
@@ -543,7 +544,7 @@ export function NewReservationDialog({
                       </PopoverContent>
                     </Popover>
                   </Field>
-                  <Field label="Noches">
+                  <Field label={t("Noches")}>
                     <Select
                       value={String(nightsCount)}
                       onValueChange={(v) => setNightsCount(Number(v))}
@@ -560,21 +561,21 @@ export function NewReservationDialog({
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Huéspedes">
+                  <Field label={t("Huéspedes")}>
                     <Stepper
                       value={people}
                       min={1}
                       max={maxPeople}
                       onChange={setPeople}
-                      label="huéspedes"
+                      label={t("huéspedes")}
                     />
                   </Field>
                 </div>
               </Section>
 
               <Section
-                title="Habitación"
-                hint={startAt ? "Disponibilidad para las fechas elegidas" : undefined}
+                title={t("Habitación")}
+                hint={startAt ? t("Disponibilidad para las fechas elegidas") : undefined}
               >
                 <div className="space-y-4">
                   {roomsByBuilding.map(([building, list]) => (
@@ -611,12 +612,12 @@ export function NewReservationDialog({
                                       : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
                                   )}
                                 >
-                                  {busy ? "Ocupada" : "Libre"}
+                                  {busy ? t("Ocupada") : t("Libre")}
                                 </span>
                               </div>
                               <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                                 <span className="truncate">
-                                  {r.rate_groups?.name ?? "Sin tarifa"} · {r.capacity} pax
+                                  {r.rate_groups?.name ?? t("Sin tarifa")} · {r.capacity} pax
                                 </span>
                                 {rate && (
                                   <span className="shrink-0 tabular-nums text-foreground">
@@ -633,18 +634,18 @@ export function NewReservationDialog({
                 </div>
               </Section>
 
-              <Section title="Huésped">
+              <Section title={t("Huésped")}>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Nombre">
+                  <Field label={t("Nombre")}>
                     <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                   </Field>
-                  <Field label="Teléfono">
+                  <Field label={t("Teléfono")}>
                     <Input
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                     />
                   </Field>
-                  <Field label="Email (opcional)">
+                  <Field label={t("Email (opcional)")}>
                     <Input
                       type="email"
                       value={customerEmail}
@@ -654,7 +655,7 @@ export function NewReservationDialog({
                 </div>
               </Section>
 
-              <Section title="Extras">
+              <Section title={t("Extras")}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {EXTRA_CATEGORIES.map((cat) => {
                     const items = extras?.filter((e) => e.category === cat && e.active) ?? [];
@@ -662,7 +663,7 @@ export function NewReservationDialog({
                     return (
                       <div key={cat} className="space-y-1.5">
                         <div className="text-xs font-medium text-muted-foreground">
-                          {EXTRA_CATEGORY_LABELS[cat]}
+                          {t(EXTRA_CATEGORY_LABELS[cat])}
                         </div>
                         {items.map((ex) => {
                           const q = extraQty[ex.id] ?? 0;
@@ -717,9 +718,9 @@ export function NewReservationDialog({
                 </div>
               </Section>
 
-              <Section title="Operativa">
+              <Section title={t("Operativa")}>
                 <div className="grid gap-3 sm:grid-cols-[200px_minmax(0,1fr)]">
-                  <Field label="Limpieza tras la salida (min)">
+                  <Field label={t("Limpieza tras la salida (min)")}>
                     <Input
                       type="number"
                       min={15}
@@ -730,7 +731,7 @@ export function NewReservationDialog({
                       }
                     />
                   </Field>
-                  <Field label="Notas internas">
+                  <Field label={t("Notas internas")}>
                     <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
                   </Field>
                 </div>
@@ -746,14 +747,14 @@ export function NewReservationDialog({
 
                 <div className="space-y-2 rounded-lg border bg-card p-4 text-sm">
                   <SummaryRow
-                    label="Entrada"
+                    label={t("Entrada")}
                     value={startAt ? `${fmtDay(startAt)} · ${CHECKIN_HOUR}:00` : "—"}
                   />
                   <SummaryRow
-                    label="Salida"
+                    label={t("Salida")}
                     value={endAt ? `${fmtDay(endAt)} · ${CHECKOUT_HOUR}:00` : "—"}
                   />
-                  <SummaryRow label="Huéspedes" value={String(people)} />
+                  <SummaryRow label={t("Huéspedes")} value={String(people)} />
                 </div>
 
                 <div className="space-y-2 rounded-lg border bg-card p-4 text-sm">
@@ -768,7 +769,7 @@ export function NewReservationDialog({
                   />
                   {(breakdown?.dynamicSurcharge ?? 0) > 0 && (
                     <SummaryRow
-                      label="Recargo dinámico"
+                      label={t("Recargo dinámico")}
                       value={eur(breakdown?.dynamicSurcharge)}
                       hint={breakdown?.dynamicReason ?? undefined}
                       tone="gold"
@@ -795,7 +796,10 @@ export function NewReservationDialog({
                   ))}
                   <div className="border-t pt-3">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-semibold">Total{isManualTotal ? " (manual)" : ""}</span>
+                      <span className="font-semibold">
+                        {t("Total")}
+                        {isManualTotal ? t(" (manual)") : ""}
+                      </span>
                       <span className="text-2xl font-semibold tabular-nums tracking-tight">
                         {displayTotal !== null ? eur(displayTotal) : "—"}
                       </span>
@@ -807,11 +811,15 @@ export function NewReservationDialog({
               <div className="flex gap-2 border-t bg-card p-4">
                 <DialogPrimitive.Close asChild>
                   <Button variant="outline" className="flex-1">
-                    Cancelar
+                    {t("Cancelar")}
                   </Button>
                 </DialogPrimitive.Close>
                 <Button className="flex-1" onClick={() => create.mutate()} disabled={!canSave}>
-                  {create.isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear reserva"}
+                  {create.isPending
+                    ? t("Guardando...")
+                    : isEdit
+                      ? t("Guardar cambios")
+                      : t("Crear reserva")}
                 </Button>
               </div>
             </aside>
@@ -920,7 +928,8 @@ function RoomPreview({ room }: { room: RoomRow | undefined }) {
     return (
       <div className="flex aspect-[16/10] flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-card text-sm text-muted-foreground">
         <BedDouble className="h-6 w-6" />
-        Elige una habitación
+
+        {t("Elige una habitación")}
       </div>
     );
   }
@@ -951,7 +960,7 @@ function RoomPreview({ room }: { room: RoomRow | undefined }) {
                 key={f}
                 className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-secondary-foreground"
               >
-                {FEATURE_LABELS[f]}
+                {t(FEATURE_LABELS[f])}
               </span>
             ))}
           </div>

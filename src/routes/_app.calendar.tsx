@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/calendar")({
   component: CalendarPage,
@@ -109,9 +110,9 @@ function CalendarPage() {
   const xOf = (iso: string) =>
     ((startOfDay(new Date(iso)).getTime() - from.getTime()) / DAY_MS + 0.5) * dayW;
 
-  const rangeLabel = `${from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} – ${new Date(
+  const rangeLabel = `${from.toLocaleDateString(currentLocale(), { day: "numeric", month: "short" })} – ${new Date(
     to.getTime() - DAY_MS,
-  ).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`;
+  ).toLocaleDateString(currentLocale(), { day: "numeric", month: "short", year: "numeric" })}`;
 
   return (
     <div className="space-y-4">
@@ -121,7 +122,7 @@ function CalendarPage() {
             variant="outline"
             size="icon"
             onClick={() => shift(-7)}
-            aria-label="Semana anterior"
+            aria-label={t("Semana anterior")}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -133,18 +134,18 @@ function CalendarPage() {
               setFrom(d);
             }}
           >
-            Hoy
+            {t("Hoy")}
           </Button>
           <Button
             variant="outline"
             size="icon"
             onClick={() => shift(7)}
-            aria-label="Semana siguiente"
+            aria-label={t("Semana siguiente")}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <div className="ml-2">
-            <h1 className="text-xl font-semibold leading-tight">Planning</h1>
+            <h1 className="text-xl font-semibold leading-tight">{t("Planning")}</h1>
             <p className="text-xs text-muted-foreground">{rangeLabel}</p>
           </div>
         </div>
@@ -155,7 +156,7 @@ function CalendarPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los hoteles</SelectItem>
+                <SelectItem value="all">{t("Todos los hoteles")}</SelectItem>
                 {hotels.map((h) => (
                   <SelectItem key={h.id} value={h.id}>
                     {h.name}
@@ -172,7 +173,7 @@ function CalendarPage() {
                 setOpen(true);
               }}
             >
-              <Plus className="mr-2 h-4 w-4" /> Nueva reserva
+              <Plus className="mr-2 h-4 w-4" /> {t("Nueva reserva")}
             </Button>
           )}
         </div>
@@ -187,7 +188,7 @@ function CalendarPage() {
                 className="sticky left-0 z-20 shrink-0 border-r bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur"
                 style={{ width: ROOM_COL_W }}
               >
-                Habitación
+                {t("Habitación")}
               </div>
               {days.map((d) => {
                 const isToday = d.getTime() === todayKey;
@@ -203,7 +204,7 @@ function CalendarPage() {
                     style={{ width: dayW }}
                   >
                     <div className="uppercase text-muted-foreground">
-                      {d.toLocaleDateString("es-ES", { weekday: "short" }).replace(".", "")}
+                      {d.toLocaleDateString(currentLocale(), { weekday: "short" }).replace(".", "")}
                     </div>
                     <div className="text-sm tabular-nums">{d.getDate()}</div>
                   </div>
@@ -245,7 +246,7 @@ function CalendarPage() {
                         <button
                           type="button"
                           key={d.getTime()}
-                          aria-label={`Nueva reserva en ${room.name} el ${d.toLocaleDateString("es-ES")}`}
+                          aria-label={`Nueva reserva en ${room.name} el ${d.toLocaleDateString(currentLocale())}`}
                           disabled={!canOperate}
                           className={cn(
                             "absolute top-0 h-full border-r border-border/60 transition-colors hover:bg-primary/5",
@@ -289,7 +290,7 @@ function CalendarPage() {
                           }}
                         >
                           <div className="truncate font-medium">
-                            {r.customers?.name ?? "Sin nombre"}
+                            {r.customers?.name ?? t("Sin nombre")}
                           </div>
                           <div className="truncate opacity-80">
                             {nights} {nights === 1 ? "noche" : "noches"}
@@ -309,10 +310,10 @@ function CalendarPage() {
         {(["pending", "confirmed", "in_progress", "completed"] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className={cn("h-3 w-5 rounded-sm border", STATUS_COLORS[s])} />
-            {STATUS_LABELS[s]}
+            {t(STATUS_LABELS[s])}
           </span>
         ))}
-        <span className="ml-auto">Pulsa una celda libre para crear una reserva.</span>
+        <span className="ml-auto">{t("Pulsa una celda libre para crear una reserva.")}</span>
       </div>
 
       <NewReservationDialog

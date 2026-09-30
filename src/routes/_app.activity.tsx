@@ -13,6 +13,7 @@ import { useStaffHotelModules } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
 import { ATTENTION, bytes, CHANNEL_LABELS, useHotelActivity } from "@/lib/activity";
 import { PlatformOnly } from "@/components/settings/AdminOnly";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/activity")({
   component: () => (
@@ -44,7 +45,7 @@ const STATUS: Record<string, string> = {
   done: "hechos",
 };
 
-const n = (v: number) => Number(v).toLocaleString("es-ES");
+const n = (v: number) => Number(v).toLocaleString(currentLocale());
 const secs = (ms: number | null) => (ms != null ? `${(ms / 1000).toFixed(1)} s` : "—");
 
 function ActivityPage() {
@@ -65,10 +66,12 @@ function ActivityPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Activity className="h-5 w-5 text-info" /> Actividad y consumo
+            <Activity className="h-5 w-5 text-info" /> {t("Actividad y consumo")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Uso de la IA, envíos a la administración y al huésped, almacenamiento y últimos errores.
+            {t(
+              "Uso de la IA, envíos a la administración y al huésped, almacenamiento y últimos errores.",
+            )}
           </p>
         </div>
         <div className="flex gap-2">
@@ -77,9 +80,9 @@ function ActivityPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Últimos 7 días</SelectItem>
-              <SelectItem value="30">Últimos 30 días</SelectItem>
-              <SelectItem value="90">Últimos 90 días</SelectItem>
+              <SelectItem value="7">{t("Últimos 7 días")}</SelectItem>
+              <SelectItem value="30">{t("Últimos 30 días")}</SelectItem>
+              <SelectItem value="90">{t("Últimos 90 días")}</SelectItem>
             </SelectContent>
           </Select>
           {hotels && hotels.length > 1 && (
@@ -104,22 +107,24 @@ function ActivityPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Inteligencia artificial</CardTitle>
+              <CardTitle className="text-base">{t("Inteligencia artificial")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {data.ai.length === 0 ? (
-                <p className="px-6 pb-2 text-sm text-muted-foreground">Sin uso en este periodo.</p>
+                <p className="px-6 pb-2 text-sm text-muted-foreground">
+                  {t("Sin uso en este periodo.")}
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[40rem] text-sm">
                     <thead className="border-y bg-muted/30">
                       <tr>
-                        <th className="p-3 text-left">Uso</th>
-                        <th className="p-3 text-right">Turnos</th>
-                        <th className="p-3 text-right">Tokens (entrada / salida)</th>
-                        <th className="p-3 text-right">Coste</th>
-                        <th className="p-3 text-right">Respuesta (mediana / p95)</th>
-                        <th className="p-3 text-right">Errores</th>
+                        <th className="p-3 text-left">{t("Uso")}</th>
+                        <th className="p-3 text-right">{t("Turnos")}</th>
+                        <th className="p-3 text-right">{t("Tokens (entrada / salida)")}</th>
+                        <th className="p-3 text-right">{t("Coste")}</th>
+                        <th className="p-3 text-right">{t("Respuesta (mediana / p95)")}</th>
+                        <th className="p-3 text-right">{t("Errores")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -131,7 +136,7 @@ function ActivityPage() {
                             {n(a.input_tokens)} / {n(a.output_tokens)}
                           </td>
                           <td className="p-3 text-right tabular-nums">
-                            {Number(a.cost_usd).toLocaleString("es-ES", {
+                            {Number(a.cost_usd).toLocaleString(currentLocale(), {
                               style: "currency",
                               currency: "USD",
                             })}
@@ -151,8 +156,10 @@ function ActivityPage() {
                 </div>
               )}
               <p className="px-6 py-3 text-xs text-muted-foreground">
-                Llamadas de asistentes externos por MCP: {n(data.mcp_calls)}. El coste es el que
-                informa el proveedor del modelo (0 con el modelo local de la demo).
+                {t("Llamadas de asistentes externos por MCP:")} {n(data.mcp_calls)}
+                {t(
+                  ". El coste es el que informa el proveedor del modelo (0 con el modelo local de la demo).",
+                )}
               </p>
             </CardContent>
           </Card>
@@ -166,12 +173,12 @@ function ActivityPage() {
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-1.5 text-sm">
                       {attention && <AlertTriangle className="h-4 w-4 text-destructive" />}
-                      {q.label}
+                      {t(q.label)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-0.5 text-sm">
                     {entries.length === 0 ? (
-                      <p className="text-muted-foreground">Nada en este periodo</p>
+                      <p className="text-muted-foreground">{t("Nada en este periodo")}</p>
                     ) : (
                       entries.map(([s, c]) => (
                         <p
@@ -192,32 +199,32 @@ function ActivityPage() {
           <div className="grid gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Almacenamiento</CardTitle>
+                <CardTitle className="text-sm">{t("Almacenamiento")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-0.5 text-sm">
                 <p className="flex justify-between">
-                  <span>Fotos de la web</span>
+                  <span>{t("Fotos de la web")}</span>
                   <span className="tabular-nums">{bytes(Number(data.storage.media_bytes))}</span>
                 </p>
                 <p className="flex justify-between">
-                  <span>Data lake</span>
+                  <span>{t("Data lake")}</span>
                   <span className="tabular-nums">{bytes(Number(data.storage.lake_bytes))}</span>
                 </p>
               </CardContent>
             </Card>
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Últimos errores</CardTitle>
+                <CardTitle className="text-sm">{t("Últimos errores")}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
                 {data.errors.length === 0 ? (
-                  <p className="text-muted-foreground">Ninguno. Todo en orden.</p>
+                  <p className="text-muted-foreground">{t("Ninguno. Todo en orden.")}</p>
                 ) : (
                   <ul className="space-y-2">
                     {data.errors.map((e, i) => (
                       <li key={i}>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(e.at).toLocaleString("es-ES", {
+                          {new Date(e.at).toLocaleString(currentLocale(), {
                             dateStyle: "short",
                             timeStyle: "short",
                           })}{" "}

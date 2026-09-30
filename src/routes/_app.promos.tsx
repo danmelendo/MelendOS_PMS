@@ -19,6 +19,7 @@ import { useRoles } from "@/lib/roles";
 import { usePromoCodes, formatDiscount, type DiscountType, type PromoCode } from "@/lib/promos";
 import { toast } from "sonner";
 import { Archive, Trash2, Ticket } from "lucide-react";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/promos")({
   component: PromosPage,
@@ -87,7 +88,7 @@ function PromosPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Código creado");
+      toast.success(t("Código creado"));
       setForm((f) => ({ ...f, code: "", discount_value: "", headline: "" }));
     },
     onError: (e: Error) => toast.error(e.message || "No se pudo crear el código"),
@@ -100,7 +101,7 @@ function PromosPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Guardado");
+      toast.success(t("Guardado"));
     },
     onError: (e: Error) => toast.error(e.message || "Error al guardar"),
   });
@@ -112,7 +113,7 @@ function PromosPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Código eliminado");
+      toast.success(t("Código eliminado"));
     },
     onError: (e: Error) => toast.error(e.message || "Error al eliminar"),
   });
@@ -125,7 +126,7 @@ function PromosPage() {
 
   const fmtDate = (iso: string | null) =>
     iso
-      ? new Date(iso).toLocaleDateString("es-ES", {
+      ? new Date(iso).toLocaleDateString(currentLocale(), {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -136,17 +137,17 @@ function PromosPage() {
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Ticket className="h-6 w-6" /> Códigos promocionales
+          <Ticket className="h-6 w-6" /> {t("Códigos promocionales")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Descuentos sobre el precio de la habitación. Los extras nunca se descuentan.
+          {t("Descuentos sobre el precio de la habitación. Los extras nunca se descuentan.")}
         </p>
       </div>
 
       {/* ── Create ── */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Nuevo código</CardTitle>
+          <CardTitle className="text-base">{t("Nuevo código")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -157,7 +158,7 @@ function PromosPage() {
             }}
           >
             <div className="space-y-1.5">
-              <Label htmlFor="code">Nombre del código</Label>
+              <Label htmlFor="code">{t("Nombre del código")}</Label>
               <Input
                 id="code"
                 placeholder="VERANO15"
@@ -169,7 +170,7 @@ function PromosPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Tipo de descuento</Label>
+              <Label>{t("Tipo de descuento")}</Label>
               <Select
                 value={form.discount_type}
                 onValueChange={(v) => setForm((f) => ({ ...f, discount_type: v as DiscountType }))}
@@ -178,15 +179,15 @@ function PromosPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percent">Porcentaje (%)</SelectItem>
-                  <SelectItem value="fixed">Importe fijo (€)</SelectItem>
+                  <SelectItem value="percent">{t("Porcentaje (%)")}</SelectItem>
+                  <SelectItem value="fixed">{t("Importe fijo (€)")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="value">
-                {form.discount_type === "percent" ? "Porcentaje" : "Importe (€)"}
+                {form.discount_type === "percent" ? t("Porcentaje") : t("Importe (€)")}
               </Label>
               <Input
                 id="value"
@@ -200,7 +201,7 @@ function PromosPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="from">Válido desde</Label>
+              <Label htmlFor="from">{t("Válido desde")}</Label>
               <Input
                 id="from"
                 type="date"
@@ -211,7 +212,7 @@ function PromosPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="until">
-                Válido hasta <span className="text-muted-foreground">(opcional)</span>
+                {t("Válido hasta")} <span className="text-muted-foreground">{t("(opcional)")}</span>
               </Label>
               <Input
                 id="until"
@@ -229,7 +230,7 @@ function PromosPage() {
                   onCheckedChange={(single_use) => setForm((f) => ({ ...f, single_use }))}
                 />
                 <Label htmlFor="single" className="cursor-pointer">
-                  Un solo uso
+                  {t("Un solo uso")}
                 </Label>
               </div>
             </div>
@@ -242,7 +243,7 @@ function PromosPage() {
                   onCheckedChange={(published) => setForm((f) => ({ ...f, published }))}
                 />
                 <Label htmlFor="published" className="cursor-pointer">
-                  Publicar en la web
+                  {t("Publicar en la web")}
                 </Label>
               </div>
             </div>
@@ -250,12 +251,13 @@ function PromosPage() {
             {form.published && (
               <div className="space-y-1.5 lg:col-span-2">
                 <Label htmlFor="headline">
-                  Titular en la web <span className="text-muted-foreground">(opcional)</span>
+                  {t("Titular en la web")}{" "}
+                  <span className="text-muted-foreground">{t("(opcional)")}</span>
                 </Label>
                 <Input
                   id="headline"
                   maxLength={120}
-                  placeholder="Escapada de otoño"
+                  placeholder={t("Escapada de otoño")}
                   value={form.headline}
                   onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
                 />
@@ -263,14 +265,14 @@ function PromosPage() {
             )}
 
             <p className="text-xs text-muted-foreground lg:col-span-3">
-              Los códigos publicados aparecen en «Habitaciones en oferta» de tu web de reservas. Los
-              demás solo funcionan si das el código al cliente. Las rebajas por fechas se crean en
-              Tarifas con una regla de fecha en negativo.
+              {t(
+                "Los códigos publicados aparecen en «Habitaciones en oferta» de tu web de reservas. Los demás solo funcionan si das el código al cliente. Las rebajas por fechas se crean en Tarifas con una regla de fecha en negativo.",
+              )}
             </p>
 
             <div className="lg:col-span-3">
               <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Creando…" : "Crear código"}
+                {create.isPending ? t("Creando…") : t("Crear código")}
               </Button>
             </div>
           </form>
@@ -280,23 +282,23 @@ function PromosPage() {
       {/* ── Active codes ── */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Códigos activos</CardTitle>
+          <CardTitle className="text-base">{t("Códigos activos")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {active.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No hay códigos activos.</p>
+            <p className="p-4 text-sm text-muted-foreground">{t("No hay códigos activos.")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[40rem] text-sm">
                 <thead className="bg-muted/30 border-y">
                   <tr>
-                    <th className="p-2 text-left">Código</th>
-                    <th className="p-2 text-right">Descuento</th>
-                    <th className="p-2 text-center">Vigencia</th>
-                    <th className="p-2 text-center">Uso</th>
-                    <th className="p-2 text-center">Activo</th>
-                    <th className="p-2 text-center">En la web</th>
-                    <th className="p-2 text-right">Acciones</th>
+                    <th className="p-2 text-left">{t("Código")}</th>
+                    <th className="p-2 text-right">{t("Descuento")}</th>
+                    <th className="p-2 text-center">{t("Vigencia")}</th>
+                    <th className="p-2 text-center">{t("Uso")}</th>
+                    <th className="p-2 text-center">{t("Activo")}</th>
+                    <th className="p-2 text-center">{t("En la web")}</th>
+                    <th className="p-2 text-right">{t("Acciones")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -308,7 +310,7 @@ function PromosPage() {
                           <button
                             type="button"
                             className="block text-left text-xs text-muted-foreground underline-offset-4 hover:underline"
-                            title="Cambiar el titular que se ve en la web"
+                            title={t("Cambiar el titular que se ve en la web")}
                             onClick={() => {
                               const headline = prompt("Titular en la web", c.headline ?? "");
                               if (headline !== null)
@@ -318,18 +320,21 @@ function PromosPage() {
                                 });
                             }}
                           >
-                            {c.headline || "Añadir titular"}
+                            {c.headline || t("Añadir titular")}
                           </button>
                         )}
                       </td>
                       <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
                       <td className="p-2 text-center text-xs text-muted-foreground">
                         {fmtDate(c.valid_from)} →{" "}
-                        {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
+                        {c.valid_until ? fmtDate(c.valid_until) : t("sin caducidad")}
                       </td>
                       <td className="p-2 text-center">
                         {c.single_use ? (
-                          <Badge variant="outline">1 uso ({c.times_used}/1)</Badge>
+                          <Badge variant="outline">
+                            {t("1 uso (")}
+                            {c.times_used}/1)
+                          </Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             {c.times_used}
@@ -348,7 +353,7 @@ function PromosPage() {
                       <td className="p-2 text-center">
                         <Switch
                           checked={c.published}
-                          aria-label="Publicar en la web"
+                          aria-label={t("Publicar en la web")}
                           onCheckedChange={(published) =>
                             patch.mutate({ id: c.id, patch: { published } })
                           }
@@ -359,7 +364,7 @@ function PromosPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Archivar"
+                            title={t("Archivar")}
                             onClick={() =>
                               patch.mutate({ id: c.id, patch: { archived: true, active: false } })
                             }
@@ -369,7 +374,7 @@ function PromosPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Eliminar"
+                            title={t("Eliminar")}
                             onClick={() => {
                               if (confirm(`¿Eliminar el código ${c.code}?`)) remove.mutate(c.id);
                             }}
@@ -391,18 +396,18 @@ function PromosPage() {
       {archived.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-muted-foreground">Archivados</CardTitle>
+            <CardTitle className="text-base text-muted-foreground">{t("Archivados")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[34rem] text-sm">
                 <thead className="bg-muted/30 border-y">
                   <tr>
-                    <th className="p-2 text-left">Código</th>
-                    <th className="p-2 text-right">Descuento</th>
-                    <th className="p-2 text-center">Vigencia</th>
-                    <th className="p-2 text-center">Usos</th>
-                    <th className="p-2 text-right">Acciones</th>
+                    <th className="p-2 text-left">{t("Código")}</th>
+                    <th className="p-2 text-right">{t("Descuento")}</th>
+                    <th className="p-2 text-center">{t("Vigencia")}</th>
+                    <th className="p-2 text-center">{t("Usos")}</th>
+                    <th className="p-2 text-right">{t("Acciones")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -412,7 +417,7 @@ function PromosPage() {
                       <td className="p-2 text-right tabular-nums">{formatDiscount(c)}</td>
                       <td className="p-2 text-center text-xs">
                         {fmtDate(c.valid_from)} →{" "}
-                        {c.valid_until ? fmtDate(c.valid_until) : "sin caducidad"}
+                        {c.valid_until ? fmtDate(c.valid_until) : t("sin caducidad")}
                       </td>
                       <td className="p-2 text-center">{c.times_used}</td>
                       <td className="p-2">
@@ -420,7 +425,7 @@ function PromosPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Eliminar"
+                            title={t("Eliminar")}
                             onClick={() => {
                               if (confirm(`¿Eliminar definitivamente ${c.code}?`))
                                 remove.mutate(c.id);

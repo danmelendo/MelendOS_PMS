@@ -23,6 +23,7 @@ import {
   type Provider,
 } from "@/lib/payments-config";
 import { AdminOnly } from "@/components/settings/AdminOnly";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/payments")({
   component: () => (
@@ -83,8 +84,8 @@ function PaymentsPage() {
           secret: secret.trim() || undefined,
         },
         {
-          onSuccess: () => toast.success("TPV guardado"),
-          onError: (e: Error) => toast.error(e.message),
+          onSuccess: () => toast.success(t("TPV guardado")),
+          onError: (e: Error) => toast.error(t(e.message)),
         },
       );
     } else {
@@ -96,8 +97,8 @@ function PaymentsPage() {
           secret2: webhook.trim() || undefined,
         },
         {
-          onSuccess: () => toast.success("Stripe guardado"),
-          onError: (e: Error) => toast.error(e.message),
+          onSuccess: () => toast.success(t("Stripe guardado")),
+          onError: (e: Error) => toast.error(t(e.message)),
         },
       );
     }
@@ -108,11 +109,12 @@ function PaymentsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <CreditCard className="h-5 w-5 text-info" /> Cobros y TPV
+            <CreditCard className="h-5 w-5 text-info" /> {t("Cobros y TPV")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Cómo cobras a tus huéspedes. Usa el TPV de tu banco (Redsys) o Stripe. El dinero va a tu
-            cuenta; nosotros no lo tocamos.
+            {t(
+              "Cómo cobras a tus huéspedes. Usa el TPV de tu banco (Redsys) o Stripe. El dinero va a tu cuenta; nosotros no lo tocamos.",
+            )}
           </p>
         </div>
         {hotels && hotels.length > 1 && (
@@ -135,35 +137,36 @@ function PaymentsPage() {
         <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
           <CheckCircle2 className="h-4 w-4 text-primary" />
           <span>
-            Cobrando con <strong>{account.provider === "stripe" ? "Stripe" : "Redsys"}</strong>
+            {t("Cobrando con")}{" "}
+            <strong>{account.provider === "stripe" ? t("Stripe") : t("Redsys")}</strong>
             {account.public_config?.bank_name && account.provider === "redsys"
               ? ` · ${account.public_config.bank_name}`
               : ""}{" "}
-            · {account.test_mode ? "modo de pruebas" : "producción"}
+            · {account.test_mode ? t("modo de pruebas") : t("producción")}
           </span>
         </div>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Pasarela de pago</CardTitle>
+          <CardTitle className="text-base">{t("Pasarela de pago")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Proveedor</Label>
+              <Label>{t("Proveedor")}</Label>
               <Select value={provider} onValueChange={(v) => setProvider(v as Provider)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="redsys">Redsys (TPV de tu banco)</SelectItem>
-                  <SelectItem value="stripe">Stripe</SelectItem>
+                  <SelectItem value="redsys">{t("Redsys (TPV de tu banco)")}</SelectItem>
+                  <SelectItem value="stripe">{t("Stripe")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Entorno</Label>
+              <Label>{t("Entorno")}</Label>
               <Select
                 value={testMode ? "test" : "prod"}
                 onValueChange={(v) => setTestMode(v === "test")}
@@ -172,8 +175,8 @@ function PaymentsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="test">Pruebas</SelectItem>
-                  <SelectItem value="prod">Producción</SelectItem>
+                  <SelectItem value="test">{t("Pruebas")}</SelectItem>
+                  <SelectItem value="prod">{t("Producción")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -182,7 +185,7 @@ function PaymentsPage() {
           {provider === "redsys" ? (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Tu banco</Label>
+                <Label>{t("Tu banco")}</Label>
                 <Select value={bank} onValueChange={setBank}>
                   <SelectTrigger>
                     <SelectValue />
@@ -196,34 +199,35 @@ function PaymentsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Casi todos los bancos españoles usan Redsys. Las credenciales te las da tu banco
-                  al contratar el TPV virtual.
+                  {t(
+                    "Casi todos los bancos españoles usan Redsys. Las credenciales te las da tu banco al contratar el TPV virtual.",
+                  )}
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Número de comercio (FUC)</Label>
+                  <Label>{t("Número de comercio (FUC)")}</Label>
                   <Input
                     inputMode="numeric"
-                    placeholder="9 dígitos"
+                    placeholder={t("9 dígitos")}
                     value={merchant}
                     onChange={(e) => setMerchant(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Terminal</Label>
+                  <Label>{t("Terminal")}</Label>
                   <Input value={terminal} onChange={(e) => setTerminal(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Clave secreta (Base64)</Label>
+                <Label>{t("Clave secreta (Base64)")}</Label>
                 <Input
                   type="password"
                   autoComplete="off"
                   placeholder={
                     account?.has_secret
-                      ? "Guardada · escribe para cambiarla"
-                      : "La clave que da el banco"
+                      ? t("Guardada · escribe para cambiarla")
+                      : t("La clave que da el banco")
                   }
                   value={secret}
                   onChange={(e) => setSecret(e.target.value)}
@@ -233,27 +237,29 @@ function PaymentsPage() {
           ) : (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Clave publicable (pk_…)</Label>
+                <Label>{t("Clave publicable (pk_…)")}</Label>
                 <Input value={publishable} onChange={(e) => setPublishable(e.target.value)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Clave secreta (sk_…)</Label>
+                  <Label>{t("Clave secreta (sk_…)")}</Label>
                   <Input
                     type="password"
                     autoComplete="off"
-                    placeholder={account?.has_secret ? "Guardada · escribe para cambiarla" : "sk_…"}
+                    placeholder={
+                      account?.has_secret ? t("Guardada · escribe para cambiarla") : t("sk_…")
+                    }
                     value={secret}
                     onChange={(e) => setSecret(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Secreto del webhook (whsec_…)</Label>
+                  <Label>{t("Secreto del webhook (whsec_…)")}</Label>
                   <Input
                     type="password"
                     autoComplete="off"
                     placeholder={
-                      account?.has_secret ? "Guardado · escribe para cambiarlo" : "whsec_…"
+                      account?.has_secret ? t("Guardado · escribe para cambiarlo") : t("whsec_…")
                     }
                     value={webhook}
                     onChange={(e) => setWebhook(e.target.value)}
@@ -265,14 +271,17 @@ function PaymentsPage() {
 
           <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-            La clave se guarda cifrada y solo la usa el servidor para cobrar. No se muestra nunca,
-            ni siquiera aquí.
+
+            {t(
+              "La clave se guarda cifrada y solo la usa el servidor para cobrar. No se muestra nunca, ni siquiera aquí.",
+            )}
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <Button onClick={submit} disabled={save.isPending}>
               {save.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              Guardar
+
+              {t("Guardar")}
             </Button>
             {account?.configured && (
               <Button
@@ -280,12 +289,12 @@ function PaymentsPage() {
                 className="text-destructive hover:bg-destructive/10"
                 onClick={() =>
                   disable.mutate(hotel!, {
-                    onSuccess: () => toast.success("Cobros desactivados"),
-                    onError: (e: Error) => toast.error(e.message),
+                    onSuccess: () => toast.success(t("Cobros desactivados")),
+                    onError: (e: Error) => toast.error(t(e.message)),
                   })
                 }
               >
-                Desactivar cobros
+                {t("Desactivar cobros")}
               </Button>
             )}
           </div>

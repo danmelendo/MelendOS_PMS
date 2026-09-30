@@ -17,7 +17,16 @@ export const LANGS: Record<Lang, string> = { es: "Español", en: "English" };
 
 const KEY = "melendos-lang";
 const PANEL_KEY = "melendos-panel-lang";
-const DICT: Record<string, string> = { ...PANEL_EN, ...EN };
+// Same Spanish word, different meaning («Dirección»: address on the web,
+// management in the panel): each side looks in its own dictionary first.
+const WEB_DICT: Record<string, string> = { ...PANEL_EN, ...EN };
+const PANEL_DICT: Record<string, string> = { ...EN, ...PANEL_EN };
+let dict = WEB_DICT;
+
+/** The panel layout turns this on; the guest web, off. */
+export function setPanelScope(on: boolean) {
+  dict = on ? PANEL_DICT : WEB_DICT;
+}
 let active: Lang = "es";
 const listeners = new Set<() => void>();
 
@@ -95,7 +104,7 @@ export function currentLocale(): string {
 
 /** Translates a Spanish text ({name} placeholders filled from vars). */
 export function t(es: string, vars?: Record<string, string | number>): string {
-  const text = active === "en" ? (DICT[es] ?? es) : es;
+  const text = active === "en" ? (dict[es] ?? es) : es;
   return vars ? text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : text;
 }
 

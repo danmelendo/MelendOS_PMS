@@ -18,6 +18,7 @@ import { useRoles } from "@/lib/roles";
 import { Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Pencil, Check, X, ChevronUp, ChevronDown, Info } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/rooms")({
   component: RoomsPage,
@@ -74,7 +75,7 @@ function RoomsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rooms"] });
-      toast.success("Estado actualizado");
+      toast.success(t("Estado actualizado"));
     },
   });
 
@@ -85,10 +86,10 @@ function RoomsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rooms"] });
-      toast.success("Nombre actualizado");
+      toast.success(t("Nombre actualizado"));
       setEditingId(null);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const swapOrder = useMutation({
@@ -105,7 +106,7 @@ function RoomsPage() {
       if (e2) throw e2;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["rooms"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const startEdit = (id: string, currentName: string) => {
@@ -115,7 +116,7 @@ function RoomsPage() {
 
   const confirmEdit = (id: string) => {
     const name = editingName.trim();
-    if (!name) return toast.error("El nombre no puede estar vacío");
+    if (!name) return toast.error(t("El nombre no puede estar vacío"));
     updateName.mutate({ id, name });
   };
 
@@ -129,8 +130,8 @@ function RoomsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Habitaciones</h1>
-        <p className="text-sm text-muted-foreground">Estado y catálogo del hotel</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Habitaciones")}</h1>
+        <p className="text-sm text-muted-foreground">{t("Estado y catálogo del hotel")}</p>
       </div>
 
       {buildings.map((b) => {
@@ -186,7 +187,7 @@ function RoomsPage() {
                                 variant="ghost"
                                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                 disabled={i === 0 || swapOrder.isPending}
-                                title="Subir"
+                                title={t("Subir")}
                                 onClick={() => swapOrder.mutate({ a: r, b: buildingRooms[i - 1] })}
                               >
                                 <ChevronUp className="h-3.5 w-3.5" />
@@ -196,7 +197,7 @@ function RoomsPage() {
                                 variant="ghost"
                                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                 disabled={i === buildingRooms.length - 1 || swapOrder.isPending}
-                                title="Bajar"
+                                title={t("Bajar")}
                                 onClick={() => swapOrder.mutate({ a: r, b: buildingRooms[i + 1] })}
                               >
                                 <ChevronDown className="h-3.5 w-3.5" />
@@ -216,20 +217,23 @@ function RoomsPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Capacidad {r.capacity}</span>
+                        <span>
+                          {t("Capacidad")} {r.capacity}
+                        </span>
                         <span>·</span>
                         <span>
                           {(r as { rate_groups?: { name: string } | null }).rate_groups?.name ??
-                            "Sin tarifa"}
+                            t("Sin tarifa")}
                         </span>
                       </div>
                       <Badge variant="outline" className={STATUS_STYLES[displayStatus]}>
-                        {STATUS_LABELS[displayStatus]}
+                        {t(STATUS_LABELS[displayStatus])}
                       </Badge>
                       {autoOccupied && (
                         <p className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
                           <Info className="h-3.5 w-3.5 shrink-0" />
-                          Reserva en curso (check-in realizado)
+
+                          {t("Reserva en curso (check-in realizado)")}
                         </p>
                       )}
                       {/* When a reservation is in progress the room is occupied by an
@@ -247,7 +251,7 @@ function RoomsPage() {
                         <SelectContent>
                           {Object.entries(STATUS_LABELS).map(([k, v]) => (
                             <SelectItem key={k} value={k}>
-                              {v}
+                              {t(v)}
                             </SelectItem>
                           ))}
                         </SelectContent>

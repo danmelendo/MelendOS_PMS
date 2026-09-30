@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 export type SortDir = "asc" | "desc";
 
@@ -85,7 +86,7 @@ export function ColumnMenu({
                   onClick={onClear}
                   className="mt-2 w-full rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted"
                 >
-                  Quitar filtro
+                  {t("Quitar filtro")}
                 </button>
               )}
             </div>
@@ -145,7 +146,7 @@ export function DateBoundsFilter({
   return (
     <div className="grid grid-cols-2 gap-2 px-1">
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">Desde</Label>
+        <Label className="text-xs text-muted-foreground">{t("Desde")}</Label>
         <Input
           type="date"
           value={from}
@@ -155,7 +156,7 @@ export function DateBoundsFilter({
         />
       </div>
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">Hasta</Label>
+        <Label className="text-xs text-muted-foreground">{t("Hasta")}</Label>
         <Input
           type="date"
           value={to}

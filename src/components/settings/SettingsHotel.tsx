@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useStaffHotelModules } from "@/lib/features";
+import { t } from "@/lib/i18n";
 
 /** The hotel a settings page edits: the first one, or the one picked when there are several. */
 export function useSettingsHotel() {
@@ -37,7 +38,7 @@ export function SettingsHeader({
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <Settings className="h-3.5 w-3.5" /> Configuración
+          <Settings className="h-3.5 w-3.5" /> {t("Configuración")}
         </p>
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">{description}</p>

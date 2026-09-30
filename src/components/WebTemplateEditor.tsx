@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { uploadHotelImage, useSaveHotelWeb, type HotelWebData } from "@/lib/website";
+import { t } from "@/lib/i18n";
 
 const MAX_GALLERY = 24;
 
@@ -41,7 +42,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
   const persist = (brand: Record<string, unknown>, done: string) =>
     save.mutate(
       { brand },
-      { onSuccess: () => toast.success(done), onError: (e) => toast.error(e.message) },
+      { onSuccess: () => toast.success(done), onError: (e) => toast.error(t(e.message)) },
     );
   const setImage = (k: "logo_url" | "hero_image_url") => (url: string) => {
     set(k)(url);
@@ -69,31 +70,32 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <div>
-          <CardTitle className="text-base">Tu web</CardTitle>
+          <CardTitle className="text-base">{t("Tu web")}</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            La web de plantilla incluida en tu plan: portada, fotos, textos y contacto. Las
-            habitaciones, precios y disponibilidad salen solos del PMS.
+            {t(
+              "La web de plantilla incluida en tu plan: portada, fotos, textos y contacto. Las habitaciones, precios y disponibilidad salen solos del PMS.",
+            )}
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
           <a href={data.url ?? "/web"} target="_blank" rel="noreferrer">
-            <ExternalLink className="h-4 w-4" /> Ver web
+            <ExternalLink className="h-4 w-4" /> {t("Ver web")}
           </a>
         </Button>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
         <section className="grid gap-4 sm:grid-cols-2">
           <ImageField
-            label="Logo"
-            hint="PNG con fondo transparente; se ve en la cabecera."
+            label={t("Logo")}
+            hint={t("PNG con fondo transparente; se ve en la cabecera.")}
             value={f.logo_url}
             tenantId={tenantId}
             kind="logo"
             onChange={setImage("logo_url")}
           />
           <ImageField
-            label="Foto de portada"
-            hint="Horizontal, al menos 1600 px de ancho."
+            label={t("Foto de portada")}
+            hint={t("Horizontal, al menos 1600 px de ancho.")}
             value={f.hero_image_url}
             tenantId={tenantId}
             kind="cover"
@@ -105,7 +107,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
           {text("heroTitle", "Título de la portada", 120, data.brand.name)}
           {text("eyebrow", "Antetítulo", 80, `${data.brand.name} · Hotel boutique`)}
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="tw-heroSubtitle">Subtítulo de la portada</Label>
+            <Label htmlFor="tw-heroSubtitle">{t("Subtítulo de la portada")}</Label>
             <textarea
               id="tw-heroSubtitle"
               maxLength={400}
@@ -115,21 +117,24 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="tw-about">Sobre nosotros</Label>
+            <Label htmlFor="tw-about">{t("Sobre nosotros")}</Label>
             <textarea
               id="tw-about"
               maxLength={2000}
               className="min-h-28 w-full rounded-md border bg-background px-3 py-2"
-              placeholder="Quiénes sois, qué tiene de especial el hotel, el barrio…"
+              placeholder={t("Quiénes sois, qué tiene de especial el hotel, el barrio…")}
               value={f.about}
               onChange={(e) => set("about")(e.target.value)}
             />
           </div>
           <details className="rounded-md border p-3 sm:col-span-2">
-            <summary className="cursor-pointer font-medium">Textos en inglés (opcional)</summary>
+            <summary className="cursor-pointer font-medium">
+              {t("Textos en inglés (opcional)")}
+            </summary>
             <p className="mt-1 text-xs text-muted-foreground">
-              Para los huéspedes que ven tu web en inglés. Si dejas uno vacío, se muestra el texto
-              en español.
+              {t(
+                "Para los huéspedes que ven tu web en inglés. Si dejas uno vacío, se muestra el texto en español.",
+              )}
             </p>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               {text(
@@ -140,7 +145,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
               )}
               {text("eyebrow_en", "Antetítulo (inglés)", 80)}
               <div className="space-y-1 sm:col-span-2">
-                <Label htmlFor="tw-heroSubtitle_en">Subtítulo de la portada (inglés)</Label>
+                <Label htmlFor="tw-heroSubtitle_en">{t("Subtítulo de la portada (inglés)")}</Label>
                 <textarea
                   id="tw-heroSubtitle_en"
                   maxLength={400}
@@ -150,7 +155,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
                 />
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <Label htmlFor="tw-about_en">Sobre nosotros (inglés)</Label>
+                <Label htmlFor="tw-about_en">{t("Sobre nosotros (inglés)")}</Label>
                 <textarea
                   id="tw-about_en"
                   maxLength={2000}
@@ -163,7 +168,7 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
           </details>
           {text("short", "Nombre corto", 40, data.brand.name)}
           <div className="space-y-1">
-            <Label htmlFor="tw-accent">Color de la marca</Label>
+            <Label htmlFor="tw-accent">{t("Color de la marca")}</Label>
             <div className="flex items-center gap-2">
               <input
                 id="tw-accent"
@@ -200,13 +205,13 @@ export function WebTemplateEditor({ tenantId, data }: { tenantId: string; data: 
             save.mutate(
               { brand: { ...f, gallery } },
               {
-                onSuccess: () => toast.success("Web guardada"),
-                onError: (e) => toast.error(e.message),
+                onSuccess: () => toast.success(t("Web guardada")),
+                onError: (e) => toast.error(t(e.message)),
               },
             )
           }
         >
-          {save.isPending ? "Guardando…" : "Guardar textos y contacto"}
+          {save.isPending ? t("Guardando…") : t("Guardar textos y contacto")}
         </Button>
       </CardContent>
     </Card>
@@ -249,7 +254,13 @@ function ImageField({
               disabled={busy}
               onClick={() => input.current?.click()}
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : value ? "Cambiar" : "Subir"}
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : value ? (
+                t("Cambiar")
+              ) : (
+                t("Subir")
+              )}
             </Button>
             {value && (
               <Button
@@ -279,7 +290,7 @@ function ImageField({
           try {
             onChange(await uploadHotelImage(tenantId, kind, file));
           } catch (err) {
-            toast.error((err as Error).message);
+            toast.error(t((err as Error).message));
           } finally {
             setBusy(false);
           }
@@ -309,9 +320,10 @@ function GalleryField({
     <section className="space-y-2">
       <div className="flex items-center justify-between">
         <div>
-          <Label>Galería de fotos</Label>
+          <Label>{t("Galería de fotos")}</Label>
           <p className="text-xs text-muted-foreground">
-            Hasta {MAX_GALLERY}. La primera sale más grande.
+            {t("Hasta")} {MAX_GALLERY}
+            {t(". La primera sale más grande.")}
           </p>
         </div>
         <Button
@@ -321,7 +333,8 @@ function GalleryField({
           onClick={() => input.current?.click()}
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-          Añadir fotos
+
+          {t("Añadir fotos")}
         </Button>
       </div>
       {value.length > 0 && (
@@ -335,7 +348,7 @@ function GalleryField({
                   disabled={i === 0}
                   onClick={() => move(i, -1)}
                   className="p-1 text-white disabled:opacity-30"
-                  aria-label="Mover antes"
+                  aria-label={t("Mover antes")}
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                 </button>
@@ -343,7 +356,7 @@ function GalleryField({
                   type="button"
                   onClick={() => onChange(value.filter((x) => x !== src))}
                   className="p-1 text-white"
-                  aria-label="Quitar foto"
+                  aria-label={t("Quitar foto")}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -352,7 +365,7 @@ function GalleryField({
                   disabled={i === value.length - 1}
                   onClick={() => move(i, 1)}
                   className="p-1 text-white disabled:opacity-30"
-                  aria-label="Mover después"
+                  aria-label={t("Mover después")}
                 >
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
@@ -378,7 +391,7 @@ function GalleryField({
             for (const file of files) urls.push(await uploadHotelImage(tenantId, "gallery", file));
             onChange([...value, ...urls]);
           } catch (err) {
-            toast.error((err as Error).message);
+            toast.error(t((err as Error).message));
           } finally {
             setBusy(false);
           }
