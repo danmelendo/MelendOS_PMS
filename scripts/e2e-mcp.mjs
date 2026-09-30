@@ -54,8 +54,10 @@ try {
     .select("id")
     .eq("slug", "hotel-lumen")
     .single();
-  const admin = await signIn("admin@lumen.demostays.example");
+  // AI integrations are set up by Melend/OS support (platform role).
+  const admin = await signIn("soporte@demostays.example");
   const reception = await signIn("recepcion@lumen.demostays.example");
+  const management = await signIn("admin@lumen.demostays.example");
 
   const denied = await reception.rpc("create_mcp_token", {
     p_tenant: tenant.id,
@@ -63,6 +65,12 @@ try {
     p_scopes: ["read"],
   });
   check("reception cannot create MCP tokens", !!denied.error, denied.error?.message);
+  const byManagement = await management.rpc("create_mcp_token", {
+    p_tenant: tenant.id,
+    p_name: "Dirección",
+    p_scopes: ["read"],
+  });
+  check("hotel management cannot either", !!byManagement.error, byManagement.error?.message);
 
   const mk = async (name, scopes) => {
     const { data, error } = await admin.rpc("create_mcp_token", {
@@ -77,7 +85,7 @@ try {
   };
   const read = await mk("e2e lectura", ["read"]);
   const write = await mk("e2e escritura", ["write"]);
-  check("admin creates tokens", /^dsm_[0-9a-f]{48}$/.test(read.token), read.token_prefix);
+  check("support creates tokens", /^dsm_[0-9a-f]{48}$/.test(read.token), read.token_prefix);
   check("write scope implies read", write.scopes.join() === "read,write", write.scopes.join());
 
   const noAuth = await fetch(MCP_URL, {
