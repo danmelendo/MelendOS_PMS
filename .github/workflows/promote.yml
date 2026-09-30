@@ -89,6 +89,6 @@ jobs:
       - name: Apply migrations
         run: npx supabase db push -p "$SUPABASE_DB_PASSWORD" --yes
       - name: Deploy Edge Functions
-        run: npx supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
+        run: bash scripts/deploy-functions.sh "$SUPABASE_PROJECT_REF"
       - name: Smoke test
         run: node scripts/smoke.mjs --production ${SMOKE_HOTEL:+--hotel "$SMOKE_HOTEL"}

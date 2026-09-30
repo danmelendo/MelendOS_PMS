@@ -39,7 +39,7 @@ jobs:
       - name: Deploy Edge Functions
         run: |
           if ls supabase/functions/*/index.ts >/dev/null 2>&1; then
-            npx supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
+            bash scripts/deploy-functions.sh "$SUPABASE_PROJECT_REF"
           else
             echo "No Edge Functions to deploy yet."
           fi
