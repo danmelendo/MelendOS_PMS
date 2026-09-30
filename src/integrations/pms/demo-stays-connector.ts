@@ -176,6 +176,8 @@ export class DemoStaysConnector implements PmsConnector {
       if (r.hold_expires_at && r.hold_expires_at < new Date().toISOString()) return "expired";
       return "held";
     }
+    // Unpaid in time (the hold lapsed) or refused by the bank.
+    if (r.status === "rejected") return "expired";
     if (r.status === "confirmed") return "confirmed";
     if (r.status === "in_progress") return "in_progress";
     if (r.status === "completed") return "completed";
@@ -429,7 +431,6 @@ export class DemoStaysConnector implements PmsConnector {
         check_in: input.checkIn,
         check_out: input.checkOut,
         guests: input.guests,
-        hold: input.hold,
         ...(input.paymentMode ? { payment_mode: input.paymentMode } : {}),
         ...(input.guest ? { customer: input.guest } : {}),
         ...(input.extras?.length ? { extras: input.extras } : {}),
@@ -464,6 +465,15 @@ export class DemoStaysConnector implements PmsConnector {
     if (!token) return null;
     const { data } = await sb.rpc("get_guest_booking", { p_id: id, p_token: token });
     return (data as Row | null) ?? null;
+  }
+
+  async touchHold(id: string): Promise<string | null> {
+    const { data, error } = await sb.rpc("touch_booking_hold", {
+      p_id: id,
+      p_token: guestToken(id) ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return (data as string | null) ?? null;
   }
 
   async startPayment(

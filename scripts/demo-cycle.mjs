@@ -142,7 +142,6 @@ async function book({ room, nights, fromOffset, guests, name, email, mode, extra
     check_in: checkIn,
     check_out: checkOut,
     guests: Math.min(guests, roomCap.get(room) ?? guests),
-    hold: mode === "prepay",
     payment_mode: mode,
     customer: { name, email },
     extras: extras ?? [],

@@ -239,7 +239,7 @@ describe("create_payment_link", () => {
 
     const expired = fakeStore();
     const b = await expired.store.getBookingById("t1", "b1000000-0000-0000-0000-000000000000");
-    Object.assign(b!, { is_prebooking: true, hold_expires_at: "2026-09-25T09:00:00Z" });
+    Object.assign(b!, { hold_expires_at: "2026-09-25T09:00:00Z" });
     expect(
       await runTool("create_payment_link", { reservation_id: b!.id }, expired.store, ctx),
     ).toMatchObject({ error: { code: "conflict" } });

@@ -90,7 +90,7 @@ try {
     password,
   });
   const member = await book(
-    { ...stay, check_in: day(150), check_out: day(151), hold: true },
+    { ...stay, check_in: day(150), check_out: day(151) },
     session.session.access_token,
   );
   check(
@@ -103,11 +103,12 @@ try {
     const m = (
       await admin
         .from("reservations")
-        .select("member_id, is_prebooking, hold_expires_at")
+        .select("member_id, hold_expires_at")
         .eq("id", member.body.reservation_id)
         .single()
     ).data;
-    check("…with a 30-minute hold", !!m.member_id && m.is_prebooking && !!m.hold_expires_at);
+    const holdMin = (new Date(m.hold_expires_at).getTime() - Date.now()) / 60_000;
+    check("…holding the room about 20 minutes", !!m.member_id && holdMin > 15 && holdMin <= 20);
     const { data: mine } = await guest
       .from("reservations")
       .select("id")

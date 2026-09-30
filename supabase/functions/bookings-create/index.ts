@@ -1,5 +1,5 @@
 // POST /bookings-create
-// { room_id, check_in, check_out, guests, hold?, customer?, extras? }
+// { room_id, check_in, check_out, guests, payment_mode?, customer?, extras? }
 //
 // Creates a *pending* reservation priced on the server (never confirmed here).
 // Anonymous visitors must send guest details; a signed-in guest (Authorization:

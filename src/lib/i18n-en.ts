@@ -132,7 +132,6 @@ export const EN: Record<string, string> = {
   "Hotel no disponible": "Hotel not available",
   "Habitación no disponible": "Room not available",
   "Reserva confirmada · pagas en el hotel": "Booking confirmed · you pay at the hotel",
-  "Prereserva creada · tienes 30 min para confirmar": "Room held · you have 30 min to confirm",
   "No se pudo crear la reserva": "The booking could not be made",
   "Confirma tu reserva": "Confirm your booking",
   Entrada: "Check-in",
@@ -171,9 +170,6 @@ export const EN: Record<string, string> = {
   "Después, se cobra la primera noche.": "After that, the first night is charged.",
   "Reservar y pagar {amount}": "Book and pay {amount}",
   "Confirmar reserva": "Confirm booking",
-  "Guardar 30 min y pagar después": "Hold for 30 min and pay later",
-  "Te guardamos la habitación 30 minutos sin pagar; confírmala antes de que expire.":
-    "We hold the room for 30 minutes without paying; confirm it before the hold expires.",
 
   // ── Checkout ──
   "No se pudo iniciar el pago": "The payment could not be started",
@@ -186,11 +182,8 @@ export const EN: Record<string, string> = {
     "The payment was not completed. You can try again.",
   "Confirmando el pago con el banco…": "Confirming the payment with the bank…",
   "Reserva confirmada · hacer el check-in online": "Booking confirmed · do the online check-in",
-  "La prereserva ha expirado. Vuelve a buscar disponibilidad.":
-    "The hold has expired. Please search availability again.",
   "Redirigiendo al pago…": "Redirecting to payment…",
   "Pagar {amount}": "Pay {amount}",
-  "Prereserva activa · expira en {time}": "Room held · expires in {time}",
 
   // ── Missing booking ──
   "No encontramos esta reserva": "We cannot find this booking",
@@ -209,6 +202,13 @@ export const EN: Record<string, string> = {
   "Sin eventos todavía.": "No events yet.",
   "Reserva creada": "Booking created",
   "Prereserva creada": "Hold created",
+  "Habitación reservada para ti · caduca en {time} sin actividad":
+    "Room held for you · expires in {time} without activity",
+  "La reserva de la habitación ha caducado por inactividad. Vuelve a reservar: si sigue libre, será tuya.":
+    "Your room hold expired after a period of inactivity. Book again: if it is still free, it is yours.",
+  "Volver a la habitación": "Back to the room",
+  "La reserva de la habitación ha caducado. Vuelve a reservar.":
+    "Your room hold has expired. Please book again.",
   "Check-out realizado": "Checked out",
   "Pago no completado": "Payment not completed",
   "No presentado": "No-show",

@@ -99,7 +99,7 @@ function WebBookScreen() {
   }, [promoFromLink, tenantId, promo, applyPromo]);
 
   const create = useMutation({
-    mutationFn: async ({ mode, hold }: { mode: PaymentMode; hold: boolean }) => {
+    mutationFn: async ({ mode }: { mode: PaymentMode }) => {
       if (!room || !propertyId) throw new Error(t("Habitación no disponible"));
       const prebooking = await pms.createPrebooking({
         guest: {
@@ -112,20 +112,16 @@ function WebBookScreen() {
         checkIn,
         checkOut,
         guests,
-        hold,
         paymentMode: mode,
         ...(promo ? { promoCode: promo.code } : {}),
         lang: currentLang(),
       });
-      return { prebooking, hold, mode };
+      return { prebooking, mode };
     },
-    onSuccess: ({ prebooking, hold, mode }) => {
+    onSuccess: ({ prebooking, mode }) => {
       if (mode === "at_hotel") {
         toast.success(t("Reserva confirmada · pagas en el hotel"));
         navigate({ to: "/web/booking/$bookingId", params: { bookingId: prebooking.id } });
-      } else if (hold) {
-        toast.success(t("Prereserva creada · tienes 30 min para confirmar"));
-        navigate({ to: "/web/checkout/$bookingId", params: { bookingId: prebooking.id } });
       } else {
         navigate({
           to: "/web/checkout/$bookingId",
@@ -283,7 +279,7 @@ function WebBookScreen() {
         disabled={!offer?.available || !guestValid}
         busy={create.isPending}
         tone="web"
-        onBook={(mode, hold) => create.mutate({ mode, hold })}
+        onBook={(mode) => create.mutate({ mode })}
       />
 
       <Link to="/web" className="mt-6 block text-center text-xs text-neutral-400 underline">

@@ -24,12 +24,14 @@ export interface RoomReservation {
   cleaningMinutes: number;
   /** When the reservation was created (pending ones expire after a while). */
   createdAt: string;
+  /** Until when an unpaid booking holds the room (older rows: 60 min from creation). */
+  holdExpiresAt?: string | null;
   /** Admin override: skips the gap check. */
   manualOverride?: boolean;
 }
 
 export const MIN_CLEANING_MINUTES = 15;
-/** Unpaid (pending) reservations stop holding the room after this long. */
+/** Unpaid bookings without hold_expires_at (older rows) hold the room this long. */
 export const PENDING_HOLD_MINUTES = 60;
 
 const INACTIVE: ReservationStatus[] = ["cancelled", "no_show", "rejected"];
@@ -43,7 +45,10 @@ export function occupiedWindow(r: RoomReservation): [number, number] {
 /** Whether an existing reservation keeps its room busy right now. */
 export function isBlocking(r: RoomReservation, now: Date): boolean {
   if (r.status === "pending") {
-    return new Date(r.createdAt).getTime() > now.getTime() - PENDING_HOLD_MINUTES * 60_000;
+    const until = r.holdExpiresAt
+      ? new Date(r.holdExpiresAt).getTime()
+      : new Date(r.createdAt).getTime() + PENDING_HOLD_MINUTES * 60_000;
+    return until > now.getTime();
   }
   return r.status === "confirmed" || r.status === "in_progress" || r.status === "completed";
 }

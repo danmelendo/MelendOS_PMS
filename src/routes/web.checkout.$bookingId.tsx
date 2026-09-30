@@ -64,6 +64,13 @@ function WebCheckoutScreen() {
     }
   }, [auto, booking?.status, confirm]);
 
+  // The hold lapsed with the gateway still open (30 minutes at the bank without
+  // an answer): close it, the guest has to book again.
+  const lapsed = booking?.status === "expired" && payment !== "ok";
+  useEffect(() => {
+    if (lapsed) setRedirect(null);
+  }, [lapsed]);
+
   // Inside the payment iframe we only report the result up (above) and show a
   // spinner; the real page is the parent one.
   if (framed)
@@ -75,9 +82,12 @@ function WebCheckoutScreen() {
 
   if (!booking) return <GuestBookingMissing loading={bookingLoading} />;
 
-  const expired = booking.status === "expired";
   const alreadyConfirmed = ["confirmed", "in_progress", "completed"].includes(booking.status);
-  const awaitingNotification = payment === "ok" && booking.status === "held";
+  // Back from the bank the confirmation may take a moment; the hold is not
+  // what matters any more (a late payment is still confirmed or refunded).
+  const awaitingNotification =
+    payment === "ok" && (booking.status === "held" || booking.status === "expired");
+  const expired = booking.status === "expired" && !awaitingNotification;
 
   return (
     <div className="mx-auto max-w-xl px-5 py-10">
@@ -91,7 +101,13 @@ function WebCheckoutScreen() {
         <h1 className="text-2xl font-bold">{t("Confirmar y pagar")}</h1>
       </div>
 
-      {booking.status === "held" && <Countdown until={booking.holdExpiresAt} />}
+      {booking.status === "held" && !awaitingNotification && (
+        <HoldKeeper
+          bookingId={bookingId}
+          until={booking.holdExpiresAt}
+          onLapse={() => qc.invalidateQueries({ queryKey: ["pms", "booking", bookingId] })}
+        />
+      )}
 
       <div className=" bg-white p-6 shadow-sm ring-1 ring-neutral-100">
         <h2 className="text-xl font-semibold">{booking.roomName}</h2>
@@ -144,8 +160,20 @@ function WebCheckoutScreen() {
             {t("Reserva confirmada · hacer el check-in online")}
           </button>
         ) : expired ? (
-          <div className=" bg-rose-50 px-4 py-3 text-center text-sm font-medium text-rose-600">
-            {t("La prereserva ha expirado. Vuelve a buscar disponibilidad.")}
+          <div className="space-y-3 bg-rose-50 px-4 py-4 text-center text-sm font-medium text-rose-600">
+            <p>
+              {t(
+                "La reserva de la habitación ha caducado por inactividad. Vuelve a reservar: si sigue libre, será tuya.",
+              )}
+            </p>
+            <button
+              onClick={() =>
+                navigate({ to: "/web/room/$roomId", params: { roomId: booking.roomId } })
+              }
+              className="bg-[var(--brand)] px-4 py-2 font-semibold text-white"
+            >
+              {t("Volver a la habitación")}
+            </button>
           </div>
         ) : (
           <button
@@ -180,20 +208,65 @@ function WebCheckoutScreen() {
   );
 }
 
-function Countdown({ until }: { until: string | null }) {
-  const [left, setLeft] = useState(() => remaining(until));
+/**
+ * The room is held for the guest while they are on this page: any activity
+ * (at most once a minute) pushes the hold 20 minutes forward on the server.
+ * After 20 minutes without activity it lapses and the guest books again.
+ */
+function HoldKeeper({
+  bookingId,
+  until,
+  onLapse,
+}: {
+  bookingId: string;
+  until: string | null;
+  onLapse: () => void;
+}) {
   const { t } = useLang();
+  const [expiry, setExpiry] = useState(until);
+  const [left, setLeft] = useState(() => remaining(until));
+  const lastTouch = useRef(0);
+  const lapse = useRef(onLapse);
+  lapse.current = onLapse;
+
+  useEffect(() => setExpiry(until), [until]);
   useEffect(() => {
-    const timer = setInterval(() => setLeft(remaining(until)), 1000);
+    const touch = () => {
+      if (Date.now() - lastTouch.current < 60_000) return;
+      lastTouch.current = Date.now();
+      pms
+        .touchHold(bookingId)
+        .then((next) => (next ? setExpiry(next) : lapse.current()))
+        .catch(() => {});
+    };
+    const events = ["pointerdown", "pointermove", "keydown", "scroll", "focus"] as const;
+    for (const e of events) window.addEventListener(e, touch, { passive: true });
+    touch();
+    return () => {
+      for (const e of events) window.removeEventListener(e, touch);
+    };
+  }, [bookingId]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const l = remaining(expiry);
+      setLeft(l);
+      if (l <= 0) {
+        clearInterval(timer);
+        lapse.current();
+      }
+    }, 1000);
     return () => clearInterval(timer);
-  }, [until]);
+  }, [expiry]);
+
   if (left <= 0) return null;
   const m = Math.floor(left / 60);
   const s = left % 60;
   return (
-    <div className="mb-4 flex items-center justify-center gap-2  bg-amber-50 py-3 text-sm font-medium text-amber-700">
-      <Clock className="h-4 w-4" />{" "}
-      {t("Prereserva activa · expira en {time}", { time: `${m}:${String(s).padStart(2, "0")}` })}
+    <div className="mb-4 flex items-center justify-center gap-2 bg-amber-50 px-3 py-3 text-center text-sm font-medium text-amber-700">
+      <Clock className="h-4 w-4 shrink-0" />{" "}
+      {t("Habitación reservada para ti · caduca en {time} sin actividad", {
+        time: `${m}:${String(s).padStart(2, "0")}`,
+      })}
     </div>
   );
 }

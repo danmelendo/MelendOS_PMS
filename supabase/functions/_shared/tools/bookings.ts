@@ -24,7 +24,14 @@ import {
 } from "../domain/policies.ts";
 
 export const MAX_NIGHTS = 30;
-export const HOLD_MINUTES = 30;
+/**
+ * An unpaid (online payment) booking holds its room this long. From the web the
+ * checkout page extends it while the guest is active (touch_booking_hold), so
+ * it lapses after this much inactivity. Links sent by the assistant or through
+ * MCP get longer: the guest is not on the page yet.
+ */
+export const HOLD_MINUTES = 20;
+export const LINK_HOLD_MINUTES = 60;
 
 const ymd = z.string().refine(isYmd, "Fecha inválida (yyyy-MM-dd)");
 
@@ -34,8 +41,6 @@ export const bookingDraftInput = z
     check_in: ymd,
     check_out: ymd,
     guests: z.number().int().min(1).max(12),
-    /** Keep the room for 30 minutes while the guest pays (online payment). */
-    hold: z.boolean().default(false),
     /** Pay the whole stay online now, or at the hotel. Default: the hotel's. */
     payment_mode: z.enum(["prepay", "at_hotel"]).optional(),
     customer: z
@@ -418,10 +423,10 @@ export async function createBookingDraft(
   const customerId = member
     ? null
     : await store.findOrCreateCustomer(room.tenant_id, input.customer!);
+  const holdMinutes =
+    ctx.channel === "agent" || ctx.channel === "mcp" ? LINK_HOLD_MINUTES : HOLD_MINUTES;
   const holdExpiresAt =
-    input.hold && mode === "prepay"
-      ? new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString()
-      : null;
+    status === "pending" ? new Date(now.getTime() + holdMinutes * 60_000).toISOString() : null;
   const access = await newAccessToken();
   if (quote.promo && !(await store.claimPromoCode(room.tenant_id, quote.promo.id))) {
     throw new BookingError("invalid", "El código promocional ya no es válido");
@@ -455,7 +460,7 @@ export async function createBookingDraft(
           : breakdown.total / quote.nights,
     ),
     status,
-    is_prebooking: !!holdExpiresAt,
+    is_prebooking: false,
     hold_expires_at: holdExpiresAt,
     created_by_role:
       ctx.channel === "agent" || ctx.channel === "mcp" ? ctx.channel : member ? "member" : "public",
