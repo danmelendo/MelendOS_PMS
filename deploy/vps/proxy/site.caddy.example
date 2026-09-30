@@ -7,6 +7,5 @@ api.example.com {
 }
 
 panel.example.com, reservas.example.com {
-	root * /srv/instances/INSTANCE/web
-	import web
+	import web INSTANCE
 }

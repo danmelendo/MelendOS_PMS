@@ -1,11 +1,12 @@
 import { DEMO_ACCOUNTS, type DemoAccount } from "@shared/demo/accounts.ts";
 import { supabase } from "@/integrations/supabase/client";
+import { runtimeConfig } from "./runtime-config";
 
 // Demo access: pick a fictitious account from a list instead of signing in.
 // Only when the build sets VITE_DEMO_ACCESS=true (and the project the
 // DEMO_ACCESS secret for the demo-login function): the demo / pre-production
 // environment. Production uses the normal sign-in form.
-export const DEMO_ACCESS = import.meta.env.VITE_DEMO_ACCESS === "true";
+export const DEMO_ACCESS = runtimeConfig.demoAccess ?? import.meta.env.VITE_DEMO_ACCESS === "true";
 
 export const demoAccounts = (kind: DemoAccount["kind"]) =>
   DEMO_ACCOUNTS.filter((a) => a.kind === kind);

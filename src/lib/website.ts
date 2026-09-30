@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { runtimeConfig } from "@/lib/runtime-config";
 import { brandOf, hotelWebUrl, type TenantRow } from "@/lib/hotel-web";
 
 // The hotel's web for the panel ("Web y dominio"): its identity, where its
 // booking web answers and its own domain (docs/web-y-dominio.md).
 
-export const PLATFORM_CNAME = (import.meta.env.VITE_PLATFORM_CNAME as string | undefined) ?? "";
+export const PLATFORM_CNAME =
+  runtimeConfig.platformCname ?? (import.meta.env.VITE_PLATFORM_CNAME as string | undefined) ?? "";
 
 export function useHotelWeb(tenantId: string | null) {
   return useQuery({
