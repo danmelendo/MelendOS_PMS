@@ -28,7 +28,7 @@ function shell(title: string, preheader: string, assets: string, body: string) {
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(preheader)}</div>
 <table role="presentation" class="bg" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5"><tr><td class="outer" align="center" style="padding:32px 12px">
 <table role="presentation" class="card" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
-<tr><td align="center" class="px" style="padding:30px 32px 24px;background:#ffffff;border-bottom:3px solid ${GOLD}"><img src="${assets}/melendos-logo.png" width="260" alt="Melend/OS" style="display:block;width:260px;max-width:100%;height:auto;border:0;font-family:${SERIF};font-size:24px;color:${NAVY}"></td></tr>
+<tr><td align="center" class="px" style="padding:28px 32px 22px;background:${NAVY};border-bottom:3px solid ${GOLD}"><img src="${assets}/melendos-logo.png" width="240" alt="Melend/OS" style="display:block;width:240px;max-width:100%;height:auto;border:0;font-family:${SERIF};font-size:24px;color:#ffffff"><div style="margin-top:8px;font-size:11px;letter-spacing:.14em;color:#aab4c8">THE OPERATING SYSTEM FOR INDEPENDENT HOTELS</div></td></tr>
 ${body}
 <tr><td style="font-size:0;line-height:0;background:${NAVY}"><img src="${assets}/melendos-footer.jpg" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>
 </table>
