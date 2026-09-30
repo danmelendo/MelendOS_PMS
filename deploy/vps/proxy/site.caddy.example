@@ -1,0 +1,12 @@
+# One file per installation: /opt/melendos/proxy/sites/<instance>.caddy
+# Replace INSTANCE and the three names.
+
+api.example.com {
+	header -Server
+	reverse_proxy INSTANCE-api:8000
+}
+
+panel.example.com, reservas.example.com {
+	root * /srv/instances/INSTANCE/web
+	import web
+}
