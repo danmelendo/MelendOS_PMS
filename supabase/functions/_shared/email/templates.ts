@@ -3,6 +3,8 @@
 // with inline styles so every mail client shows them the same. Pure: the
 // dispatcher loads the data and sends what this returns.
 
+import { button, esc, MONO, pill, SERIF, shell } from "./layout.ts";
+
 export type BookingEmailKind = "booking_confirmed" | "booking_cancelled" | "checkin_invite";
 export type EmailLang = "es" | "en";
 
@@ -172,12 +174,6 @@ const COPY: Record<EmailLang, Copy> = {
   },
 };
 
-const esc = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-  );
-
 const hour = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
 function nights(checkIn: string, checkOut: string): number {
@@ -185,10 +181,6 @@ function nights(checkIn: string, checkOut: string): number {
     (Date.parse(`${checkOut}T00:00:00Z`) - Date.parse(`${checkIn}T00:00:00Z`)) / 86_400_000,
   );
 }
-
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const SERIF = "Georgia,'Times New Roman',serif";
-const MONO = "'SFMono-Regular',Consolas,'Liberation Mono',monospace";
 
 const httpsUrl = (u: string | null | undefined) => (u && /^https:\/\//.test(u) ? u : null);
 
@@ -200,13 +192,14 @@ function emailHeader(d: BookingEmailData, accent: string): string {
   const name = esc(d.hotelName);
   if (style === "image" && image) {
     return `<tr><td style="font-size:0;line-height:0"><img src="${esc(image)}" width="600" alt="${name}" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>
-<tr><td style="padding:18px 32px 0;border-top:4px solid ${accent};font-family:${SERIF};font-size:22px;color:#0f172a">${name}</td></tr>`;
+<tr><td class="px t1 hotel" style="padding:20px 32px 0;border-top:4px solid ${accent};font-family:${SERIF};font-size:24px;color:#0f172a">${name}</td></tr>`;
   }
   if (style === "logo" && logo) {
+    // Logos are drawn for a light background: this band stays white in dark mode.
     return `<tr><td style="height:6px;background:${accent};font-size:0;line-height:0">&nbsp;</td></tr>
-<tr><td align="center" style="padding:28px 32px 20px;border-bottom:1px solid #e2e8f0"><img src="${esc(logo)}" alt="${name}" height="56" style="display:block;height:56px;width:auto;max-width:240px;border:0"></td></tr>`;
+<tr><td align="center" class="px" style="padding:28px 32px 22px;background:#ffffff"><img src="${esc(logo)}" alt="${name}" height="56" style="display:block;height:56px;width:auto;max-width:240px;border:0"></td></tr>`;
   }
-  return `<tr><td style="background:${accent};padding:28px 32px;font-family:${SERIF};font-size:24px;color:#ffffff">${name}</td></tr>`;
+  return `<tr><td class="px hotel" style="background:${accent};padding:28px 32px;font-family:${SERIF};font-size:26px;color:#ffffff">${name}</td></tr>`;
 }
 
 export function bookingEmail(d: BookingEmailData): RenderedEmail {
@@ -221,6 +214,17 @@ export function bookingEmail(d: BookingEmailData): RenderedEmail {
       year: "numeric",
       timeZone: "UTC",
     });
+  const shortDate = (ymd: string) =>
+    new Date(`${ymd}T12:00:00Z`)
+      .toLocaleDateString(L.locale, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+      .replace(/\./g, "");
+  const weekday = (ymd: string) =>
+    new Date(`${ymd}T12:00:00Z`).toLocaleDateString(L.locale, { weekday: "long", timeZone: "UTC" });
   const instant = (iso: string) =>
     new Date(iso).toLocaleString(L.locale, {
       day: "numeric",
@@ -287,84 +291,81 @@ export function bookingEmail(d: BookingEmailData): RenderedEmail {
   ].join("\n");
 
   const status = checkin
-    ? { label: L.status.checkin, fg: accent, bg: "#f1f5f9" }
+    ? pill("info", L.status.checkin)
     : confirmed
-      ? { label: L.status.confirmed, fg: "#166534", bg: "#dcfce7" }
-      : { label: L.status.cancelled, fg: "#991b1b", bg: "#fee2e2" };
+      ? pill("ok", L.status.confirmed)
+      : pill("ko", L.status.cancelled);
   const details: [string, string][] = [
     [L.rows.room, d.roomName],
     [L.rows.nights, String(n)],
     [L.rows.guests, String(d.guests)],
   ];
-  const dateCell = (label: string, date: string, when: string) =>
-    `<td valign="top" width="48%" style="width:48%;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
-<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b">${esc(label)}</div>
-<div style="margin-top:6px;font-size:15px;font-weight:600;color:#0f172a">${esc(date)}</div>
-<div style="margin-top:2px;font-size:13px;color:#475569">${esc(when)}</div></td>`;
+  const label = (text: string) =>
+    `<div class="t3" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b">${esc(text)}</div>`;
+  const dateCell = (title: string, ymd: string, when: string) =>
+    `<td valign="top" width="48%" class="col box" style="width:48%;padding:16px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+${label(title)}
+<div class="t1" style="margin-top:8px;font-size:22px;font-weight:700;color:#0f172a;white-space:nowrap">${esc(shortDate(ymd))}</div>
+<div class="t2" style="margin-top:4px;font-size:13px;color:#475569">${esc(weekday(ymd))} &middot; ${esc(when)}</div></td>`;
   const contactLinks = [
     d.hotelPhone
-      ? `<a href="tel:${esc(d.hotelPhone.replace(/[^+\d]/g, ""))}" style="color:#475569;text-decoration:none">${esc(d.hotelPhone)}</a>`
+      ? `<a class="t2" href="tel:${esc(d.hotelPhone.replace(/[^+\d]/g, ""))}" style="color:#475569;text-decoration:none">${esc(d.hotelPhone)}</a>`
       : "",
     d.hotelEmail
-      ? `<a href="mailto:${esc(d.hotelEmail)}" style="color:${accent};text-decoration:none">${esc(d.hotelEmail)}</a>`
+      ? `<a class="t2" href="mailto:${esc(d.hotelEmail)}" style="color:${accent};text-decoration:none">${esc(d.hotelEmail)}</a>`
       : "",
   ].filter(Boolean);
   const terms =
     payment || cancellation
-      ? `<tr><td style="padding:20px 32px 0"><div style="padding:14px 16px;border-left:3px solid ${accent};background:#f8fafc;font-size:14px;line-height:1.5;color:#334155">${
+      ? `<tr><td class="px" style="padding:20px 32px 0"><div class="box t2" style="padding:14px 16px;border-left:3px solid ${accent};background:#f8fafc;font-size:14px;line-height:1.5;color:#334155">${
           payment ? `<div>${esc(payment)}</div>` : ""
-        }${cancellation ? `<div style="margin-top:${payment ? 6 : 0}px;color:#64748b">${esc(cancellation)}</div>` : ""}</div></td></tr>`
+        }${cancellation ? `<div class="t3" style="margin-top:${payment ? 6 : 0}px;color:#64748b">${esc(cancellation)}</div>` : ""}</div></td></tr>`
       : "";
 
-  const html = `<!doctype html>
-<html lang="${d.lang === "en" ? "en" : "es"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background:#eef1f5;font-family:${FONT};color:#1f2937;-webkit-text-size-adjust:100%">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(intro)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5;padding:32px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
-${emailHeader(d, accent)}
-<tr><td style="padding:32px 32px 8px">
-<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:${status.bg};color:${status.fg};font-size:12px;font-weight:600">${esc(status.label)}</span>
-<p style="margin:20px 0 8px;font-size:16px;color:#0f172a">${esc(hello)}</p>
-<p style="margin:0;font-size:16px;line-height:1.5;color:#334155">${esc(intro)}</p>
+  const body = `<tr><td class="px" style="padding:32px 32px 8px">
+${status}
+<p class="t1" style="margin:20px 0 8px;font-size:17px;color:#0f172a">${esc(hello)}</p>
+<p class="t2" style="margin:0;font-size:16px;line-height:1.55;color:#334155">${esc(intro)}</p>
 </td></tr>
-<tr><td style="padding:24px 32px 0">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0"><tr>
-<td style="padding:14px 0;font-size:13px;color:#64748b">${esc(L.rows.reference)}</td>
-<td align="right" style="padding:14px 0;font-family:${MONO};font-size:18px;font-weight:700;letter-spacing:.12em;color:#0f172a">${esc(d.reference)}</td>
-</tr></table></td></tr>
-<tr><td style="padding:20px 32px 0">
+<tr><td class="px" style="padding:24px 32px 0">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-${dateCell(L.rows.checkIn, longDate(d.checkIn), L.fromHour(hour(d.checkInHour)))}
-<td width="12" style="width:12px;min-width:12px;font-size:0;line-height:0">&nbsp;</td>
-${dateCell(L.rows.checkOut, longDate(d.checkOut), L.untilHour(hour(d.checkOutHour)))}
+<td class="t3 line" style="padding:14px 0;font-size:13px;color:#64748b;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">${esc(L.rows.reference)}</td>
+<td align="right" class="t1 line" style="padding:14px 0;font-family:${MONO};font-size:18px;font-weight:700;letter-spacing:.12em;color:#0f172a;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">${esc(d.reference)}</td>
 </tr></table></td></tr>
-<tr><td style="padding:20px 32px 0">
-<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:4px">${esc(L.stay)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
+<tr><td class="px" style="padding:20px 32px 0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+${dateCell(L.rows.checkIn, d.checkIn, L.fromHour(hour(d.checkInHour)))}
+<td class="gap" width="12" style="width:12px;min-width:12px;font-size:0;line-height:0">&nbsp;</td>
+${dateCell(L.rows.checkOut, d.checkOut, L.untilHour(hour(d.checkOutHour)))}
+</tr></table></td></tr>
+<tr><td class="px" style="padding:22px 32px 0">
+${label(L.stay)}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px;font-size:14px">
 ${details
   .map(
     ([k, v]) =>
-      `<tr><td style="padding:9px 0;color:#64748b;border-bottom:1px solid #f1f5f9">${esc(k)}</td><td align="right" style="padding:9px 0;border-bottom:1px solid #f1f5f9;font-weight:600;color:#0f172a">${esc(v)}</td></tr>`,
+      `<tr><td class="t3 line" style="padding:10px 0;color:#64748b;border-bottom:1px solid #f1f5f9">${esc(k)}</td><td align="right" class="t1 line" style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-weight:600;color:#0f172a">${esc(v)}</td></tr>`,
   )
   .join("\n")}
 </table></td></tr>
 ${terms}
-<tr><td align="center" style="padding:28px 32px 8px">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:8px;background:${accent}">
-<a href="${esc(d.manageUrl)}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;background:${accent}">${esc(cta)}</a>
-</td></tr></table></td></tr>
-${note ? `<tr><td align="center" style="padding:4px 32px 0;font-size:13px;line-height:1.5;color:#64748b">${esc(note)}</td></tr>` : ""}
-<tr><td style="padding:32px 32px 28px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0"><tr><td style="padding-top:20px;font-size:13px;line-height:1.6;color:#475569">
-<div style="font-family:${SERIF};font-size:16px;color:#0f172a">${esc(d.hotelName)}</div>
+<tr><td align="center" class="px" style="padding:28px 32px 8px">${button(d.manageUrl, cta, accent)}</td></tr>
+${note ? `<tr><td align="center" class="px t3" style="padding:4px 32px 0;font-size:13px;line-height:1.5;color:#64748b">${esc(note)}</td></tr>` : ""}
+<tr><td class="px" style="padding:32px 32px 28px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="t2 line" style="padding-top:20px;border-top:1px solid #e2e8f0;font-size:13px;line-height:1.6;color:#475569">
+<div class="t1" style="font-family:${SERIF};font-size:16px;color:#0f172a">${esc(d.hotelName)}</div>
 ${d.hotelAddress ? `<div>${esc(d.hotelAddress)}</div>` : ""}
 ${contactLinks.length ? `<div>${contactLinks.join(" &middot; ")}</div>` : ""}
-</td></tr></table></td></tr>
-</table>
-<p style="margin:16px 0 0;font-size:11px;color:#94a3b8">${esc(L.footer(d.hotelName))}</p>
-</td></tr></table>
-</body></html>`;
+</td></tr></table></td></tr>`;
+
+  const html = shell({
+    lang: d.lang === "en" ? "en" : "es",
+    title: subject,
+    preheader: intro,
+    header: emailHeader(d, accent),
+    body,
+    below: esc(L.footer(d.hotelName)),
+  });
 
   return { subject, html, text };
 }
