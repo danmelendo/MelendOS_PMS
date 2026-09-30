@@ -40,11 +40,52 @@ Es el `docker compose` oficial de Supabase autoalojado, más nuestras piezas enc
 
 ## 3. Requisitos del servidor
 
-- **Mínimo razonable**: 4 vCPU, 8 GB de RAM y 160 GB de SSD. Supabase autoalojado pide unos 4 GB solo para arrancar, así que con 4 GB va justo. El disco va doble porque las copias para volver atrás se guardan en el propio VPS (sección 8); mejor en un volumen aparte del disco del sistema, que la mayoría de proveedores venden por separado. Medirlo en la prueba.
+- **Mínimo razonable para una instalación** (la prueba a mano): 4 vCPU, 8 GB de RAM y 160 GB de SSD. Para varias, ver abajo. Supabase autoalojado pide unos 4 GB solo para arrancar, así que con 4 GB va justo. El disco va doble porque las copias para volver atrás se guardan en el propio VPS (sección 8); mejor en un volumen aparte del disco del sistema, que la mayoría de proveedores venden por separado. Medirlo en la prueba.
 - **Sistema**: Ubuntu 24.04 LTS, Docker Engine y el plugin de Compose.
 - **Ubicación en la UE** (datos personales, SES.HOSPEDAJES): Hetzner (Alemania/Finlandia), OVH (Francia) o un proveedor español (IONOS, Arsys) si el cliente lo pide. Hay que confirmar precios en cada proveedor; en la gama de 4 vCPU/8 GB suelen rondar las decenas de euros al mes.
 - **DNS**: un dominio con tres nombres apuntando al VPS (sección 7).
 - **Salida a internet** hacia Redsys/Stripe, Resend, la AEAT, el Ministerio del Interior y el proveedor de IA. **Entrada** solo por los puertos 80 y 443.
+
+### Varios hoteles por VPS, cada uno con su instalación (decidido)
+
+(Dan, 30/09/2026: «dentro de un mismo VPS servir a más de un hotel, con tope de 10 por VPS para repartir la carga y que no se pierda el servicio en todos a la vez; en el VPS deben estar diferenciados y cada uno con su instalación independiente».)
+
+- **La unidad es el cliente.** Un hotel independiente tiene su instalación. Una cadena tiene una sola instalación con sus hoteles dentro, porque dirección de grupo los ve juntos. **Tope: 10 instalaciones por VPS.**
+- **Cada instalación es completa y aparte:**
+  - su base de datos y sus servicios;
+  - su `.env` con sus secretos;
+  - sus copias y puntos de restauración;
+  - su versión, que se actualiza sin tocar a las demás.
+- En el VPS solo se comparte:
+  - Docker;
+  - un **Caddy delante** que reparte por dominio a cada instalación y saca los certificados;
+  - el temporizador que vigila a todas.
+- **Límites por instalación** (CPU y memoria, con los límites de Docker): un hotel con mucho tráfico o un proceso que se dispare no puede ralentizar a los otros nueve.
+- **Instalación adelgazada:** de la pila de Supabase quedan solo las piezas que usa Melend/OS (base, login, API, tiempo real, ficheros, funciones y la pasarela Kong). Sin Studio, `analytics`, `vector`, `imgproxy` ni `supavisor`. Así cada instalación ocupa lo mínimo.
+- **Tamaño (a confirmar en la instalación a mano):**
+  - Estimación: 1–1,5 GB de RAM por instalación en reposo y 5–10 GB de disco, más sus copias.
+  - Para 10 instalaciones: unos 8 vCPU, 32 GB de RAM y 400–500 GB de disco (o un volumen aparte para las copias).
+  - Si no compensa, dos VPS de 5.
+- **Frente a una sola instalación con 10 hoteles:**
+  - Una sola gastaría del orden de un tercio de la memoria.
+  - A cambio, una actualización, un fallo de la base o una restauración afectarían a los 10 a la vez.
+  - Se elige aislar; el coste extra entra en el precio del alojamiento.
+- **Reparto:** el asistente (sección 6) ve cuántas instalaciones y cuánta memoria libre tiene cada VPS, y propone el más holgado. Mover una instalación de VPS es copia y restauración: la misma operación que un simulacro.
+
+### Rendimiento
+
+Dan notó en la demo que el calendario tarda en mostrar los precios y la web, en cargar las habitaciones libres. Medido el 30/09/2026 contra la demo (Supabase Cloud, plan gratuito):
+
+- **Coste de red de la nube:**
+  - cada llamada a una Edge Function tiene un coste fijo de 0,25–0,35 s, aunque no consulte nada;
+  - cada consulta directa a la API, unos 0,07 s;
+  - las funciones corren lejos de la base y cada consulta que hacen es un viaje de ida y vuelta.
+- **Coste del propio código:** la web hacía hasta 80 peticiones y calculaba precios habitación por habitación. Arreglado en el PR #88: ahora son 28 peticiones y de 1,5–1,9 s se baja a 0,9 s en la página del hotel; el calendario de precios, de 0,75–0,9 s a 0,5–0,7 s.
+- **En el VPS**, la base, las funciones y la API están en la misma máquina: cada consulta cuesta milisegundos, no decenas, y las funciones no «se enfrían». Por eso debería ir claramente más rápido que la demo.
+- **Objetivos que se medirán en la bitácora:**
+  - API por debajo de 100 ms;
+  - página del hotel con precios y calendario por debajo de 400 ms;
+  - todo ello también con una prueba de carga que simule el tráfico de 10 hoteles a la vez (`k6`).
 
 ## 4. Cambios en el código antes de empaquetar
 
@@ -119,7 +160,7 @@ Cada hotel o cliente nuevo no debería pedir trabajo manual. El asistente es un 
 | Bloque             | Datos                                                                                                                                                                                                                                                                                     |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cliente            | Uno de los clientes del panel (contrato, plan y paquetes ya están ahí)                                                                                                                                                                                                                    |
-| Servidores         | Una o varias IPs, puerto SSH y usuario administrador. Cada servidor es una instalación; si un cliente tiene varios, se instalan uno tras otro                                                                                                                                             |
+| Servidor           | Un VPS ya registrado (el asistente propone el más holgado, con un máximo de 10 instalaciones) o uno nuevo: IP, puerto SSH y usuario administrador                                                                                                                                         |
 | Acceso             | **Preferido:** el asistente enseña nuestra clave pública y un comando de una línea para autorizarla en el VPS. **Alternativa:** la contraseña de administración, de un solo uso: se usa para instalar nuestra clave, se desactiva el acceso por contraseña y no se guarda en ningún sitio |
 | Dominio            | Dominio del cliente y nombres para panel, reservas y API; comprobación de que ya apuntan a la IP                                                                                                                                                                                          |
 | Servicios externos | Email de envío (Resend) e IA: los nuestros o los del cliente                                                                                                                                                                                                                              |
@@ -287,9 +328,7 @@ Esta es la prueba del instalador terminado, sobre un VPS limpio. Antes va la ins
 
 ## 13. Decisiones para Dan
 
-1. **Modelo**:
-   - ¿Solo instalaciones dedicadas por cliente, o también mover nuestra nube multi-hotel a VPS?
-   - Propuesta: el paquete sirve para ambas; se decide por cliente.
+1. **Modelo** (decidido el 30/09): varios clientes por VPS, hasta 10, cada uno con su instalación independiente (sección 3, «Varios hoteles por VPS»).
 2. **Quién contrata el VPS**:
    - ¿El cliente (su servidor, nosotros con acceso de soporte) o nosotros (se lo repercutimos)?
    - Cambia el contrato y el reparto RGPD.
