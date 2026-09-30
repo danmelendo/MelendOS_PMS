@@ -1,0 +1,83 @@
+# Melend/OS on top of the official self-hosted Supabase compose
+# (supabase/supabase, docker/, tag self-hosted/v0.8.2).
+#
+# Every installation is one copy of that folder plus this file. It:
+#   - drops what Melend/OS does not use (Studio, postgres-meta, imgproxy,
+#     supavisor): about 4 GB of images and their memory;
+#   - publishes no port to the internet: Docker skips ufw, so a published
+#     port would be open even with the firewall on. The shared Caddy reaches
+#     the gateway through the melendos-edge network;
+#   - loads our Edge Functions with our router (functions-main).
+#
+# INSTANCE is the installation name (e.g. "prueba"). The official compose
+# fixes container names (supabase-db...), which would clash with a second
+# installation on the same VPS: here they are <INSTANCE>-<service>, and the
+# compose project is named by COMPOSE_PROJECT_NAME=melendos-<INSTANCE> in .env.
+# The gateway is <INSTANCE>-api on the shared network.
+
+services:
+  studio:
+    profiles: ["disabled"]
+  meta:
+    profiles: ["disabled"]
+  imgproxy:
+    profiles: ["disabled"]
+  supavisor:
+    profiles: ["disabled"]
+
+  api-gw:
+    container_name: ${INSTANCE}-api
+    ports: !reset []
+    depends_on: !reset {}
+    networks:
+      default:
+        aliases: [envoy, kong]
+      edge:
+        aliases: ["${INSTANCE}-api"]
+
+  auth:
+    container_name: ${INSTANCE}-auth
+    environment:
+      # Staff two-step verification (TOTP), as in the cloud projects.
+      GOTRUE_MFA_TOTP_ENROLL_ENABLED: "true"
+      GOTRUE_MFA_TOTP_VERIFY_ENABLED: "true"
+
+  rest:
+    container_name: ${INSTANCE}-rest
+
+  realtime:
+    # Realtime reads its tenant from the host name, and the gateway calls it
+    # by this one: keep it as an alias on the installation's own network.
+    container_name: ${INSTANCE}-realtime
+    networks:
+      default:
+        aliases: [realtime-dev.supabase-realtime]
+
+  storage:
+    container_name: ${INSTANCE}-storage
+    depends_on: !reset
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+
+  functions:
+    container_name: ${INSTANCE}-functions
+    volumes: !override
+      - ./functions:/home/deno/functions:ro,z
+      - deno-cache:/root/.cache/deno
+    env_file:
+      - ./functions.env
+
+  db:
+    container_name: ${INSTANCE}-db
+    # Only on the VPS loopback, for migrations through an SSH tunnel.
+    ports:
+      - "127.0.0.1:${DB_TUNNEL_PORT}:5432"
+
+networks:
+  edge:
+    name: melendos-edge
+    external: true

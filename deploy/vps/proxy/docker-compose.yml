@@ -1,0 +1,30 @@
+# Shared entry point of the VPS: one Caddy for every installation.
+# Terminates HTTPS (Let's Encrypt), serves each installation's web build and
+# forwards its API to <instance>-api on the melendos-edge network.
+name: melendos-proxy
+
+services:
+  caddy:
+    container_name: melendos-caddy
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
+      - /opt/melendos/instances:/srv/instances:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+
+networks:
+  edge:
+    name: melendos-edge
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:
