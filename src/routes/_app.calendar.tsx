@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRooms, STATUS_COLORS, STATUS_LABELS, HOTELS, buildingKey } from "@/lib/data";
+import { useRooms, STATUS_COLORS, STATUS_LABELS } from "@/lib/data";
+import { useStaffHotels } from "@/lib/reports";
 import { cn } from "@/lib/utils";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -52,6 +53,8 @@ function CalendarPage() {
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [defaults, setDefaults] = useState<{ start?: Date; roomId?: string }>({});
   const [buildingFilter, setBuildingFilter] = useState<string>("all");
+  // Only people with more than one hotel choose which one to see.
+  const { data: hotels } = useStaffHotels();
   const board = useRef<HTMLDivElement>(null);
   const [dayW, setDayW] = useState(MIN_DAY_W);
   useLayoutEffect(() => {
@@ -78,7 +81,7 @@ function CalendarPage() {
   const todayKey = startOfDay(new Date()).getTime();
 
   const visibleRooms = rooms?.filter(
-    (r) => buildingFilter === "all" || buildingKey(r.building) === buildingFilter,
+    (r) => buildingFilter === "all" || r.tenant_id === buildingFilter,
   );
 
   const { data: reservations } = useQuery({
@@ -146,19 +149,21 @@ function CalendarPage() {
           </div>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
-          <Select value={buildingFilter} onValueChange={setBuildingFilter}>
-            <SelectTrigger className="min-w-0 flex-1 sm:w-44 sm:flex-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los hoteles</SelectItem>
-              {HOTELS.map((h) => (
-                <SelectItem key={h.key} value={h.key}>
-                  {h.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {hotels && hotels.length > 1 && (
+            <Select value={buildingFilter} onValueChange={setBuildingFilter}>
+              <SelectTrigger className="min-w-0 flex-1 sm:w-44 sm:flex-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los hoteles</SelectItem>
+                {hotels.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {canOperate && (
             <Button
               onClick={() => {

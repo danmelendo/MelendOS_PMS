@@ -12,9 +12,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { pms } from "@/integrations/pms";
 import type { JournalEventType } from "@/integrations/pms";
+import { PlatformOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/journal")({
-  component: JournalPage,
+  component: () => (
+    <PlatformOnly>
+      <JournalPage />
+    </PlatformOnly>
+  ),
 });
 
 const EVENT_LABELS: Record<JournalEventType, string> = {

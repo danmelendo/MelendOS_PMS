@@ -6,7 +6,7 @@ import { useRoles } from "@/lib/roles";
 
 /** Shown instead of a page when the selected hotel has not got the module. */
 export function ModuleOff({ feature, hotel }: { feature: Feature; hotel: string }) {
-  const { isAdmin } = useRoles();
+  const { isPlatform } = useRoles();
   const m = MODULES[feature];
   return (
     <Card>
@@ -18,12 +18,12 @@ export function ModuleOff({ feature, hotel }: { feature: Feature; hotel: string 
           </p>
           <p className="text-muted-foreground">
             {m.description} Forma parte del paquete {PACKAGES[m.package].name}.{" "}
-            {isAdmin ? (
+            {isPlatform ? (
               <Link to="/plan" className="font-medium text-foreground underline">
                 Ver plan y módulos
               </Link>
             ) : (
-              "Consúltalo con el administrador del hotel."
+              "Para activarlo, contacta con Melend/OS."
             )}
           </p>
         </div>

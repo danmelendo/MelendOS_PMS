@@ -36,6 +36,8 @@ import {
   Network,
   ShieldCheck,
   Receipt,
+  FileCog,
+  ShieldEllipsis,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -58,7 +60,6 @@ const items: NavItem[] = [
   { to: "/customers", label: "Clientes", icon: Users },
   { to: "/travellers", label: "Registro de viajeros", icon: ShieldCheck },
   { to: "/invoices", label: "Facturas", icon: Receipt },
-  { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/reports", label: "Informes", icon: BarChart3, feature: "reports" },
   { to: "/reviews", label: "Reseñas", icon: Star, feature: "reviews" },
 ];
@@ -67,19 +68,32 @@ const items: NavItem[] = [
 const ACTIVE_ITEM =
   "data-[active=true]:shadow-[inset_3px_0_0_var(--sidebar-primary)] data-[active=true]:[&>a>svg]:text-sidebar-primary";
 
-const adminItems: NavItem[] = [
+// Management (hotel management and Melend/OS support): what the hotel runs day to day.
+const manageItems: NavItem[] = [
   { to: "/admin/manual", label: "Reserva manual", icon: Wand2 },
   { to: "/rooms", label: "Habitaciones", icon: DoorOpen },
   { to: "/rates", label: "Tarifas", icon: Tag },
   { to: "/extras", label: "Extras", icon: PackagePlus },
   { to: "/promos", label: "Códigos promo", icon: Ticket },
+];
+
+// Settings the hotel sets once and rarely touches (keys, merchant numbers,
+// certificates, staff). Reception has none.
+const settingsItems: NavItem[] = [
   { to: "/website", label: "Web y dominio", icon: Globe },
   { to: "/payments", label: "Cobros y TPV", icon: CreditCard },
+  { to: "/settings/invoicing", label: "Facturación", icon: FileCog },
+  { to: "/settings/travellers", label: "SES.HOSPEDAJES", icon: ShieldEllipsis },
+  { to: "/team", label: "Equipo", icon: UsersRound },
+];
+
+// What Melend/OS sets up for the hotel: only its support role sees it.
+const platformItems: NavItem[] = [
+  { to: "/plan", label: "Plan y módulos", icon: Boxes },
   { to: "/channels", label: "Canales", icon: Network, feature: "channels" },
   { to: "/integrations", label: "Integraciones IA", icon: PlugZap, feature: "mcp" },
-  { to: "/team", label: "Equipo", icon: UsersRound },
+  { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/activity", label: "Actividad y consumo", icon: Activity },
-  { to: "/plan", label: "Plan y módulos", icon: Boxes },
 ];
 
 export function AppSidebar() {
@@ -96,6 +110,21 @@ export function AppSidebar() {
     (canMessage || i.to !== "/messages");
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const navItem = (item: NavItem) => (
+    <SidebarMenuItem key={item.to}>
+      <SidebarMenuButton
+        asChild
+        isActive={path === item.to || path.startsWith(item.to + "/")}
+        tooltip={item.label}
+        className={ACTIVE_ITEM}
+      >
+        <Link to={item.to} className="flex items-center gap-2">
+          <item.icon className="h-4 w-4" />
+          <span>{item.label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 
   return (
     <Sidebar collapsible="icon">
@@ -173,27 +202,10 @@ export function AppSidebar() {
 
         {isAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupLabel>Gestión</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {adminItems.filter(visible).map((item) => {
-                  const active = path === item.to;
-                  return (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={item.label}
-                        className={ACTIVE_ITEM}
-                      >
-                        <Link to={item.to} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
+                {manageItems.filter(visible).map(navItem)}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Web pública">
                     <a
@@ -208,6 +220,24 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Configuración</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{settingsItems.filter(visible).map(navItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {isPlatform && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administrar y configuración</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{platformItems.filter(visible).map(navItem)}</SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}

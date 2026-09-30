@@ -12,9 +12,14 @@ import {
 import { useStaffHotelModules } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
 import { ATTENTION, bytes, CHANNEL_LABELS, useHotelActivity } from "@/lib/activity";
+import { PlatformOnly } from "@/components/settings/AdminOnly";
 
 export const Route = createFileRoute("/_app/activity")({
-  component: ActivityPage,
+  component: () => (
+    <PlatformOnly>
+      <ActivityPage />
+    </PlatformOnly>
+  ),
 });
 
 const QUEUES: { key: "ses" | "verifactu" | "emails" | "channels"; label: string }[] = [
