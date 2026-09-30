@@ -98,6 +98,38 @@ describe("bookingEmail", () => {
     expect(e.html).toContain("Hotel &lt;script&gt;");
     expect(e.html).toContain("background:#1e3a5f"); // an invalid colour falls back
   });
+
+  it("puts the header chosen for the hotel on top", () => {
+    const logo = "https://media.example/lumen/logo.png";
+    const photo = "https://media.example/lumen/cover.jpg";
+    const withLogo = bookingEmail({
+      ...data,
+      header: { style: "logo", logoUrl: logo, imageUrl: photo },
+    });
+    expect(withLogo.html).toContain(`<img src="${logo}"`);
+    expect(withLogo.html).not.toContain(photo);
+
+    const withPhoto = bookingEmail({
+      ...data,
+      header: { style: "image", logoUrl: logo, imageUrl: photo },
+    });
+    expect(withPhoto.html).toContain(`<img src="${photo}"`);
+
+    // Without a choice, the logo if there is one; otherwise the colour band.
+    expect(
+      bookingEmail({ ...data, header: { style: null, logoUrl: logo, imageUrl: null } }).html,
+    ).toContain(`<img src="${logo}"`);
+    const band = bookingEmail({ ...data, header: null }).html;
+    expect(band).not.toContain("<img");
+    expect(band).toContain("Hotel Lumen</td>");
+    // A style without its image, or an image that is not https, falls back too.
+    expect(
+      bookingEmail({
+        ...data,
+        header: { style: "image", logoUrl: null, imageUrl: "http://x.example/a.jpg" },
+      }).html,
+    ).not.toContain("<img");
+  });
 });
 
 describe("dispatchEmails", () => {
