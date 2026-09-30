@@ -229,7 +229,7 @@ function DynamicRulesPanel() {
                 <div className="font-medium">{r.name}</div>
                 <div className="text-sm text-muted-foreground">
                   {r.type === "occupancy"
-                    ? `≥ ${cfg.threshold}% ocupación`
+                    ? t("≥ {0}% ocupación", { 0: cfg.threshold ?? "" })
                     : `${cfg.from} → ${cfg.to}`}
                 </div>
                 <div className="text-sm font-semibold text-gold-foreground">+{r.multiplier}%</div>

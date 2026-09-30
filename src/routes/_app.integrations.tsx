@@ -149,8 +149,8 @@ function TokenRow({
           <p className="mt-1 text-xs text-muted-foreground">
             {t("Creado")} {when(token.created_at)} ·{" "}
             {status === "revoked"
-              ? `revocado ${when(token.revoked_at)}`
-              : `caduca ${when(token.expires_at)}`}{" "}
+              ? t("revocado {0}", { 0: when(token.revoked_at) })
+              : t("caduca {0}", { 0: when(token.expires_at) })}{" "}
             {t("· último uso")} {when(token.last_used_at)} · {token.calls_30d}{" "}
             {t("llamadas en 30 días")}
           </p>

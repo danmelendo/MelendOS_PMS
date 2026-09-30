@@ -29,7 +29,7 @@ type Filter = "all" | "unanswered" | "low";
 
 function StarsRow({ value }: { value: number }) {
   return (
-    <span className="inline-flex" aria-label={`${value} de 5`}>
+    <span className="inline-flex" aria-label={t("{0} de 5", { 0: value })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}

@@ -77,7 +77,7 @@ export function SesSettingsCard({
               <SelectContent>
                 {Object.entries(ENVIRONMENTS).map(([v, l]) => (
                   <SelectItem key={v} value={v}>
-                    {l}
+                    {t(l)}
                   </SelectItem>
                 ))}
               </SelectContent>

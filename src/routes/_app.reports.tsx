@@ -163,7 +163,7 @@ function ReportsPage() {
   const cancelReasons = view
     ? Object.entries(view.now.cancelReasons)
         .map(([k, n]) => ({
-          name: isCancellationCategory(k) ? CANCELLATION_CATEGORIES[k] : k,
+          name: t(isCancellationCategory(k) ? CANCELLATION_CATEGORIES[k] : k),
           count: n,
         }))
         .sort((a, b) => b.count - a.count)
@@ -247,13 +247,13 @@ function ReportsPage() {
             <Kpi
               label={t("Reservas hechas")}
               value={String(view.now.bookings)}
-              hint={`${pct(view.now.cancelRate)} canceladas`}
+              hint={t("{0} canceladas", { 0: pct(view.now.cancelRate) })}
               delta={view.ly && relative(view.now.bookings, view.ly.bookings)}
             />
             <Kpi
               label={t("Antelación media")}
-              value={`${Math.round(view.now.avgLeadDays)} días`}
-              hint={`Estancia media ${view.now.avgLengthOfStay.toFixed(1)} noches`}
+              value={t("{0} días", { 0: Math.round(view.now.avgLeadDays) })}
+              hint={t("Estancia media {0} noches", { 0: view.now.avgLengthOfStay.toFixed(1) })}
             />
           </div>
 
@@ -570,7 +570,8 @@ function Kpi({
               }
               title={t("Frente al mismo periodo del año anterior")}
             >
-              {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)} {unit === "pts" ? "pts" : "%"}
+              {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}{" "}
+              {unit === "pts" ? t("pts") : "%"}
             </span>
           )}
           {hint && <span className="truncate">{hint}</span>}

@@ -128,7 +128,7 @@ function FolioBody({ reservationId }: { reservationId: string }) {
             <div key={x.id} className="rounded-md border border-gold/50 bg-gold/5 p-3 text-sm">
               <p className="font-medium">
                 {t("Pide ampliar hasta el")} {day(`${x.new_check_out}T12:00:00Z`)} · {x.nights}{" "}
-                {x.nights === 1 ? "noche" : "noches"} · {eur(Number(x.amount))}
+                {x.nights === 1 ? t("noche") : t("noches")} · {eur(Number(x.amount))}
               </p>
               <p className="text-xs text-muted-foreground">
                 {t(

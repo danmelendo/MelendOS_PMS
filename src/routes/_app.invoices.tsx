@@ -330,7 +330,9 @@ function Row({
           </p>
         )}
         {i.record?.csv && (
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">CSV {i.record.csv}</p>
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+            {t("CSV")} {i.record.csv}
+          </p>
         )}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
@@ -423,7 +425,7 @@ function RectifyForm({
           />
         </div>
         <div className="space-y-1">
-          <Label>IVA</Label>
+          <Label>{t("IVA")}</Label>
           <Select value={f.rate} onValueChange={(v) => setF({ ...f, rate: v })}>
             <SelectTrigger>
               <SelectValue />

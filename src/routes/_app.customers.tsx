@@ -115,7 +115,7 @@ function CustomersPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("Clientes")}</h1>
         <p className="text-sm text-muted-foreground">
-          {Number(total).toLocaleString(currentLocale())} fichas
+          {Number(total).toLocaleString(currentLocale())} {t("fichas")}
           {isFetching && t(" · actualizando…")}
         </p>
       </div>

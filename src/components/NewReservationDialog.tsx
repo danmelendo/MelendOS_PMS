@@ -515,7 +515,10 @@ export function NewReservationDialog({
 
               <Section
                 title={t("Estancia")}
-                hint={`Check-in ${CHECKIN_HOUR}:00 · check-out ${CHECKOUT_HOUR}:00`}
+                hint={t("Check-in {0}:00 · check-out {1}:00", {
+                  0: CHECKIN_HOUR,
+                  1: CHECKOUT_HOUR,
+                })}
               >
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Field label={t("Entrada")}>
@@ -555,7 +558,7 @@ export function NewReservationDialog({
                       <SelectContent className="max-h-[40vh]">
                         {Array.from({ length: MAX_NIGHTS }, (_, i) => i + 1).map((n) => (
                           <SelectItem key={n} value={String(n)}>
-                            {n} {n === 1 ? "noche" : "noches"}
+                            {n} {n === 1 ? t("noche") : t("noches")}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -617,7 +620,7 @@ export function NewReservationDialog({
                               </div>
                               <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                                 <span className="truncate">
-                                  {r.rate_groups?.name ?? t("Sin tarifa")} · {r.capacity} pax
+                                  {r.rate_groups?.name ?? t("Sin tarifa")} · {r.capacity} {t("pax")}
                                 </span>
                                 {rate && (
                                   <span className="shrink-0 tabular-nums text-foreground">
@@ -682,7 +685,7 @@ export function NewReservationDialog({
                                     <Input
                                       inputMode="decimal"
                                       placeholder="0,00"
-                                      aria-label={`Precio de ${ex.name}`}
+                                      aria-label={t("Precio de {0}", { 0: ex.name })}
                                       className="h-7 w-24 tabular-nums"
                                       value={
                                         extraPrice[ex.id] ??
@@ -759,11 +762,11 @@ export function NewReservationDialog({
 
                 <div className="space-y-2 rounded-lg border bg-card p-4 text-sm">
                   <SummaryRow
-                    label={`Alojamiento · ${nightsLabel}`}
+                    label={t("Alojamiento · {0}", { 0: nightsLabel })}
                     value={eur(breakdown?.base)}
                     hint={
                       breakdown && nightsCount > 0
-                        ? `${eur(breakdown.base / nightsCount)} / noche de media`
+                        ? t("{0} / noche de media", { 0: eur(breakdown.base / nightsCount) })
                         : undefined
                     }
                   />
@@ -879,7 +882,7 @@ function Stepper({
         size="icon"
         className={compact ? "h-8 w-8" : "h-9 w-9"}
         disabled={value <= min}
-        aria-label={`Quitar ${label}`}
+        aria-label={t("Quitar {0}", { 0: label })}
         onClick={() => onChange(Math.max(min, value - 1))}
       >
         <Minus className="h-3.5 w-3.5" />
@@ -891,7 +894,7 @@ function Stepper({
         size="icon"
         className={compact ? "h-8 w-8" : "h-9 w-9"}
         disabled={value >= max}
-        aria-label={`Añadir ${label}`}
+        aria-label={t("Añadir {0}", { 0: label })}
         onClick={() => onChange(Math.min(max, value + 1))}
       >
         <Plus className="h-3.5 w-3.5" />
@@ -950,7 +953,7 @@ function RoomPreview({ room }: { room: RoomRow | undefined }) {
         <div>
           <div className="font-semibold">{room.name}</div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {room.building} · <Users className="h-3 w-3" /> hasta {room.capacity}
+            {room.building} · <Users className="h-3 w-3" /> {t("hasta")} {room.capacity}
           </div>
         </div>
         {features.length > 0 && (

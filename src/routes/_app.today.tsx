@@ -179,8 +179,8 @@ function TodayPage() {
           </span>
           <span className="text-sm">{r.customers?.name ?? t("Sin nombre")}</span>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {fmt(start)} → {fmt(end)} · {nights} {nights === 1 ? "noche" : "noches"} · {r.people}{" "}
-            pax
+            {fmt(start)} → {fmt(end)} · {nights} {nights === 1 ? t("noche") : t("noches")} ·{" "}
+            {r.people} {t("pax")}
           </span>
           <Badge variant="outline" className={STATUS_COLORS[r.status]}>
             {t(STATUS_LABELS[r.status])}
@@ -245,12 +245,12 @@ function TodayPage() {
         <StatCard
           label={t("Llegadas")}
           value={String(arrivals.length)}
-          hint={`${pendingArrivals} pendientes de check-in`}
+          hint={t("{0} pendientes de check-in", { 0: pendingArrivals })}
         />
         <StatCard
           label={t("Salidas")}
           value={String(departures.length)}
-          hint={`${pendingDepartures} pendientes de check-out`}
+          hint={t("{0} pendientes de check-out", { 0: pendingDepartures })}
         />
         <StatCard
           label={t("Alojados")}
@@ -260,7 +260,7 @@ function TodayPage() {
         <StatCard
           label={t("Ocupación esta noche")}
           value={`${occupancy}%`}
-          hint={`${tonight.size} de ${totalRooms} habitaciones`}
+          hint={t("{0} de {1} habitaciones", { 0: tonight.size, 1: totalRooms })}
           accent
         />
         <StatCard

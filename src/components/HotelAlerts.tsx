@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ChevronRight } from "lucide-react";
-import { HOTEL_ALERT_KINDS, hotelAlertText, isHotelAlertKind } from "@domain/hotel-alerts.ts";
+import { HOTEL_ALERT_KINDS, isHotelAlertKind } from "@domain/hotel-alerts.ts";
 import { supabase } from "@/integrations/supabase/client";
 import { t } from "@/lib/i18n";
 
@@ -37,9 +37,11 @@ export function HotelAlerts() {
                 to={k.path}
                 className="group flex flex-wrap items-center gap-x-2 rounded px-1 py-0.5 hover:bg-gold/15"
               >
-                <span className="font-medium">{k.area}</span>
+                <span className="font-medium">{t(k.area)}</span>
                 {hotels > 1 && <span className="text-muted-foreground">· {a.hotel}</span>}
-                <span>· {hotelAlertText(a.kind, Number(a.items))}</span>
+                <span>
+                  · {a.items} {t(Number(a.items) === 1 ? k.one : k.many)}
+                </span>
                 <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
               </Link>
             </li>

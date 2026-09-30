@@ -147,10 +147,15 @@ export function CancellationRequests() {
                   {confirming.approve && (
                     <p className="text-xs text-muted-foreground">
                       {late
-                        ? `Fuera del plazo gratuito: según la política, el hotel puede cobrar ${eur(fee)}.`
+                        ? t(
+                            "Fuera del plazo gratuito: según la política, el hotel puede cobrar {0}.",
+                            { 0: eur(fee) },
+                          )
                         : t("Dentro del plazo de cancelación gratuita.")}
                       {paid > 0 &&
-                        ` Pagado online: ${eur(paid)}; el reembolso se hace desde la pasarela de pago.`}
+                        t(" Pagado online: {0}; el reembolso se hace desde la pasarela de pago.", {
+                          0: eur(paid),
+                        })}
                     </p>
                   )}
                   {confirming.approve && (

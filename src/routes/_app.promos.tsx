@@ -338,7 +338,7 @@ function PromosPage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             {c.times_used}
-                            {c.max_uses ? `/${c.max_uses}` : ""} usos
+                            {c.max_uses ? `/${c.max_uses}` : ""} {t("usos")}
                           </span>
                         )}
                       </td>

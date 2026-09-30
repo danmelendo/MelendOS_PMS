@@ -81,9 +81,9 @@ export function PendingRefunds({ onOpen }: { onOpen: (reservationId: string) => 
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {r.status === "rejected" ? t("Pagada sin reserva válida") : t("Cancelada")}
-                {r.cancelled_at ? ` el ${fmt(r.cancelled_at)}` : ""}{" "}
+                {r.cancelled_at ? t(" el {0}", { 0: fmt(r.cancelled_at) }) : ""}{" "}
                 {t("· pagado online sin devolver")} {eur(Number(r.refundable))}
-                {fee > 0 && ` · retiene ${eur(fee)} por cancelación fuera de plazo`}
+                {fee > 0 && t(" · retiene {0} por cancelación fuera de plazo", { 0: eur(fee) })}
               </p>
               {canOperate && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">

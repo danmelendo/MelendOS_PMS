@@ -446,7 +446,7 @@ function ReservationsPage() {
                         <td className="p-2 whitespace-nowrap tabular-nums">
                           <div>{e.toLocaleDateString(currentLocale(), DATE_FMT)}</div>
                           <div className="text-xs text-muted-foreground">
-                            {nights} {nights === 1 ? "noche" : "noches"}
+                            {nights} {nights === 1 ? t("noche") : t("noches")}
                           </div>
                         </td>
                         {multiHotel && <td className="p-2">{hotelName.get(r.tenant_id) ?? "—"}</td>}
@@ -489,8 +489,8 @@ function ReservationsPage() {
                               <div className="mt-1 max-w-[220px] space-y-0.5 text-xs text-muted-foreground">
                                 <div className="font-medium">
                                   {isCancellationCategory(r.cancellation_category)
-                                    ? CANCELLATION_CATEGORIES[r.cancellation_category]
-                                    : r.cancellation_reason}
+                                    ? t(CANCELLATION_CATEGORIES[r.cancellation_category])
+                                    : t(r.cancellation_reason ?? "")}
                                 </div>
                                 {r.cancellation_note && (
                                   <div className="italic" title={t("Nota interna")}>

@@ -352,7 +352,7 @@ function ChannelsPage() {
                 </div>
                 <Switch
                   checked={c.status === "active"}
-                  aria-label={`Canal ${c.name} activo`}
+                  aria-label={t("Canal {0} activo", { 0: c.name })}
                   onCheckedChange={(on) =>
                     actions.update.mutate({ id: c.id, patch: { status: on ? "active" : "paused" } })
                   }
@@ -409,7 +409,10 @@ function ChannelsPage() {
                           onSuccess: (r) =>
                             r.response?.reference
                               ? toast.success(
-                                  `Reserva ${r.response.reference} recibida de ${c.name}`,
+                                  t("Reserva {0} recibida de {1}", {
+                                    0: r.response.reference,
+                                    1: c.name,
+                                  }),
                                 )
                               : toast.error(r.response?.error ?? "No se recibió la reserva"),
                           onError: (e) => toast.error(t(e.message)),
@@ -482,7 +485,7 @@ function ChannelsPage() {
                     </td>
                     <td className="p-2 text-xs">
                       <span className={m.status === "ok" ? "text-info" : "text-destructive"}>
-                        {m.status === "ok" ? "OK" : t("Error")}
+                        {m.status === "ok" ? t("OK") : t("Error")}
                       </span>
                       {m.detail && <span className="ml-1 text-muted-foreground">· {m.detail}</span>}
                     </td>

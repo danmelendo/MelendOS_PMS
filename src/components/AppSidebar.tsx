@@ -179,7 +179,7 @@ export function AppSidebar() {
                         {item.to === "/travellers" && sesAttention > 0 && (
                           <span
                             className="ml-auto min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-semibold text-white"
-                            aria-label={`${sesAttention} comunicaciones que revisar`}
+                            aria-label={t("{0} comunicaciones que revisar", { 0: sesAttention })}
                           >
                             {sesAttention}
                           </span>
@@ -187,7 +187,7 @@ export function AppSidebar() {
                         {item.to === "/messages" && unread > 0 && (
                           <span
                             className="ml-auto min-w-5 rounded-full bg-sidebar-primary px-1.5 text-center text-[11px] font-semibold text-sidebar-primary-foreground"
-                            aria-label={`${unread} mensajes sin leer`}
+                            aria-label={t("{0} mensajes sin leer", { 0: unread })}
                           >
                             {unread}
                           </span>

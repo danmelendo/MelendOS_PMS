@@ -300,7 +300,7 @@ function Thread({
             }}
             rows={2}
             maxLength={2000}
-            placeholder={`Responder a ${guestName}…`}
+            placeholder={t("Responder a {0}…", { 0: guestName })}
             aria-label={t("Respuesta")}
             className="min-h-[44px] flex-1 resize-none"
           />

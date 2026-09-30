@@ -78,7 +78,7 @@ function PackageCard({
             checked={contracted}
             disabled={saving}
             onCheckedChange={onToggle}
-            aria-label={`Paquete ${t(PACKAGES[id].name)}`}
+            aria-label={t("Paquete {0}", { 0: t(PACKAGES[id].name) })}
           />
         )}
       </CardHeader>
@@ -148,7 +148,11 @@ function PlanPage() {
     save.mutate(next, {
       onSuccess: () =>
         toast.success(
-          `${t(PACKAGES[id].name)} ${on ? "activado" : "desactivado"} en ${hotel.name}`,
+          t("{0} {1} en {2}", {
+            0: t(PACKAGES[id].name),
+            1: on ? t("activado") : t("desactivado"),
+            2: hotel.name,
+          }),
         ),
     });
   };

@@ -267,7 +267,7 @@ function ImageField({
                 size="sm"
                 variant="ghost"
                 onClick={() => onChange("")}
-                aria-label={`Quitar ${label}`}
+                aria-label={t("Quitar {0}", { 0: label })}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

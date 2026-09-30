@@ -226,7 +226,9 @@ function Row({
       <td className="p-3">
         <span className="font-medium">{m.email}</span>
         {self && <span className="ml-1.5 text-xs text-muted-foreground">{t("(tú)")}</span>}
-        <span className="block text-xs text-muted-foreground">desde {fmt(m.created_at)}</span>
+        <span className="block text-xs text-muted-foreground">
+          {t("desde")} {fmt(m.created_at)}
+        </span>
       </td>
       <td className="p-3">
         {group || self ? (

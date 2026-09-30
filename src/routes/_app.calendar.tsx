@@ -246,7 +246,10 @@ function CalendarPage() {
                         <button
                           type="button"
                           key={d.getTime()}
-                          aria-label={`Nueva reserva en ${room.name} el ${d.toLocaleDateString(currentLocale())}`}
+                          aria-label={t("Nueva reserva en {0} el {1}", {
+                            0: room.name,
+                            1: d.toLocaleDateString(currentLocale()),
+                          })}
                           disabled={!canOperate}
                           className={cn(
                             "absolute top-0 h-full border-r border-border/60 transition-colors hover:bg-primary/5",
@@ -293,7 +296,7 @@ function CalendarPage() {
                             {r.customers?.name ?? t("Sin nombre")}
                           </div>
                           <div className="truncate opacity-80">
-                            {nights} {nights === 1 ? "noche" : "noches"}
+                            {nights} {nights === 1 ? t("noche") : t("noches")}
                           </div>
                         </button>
                       );

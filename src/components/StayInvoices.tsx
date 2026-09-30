@@ -171,7 +171,9 @@ export function StayInvoices({
                 title={
                   simplifiedOk
                     ? undefined
-                    : `La simplificada llega hasta ${eur(Number(settings.simplified_limit))}`
+                    : t("La simplificada llega hasta {0}", {
+                        0: eur(Number(settings.simplified_limit)),
+                      })
                 }
                 onClick={() =>
                   actions.issue.mutate(

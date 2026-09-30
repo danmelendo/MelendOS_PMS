@@ -43,7 +43,7 @@ export function ColumnMenu({
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label={`Ordenar y filtrar: ${label}`}
+            aria-label={t("Ordenar y filtrar: {0}", { 0: label })}
             className={cn(
               "relative inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
               marked && "text-info",

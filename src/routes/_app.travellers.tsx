@@ -52,8 +52,12 @@ const shortDate = (iso: string) =>
 function deadline(c: SesCommunication): { text: string; late: boolean } | null {
   if (!["pending", "blocked", "error", "rejected"].includes(c.status)) return null;
   const h = Math.round((Date.parse(c.due_at) - Date.now()) / 3_600_000);
-  if (h >= 0) return { text: h < 1 ? "vence en menos de 1 h" : `vence en ${h} h`, late: false };
-  return { text: `vencida hace ${-h} h`, late: true };
+  if (h >= 0)
+    return {
+      text: h < 1 ? t("vence en menos de 1 h") : t("vence en {0} h", { 0: h }),
+      late: false,
+    };
+  return { text: t("vencida hace {0} h", { 0: -h }), late: true };
 }
 
 function TravellersPage() {
@@ -280,7 +284,11 @@ function Row({
         </p>
         {c.error && ["blocked", "rejected", "error"].includes(c.status) && (
           <p className="mt-1 flex items-start gap-1 text-xs text-gold-foreground">
-            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {c.error}
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />{" "}
+            {c.error
+              .split(" · ")
+              .map((part) => t(part))
+              .join(" · ")}
           </p>
         )}
         {c.ses_code && (

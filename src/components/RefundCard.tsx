@@ -57,7 +57,7 @@ export function RefundCard({ reservationId }: { reservationId: string }) {
       return data as { refunded: number };
     },
     onSuccess: (r) => {
-      toast.success(`Devueltos ${eur(r.refunded)} a la tarjeta`);
+      toast.success(t("Devueltos {0} a la tarjeta", { 0: eur(r.refunded) }));
       setConfirming(false);
       setAmount("");
     },

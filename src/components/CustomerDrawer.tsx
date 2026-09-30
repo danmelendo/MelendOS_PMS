@@ -105,7 +105,7 @@ function Body({ customer: c, hotelName }: { customer: CustomerRow; hotelName?: s
             value={c.in_house ? "Alojado ahora" : day(c.next_check_in)}
           />
           <Fact label={t("Última salida")} value={day(c.last_check_out)} />
-          <Fact label={t("Comunicaciones")} value={c.no_contact ? "No desea" : "Acepta"} />
+          <Fact label={t("Comunicaciones")} value={c.no_contact ? t("No desea") : t("Acepta")} />
         </section>
         {c.notes && (
           <section>
