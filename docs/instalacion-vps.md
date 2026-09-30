@@ -72,6 +72,51 @@ Es el `docker compose` oficial de Supabase autoalojado, más nuestras piezas enc
   - Se elige aislar; el coste extra entra en el precio del alojamiento.
 - **Reparto:** el asistente (sección 6) ve cuántas instalaciones y cuánta memoria libre tiene cada VPS, y propone el más holgado. Mover una instalación de VPS es copia y restauración: la misma operación que un simulacro.
 
+### Coste y rentabilidad
+
+(Dan, 30/09/2026: «se iría mucho de precio un VPS así; hay que encontrar un balance en el que sea rentable; se quedó fuera de los gastos del plan de negocio».)
+
+**Precios de mercado** (septiembre de 2026, sin IVA, comprobar al contratar). En 2026 la RAM se ha encarecido y los proveedores han subido: Hetzner dos veces (abril y junio, algunos planes más del doble), netcup hasta un 110 % en servidores y OVH en torno a un 10 %.
+
+| Proveedor y plan                    | CPU            | RAM   | Disco          | €/mes      | Por instalación (÷10) |
+| ----------------------------------- | -------------- | ----- | -------------- | ---------- | --------------------- |
+| OVH VPS-4                           | 12 vCore       | 48 GB | 300 GB         | ~37        | ~3,7                  |
+| OVH VPS-3                           | 8 vCore        | 24 GB | 200 GB         | ~20        | ~2 (para ~5)          |
+| netcup VPS 4000 (contrato 12 meses) | 12 vCore       | 32 GB | 512 GB         | ~45        | ~4,5                  |
+| Hetzner AX42 (servidor dedicado)    | 8 núcleos/16 h | 64 GB | 2×512 GB RAID1 | ~97 + alta | ~9,7                  |
+| Hetzner Cloud CPX62                 | 16 vCPU        | 32 GB | —              | ~130       | ~13                   |
+| Hetzner Cloud CCX33 (CPU dedicada)  | 8 vCPU         | 32 GB | —              | ~139       | ~14                   |
+
+Descartados para producción: Contabo (el más barato, pero con CPU muy compartida y soporte flojo) y los planes baratos de Hetzner Cloud, que ya no se pueden contratar.
+
+**Coste por instalación** = parte del VPS, más ~1 € de copia fuera, más el tiempo de mantenerla. El tiempo de mantenimiento es el coste escondido, y por eso el instalador, las actualizaciones y las alertas tienen que ser automáticos. Con OVH o netcup sale en unos **5 € al mes**; con Hetzner dedicado, ~11 €; con Hetzner Cloud, ~15 €.
+
+**Qué deja cada plan al mes** (cliente típico del modelo de `site/supabase/functions/_shared/plans.ts`; «servirlo» es su soporte y su consumo, antes de los costes fijos):
+
+| Plan                        | Ingreso | Servirlo | Con VPS a 5 € | a 11 € | a 15 € |
+| --------------------------- | ------- | -------- | ------------- | ------ | ------ |
+| Hostal (10 hab.)            | 39      | 19,5     | **14,5**      | 8,5    | 4,5    |
+| Esencial (20 hab.)          | 80      | 38       | **37**        | 31     | 27     |
+| Profesional (35 hab.)       | 315     | 67,5     | **242,5**     | 236,5  | 232,5  |
+| Grupo (2 hoteles, 120 hab.) | 960     | 180      | **775**       | 769    | 765    |
+
+**Para el negocio entero** (mismo modelo):
+
+- Punto muerto: pasa de 42 contratos a 43 (VPS a 5 €) o 45 (a 11–15 €).
+- 20 % de margen: pasa de 54 contratos a 55–58.
+- Cinco VPS de OVH dan para unos 50 clientes y cuestan unos 185 €/mes, más unos 50 € de copias fuera. A cambio, sobra buena parte de lo previsto para Supabase de pago con PITR dentro de los 900 € fijos.
+
+**Conclusiones:**
+
+1. **El VPS no es lo que decide la rentabilidad; el equipo sí** (9.200 €/mes). Pero el proveedor importa para el plan Hostal: con Hetzner Cloud deja 4,5 € al mes y con OVH o netcup, 14,5 €.
+2. **Propuesta de proveedor:** OVH (Francia, RGPD y la mejor relación RAM/precio) o netcup (Alemania, más disco). Hetzner dedicado (AX42) cuando haya clientes grandes que llenen un servidor. El instalador tiene que funcionar en cualquiera, para poder cambiar si vuelven a subir precios.
+3. **Empezar pequeño:** los primeros clientes van en un VPS mediano (OVH VPS-3, ~20 €, ~5 instalaciones). Se sube de plan o se añade un segundo VPS al acercarse al tope. La prueba a mano sirve para medir cuánta RAM gasta de verdad cada instalación: si es menos de lo estimado, caben más o sirve un VPS más barato.
+4. **Contrato del proveedor a 12 meses** cuando haya clientes: fija el precio frente a nuevas subidas y sale más barato.
+5. **Cliente que quiere un servidor solo para él:** es otro producto, con su VPS entero repercutido (desde ~20–40 €/mes más) y en la implantación.
+6. **Pendiente en el modelo:** sumar el coste por instalación a `SERVE_COST` en `plans.ts`, y bajar de los 900 € fijos lo que ya no se gaste en Supabase, cuando se elija proveedor.
+
+Fuentes de precios: [Hetzner, ajuste del 15/06/2026](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/), [resumen de precios de Hetzner Cloud en 2026](https://agentdeals.dev/hetzner-pricing-2026), [OVH VPS-3](https://www.vpsbenchmarks.com/hosters/ovhcloud/plans/vps-3), [cambios de precio de OVH](https://blog.ovhcloud.com/en/posts/pricing-evolution-of-public-cloud-bare-metal-and-vps-at-ovhcloud/), [netcup VPS](https://www.netcup.com/en/server/vps), [subida de netcup en 2026](https://servercalc.com/news/netcup-price-increase-2026/), [Hetzner AX42](https://www.hetzner.com/dedicated-rootserver/ax42/), [Contabo](https://contabo.com/blog/cheapest-eu-vps-high-ram-gdpr/).
+
 ### Rendimiento
 
 Dan notó en la demo que el calendario tarda en mostrar los precios y la web, en cargar las habitaciones libres. Medido el 30/09/2026 contra la demo (Supabase Cloud, plan gratuito):
@@ -336,8 +381,8 @@ Esta es la prueba del instalador terminado, sobre un VPS limpio. Antes va la ins
 4. **Actualizaciones**:
    - ¿Las lanzamos nosotros (con acceso SSH) o el cliente con `melendos update`?
    - Propuesta: nosotros, en una ventana acordada.
-5. **Proveedor para la prueba**: propuesta, Hetzner (barato, UE, API para automatizar); o uno español si algún cliente lo va a pedir.
-6. **VPS para la instalación a mano**: hace falta uno con Ubuntu 24.04 (4 vCPU, 8 GB, 160 GB) y acceso de administrador, y tres nombres de un dominio de pruebas apuntando a él (por ejemplo `panel-prueba`, `reservas-prueba` y `api-prueba` de `melendo.app`).
+5. **Proveedor**: propuesta, OVH o netcup (sección 3, «Coste y rentabilidad»); Hetzner Cloud ha dejado de ser barato tras las subidas de 2026. Para la prueba a mano, un OVH VPS-3 (~20 €/mes) basta.
+6. **VPS para la instalación a mano**: propuesta, un OVH VPS-3 (8 vCore, 24 GB, 200 GB, ~20 €/mes) con Ubuntu 24.04 y acceso de administrador; así ya se prueban varias instalaciones en el mismo VPS. Además, y tres nombres de un dominio de pruebas apuntando a él (por ejemplo `panel-prueba`, `reservas-prueba` y `api-prueba` de `melendo.app`).
 7. **Copia fuera del VPS**: las copias van en el VPS, como pediste. ¿Añadimos también la copia diaria fuera (sección 8)? Recomiendo que sí: sin ella, perder el VPS es perderlo todo.
 8. **Orquestador**: propuesta, un workflow de GitHub Actions lanzado desde el panel de gestión; un servicio propio solo si hay muchas altas.
 9. **Credenciales del hotel** (TPV, SES, certificado): propuesta, que las meta el hotel en su panel y no pasen por el asistente.
