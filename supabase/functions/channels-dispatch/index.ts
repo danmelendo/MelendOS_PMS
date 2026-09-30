@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
             .eq("user_id", auth.user.id)
             .maybeSingle()
         : { data: null };
-    if (!member) return json({ error: "No autorizado" }, 403);
+    // From the panel, only Melend/OS support (channels are set up by us).
+    if (member?.role !== "platform") return json({ error: "No autorizado" }, 403);
   } else if (!tenantId) {
     tenantId = null; // every hotel
   }

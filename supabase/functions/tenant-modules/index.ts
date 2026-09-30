@@ -4,7 +4,7 @@
 // product with and without each package. Only in the demo: it answers 403
 // unless the project has the DEMO_ACCESS=true secret (in production packages
 // are contracted with sales and set by the platform, never by the hotel).
-// Caller: an admin of that hotel (Authorization: Bearer <user JWT>).
+// Caller: Melend/OS support on that hotel (Authorization: Bearer <user JWT>).
 import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { PACKAGE_IDS } from "../_shared/domain/features.ts";
 
@@ -38,8 +38,9 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .maybeSingle()
     : { data: null };
-  if (!["admin", "group", "platform"].includes(member?.role ?? "")) {
-    return json({ error: "Solo un administrador del hotel puede cambiar el plan" }, 403);
+  // Plan and modules are set by Melend/OS (support role), never by the hotel.
+  if (member?.role !== "platform") {
+    return json({ error: "El plan lo gestiona Melend/OS: contacta con ventas" }, 403);
   }
 
   const { data: tenant } = await db

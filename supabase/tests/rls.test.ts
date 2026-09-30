@@ -29,6 +29,9 @@ const users = {
   alboraAdmin: "00000000-0000-4000-8000-000000000003",
   guestAlex: "00000000-0000-4000-8000-000000000004",
   otherGuest: "00000000-0000-4000-8000-000000000005",
+  // Melend/OS support (platform role); a member of a hotel only inside the
+  // tests that need it (supportOn), so the staff lists elsewhere stay as seeded.
+  support: "00000000-0000-4000-8000-000000000016",
 };
 const ids: Record<string, string> = {};
 
@@ -80,6 +83,13 @@ async function asIdentity<T>(
     await client.query("reset role");
   }
 }
+
+// Makes users.support the Melend/OS support role on a hotel (inside a savepoint).
+const supportOn = (tenant: string) =>
+  client.query(
+    "insert into public.tenant_members (tenant_id, user_id, role) values ($1, $2, 'platform') on conflict do nothing",
+    [tenant, users.support],
+  );
 
 const count = async (sql: string, params: unknown[] = []) =>
   Number((await client.query(sql, params)).rows[0].n);
@@ -1401,16 +1411,19 @@ describe.skipIf(!DB_URL)("RLS", () => {
         return r.rows[0].t;
       });
 
-    it("only an admin of the hotel creates, lists or revokes them", async () => {
+    it("only Melend/OS support creates, lists or revokes them", async () => {
       const reception = await create(users.lumenReception, ids.lumen, ["read"]);
+      const management = await create(users.lumenAdmin, ids.lumen, ["read"]);
       const otherHotel = await create(users.alboraAdmin, ids.lumen, ["read"]);
       expect(reception.ok).toBe(false);
+      expect(management.ok).toBe(false);
       expect(otherHotel.ok).toBe(false);
 
       await client.query("savepoint setup");
+      await supportOn(ids.lumen);
       const t = await asIdentity(
         "authenticated",
-        users.lumenAdmin,
+        users.support,
         async () =>
           (
             await client.query(
@@ -1425,9 +1438,12 @@ describe.skipIf(!DB_URL)("RLS", () => {
       const revokeOther = await attempt("authenticated", users.alboraAdmin, () =>
         client.query("select public.revoke_mcp_token($1)", [t.id]),
       );
+      const listByManagement = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.list_mcp_tokens($1)", [ids.lumen]),
+      );
       const listed = await asIdentity(
         "authenticated",
-        users.lumenAdmin,
+        users.support,
         async () =>
           (await client.query("select public.list_mcp_tokens($1) as l", [ids.lumen])).rows[0].l,
       );
@@ -1440,6 +1456,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
       expect(t.scopes).toEqual(["read", "write"]);
       expect(listOther.ok).toBe(false);
       expect(revokeOther.ok).toBe(false);
+      expect(listByManagement.ok).toBe(false);
       expect(listed).toHaveLength(1);
       expect(JSON.stringify(listed)).not.toContain(stored.token_hash);
       expect(JSON.stringify(listed)).not.toContain(t.token);
@@ -1462,9 +1479,10 @@ describe.skipIf(!DB_URL)("RLS", () => {
 
     it("a revoked or expired token no longer authenticates", async () => {
       await client.query("savepoint setup");
+      await supportOn(ids.lumen);
       const t = await asIdentity(
         "authenticated",
-        users.lumenAdmin,
+        users.support,
         async () =>
           (
             await client.query(
@@ -1490,7 +1508,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
         "update public.mcp_tokens set expires_at = now() + interval '1 day' where id = $1",
         [t.id],
       );
-      await asIdentity("authenticated", users.lumenAdmin, () =>
+      await asIdentity("authenticated", users.support, () =>
         client.query("select public.revoke_mcp_token($1)", [t.id]),
       );
       const revoked = await auth();
@@ -1539,9 +1557,10 @@ describe.skipIf(!DB_URL)("RLS", () => {
     it("without the AI package: no MCP tokens, and existing ones stop working", async () => {
       await client.query("savepoint setup");
       await setTenant("starter", { packages: ["stay", "ai"] });
+      await supportOn(ids.lumen);
       const t = await asIdentity(
         "authenticated",
-        users.lumenAdmin,
+        users.support,
         async () =>
           (
             await client.query(
@@ -1551,7 +1570,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
           ).rows[0].t,
       );
       await setTenant("starter", { packages: ["stay"] });
-      const refused = await attempt("authenticated", users.lumenAdmin, () =>
+      const refused = await attempt("authenticated", users.support, () =>
         client.query("select public.create_mcp_token($1, 'x', array['read'], 30)", [ids.lumen]),
       );
       const auth = (
@@ -1868,13 +1887,13 @@ describe.skipIf(!DB_URL)("RLS", () => {
         if (!r.ok) expect(r.error, what).toMatch(/grupo|row-level security/);
       }
       expect(rates.ok && rates.value).toBeGreaterThan(0);
-      expect(tokens.ok).toBe(true);
+      expect(tokens.ok).toBe(false); // AI integrations are set up by Melend/OS
       expect(reception.ok).toBe(true);
     });
   });
 
   describe("distribution channels", () => {
-    it("admins connect channels; the secret stays in Vault; bookings queue availability", async () => {
+    it("Melend/OS support connects channels; the secret stays in Vault; bookings queue availability", async () => {
       await client.query("savepoint setup");
       await client.query(
         'update public.tenants set settings = settings || \'{"packages": ["stay", "distribution"]}\'::jsonb where id = $1',
@@ -1883,9 +1902,13 @@ describe.skipIf(!DB_URL)("RLS", () => {
       const byReception = await attempt("authenticated", users.lumenReception, () =>
         client.query("select public.create_channel($1, 'ota', 'demo', 'OTA')", [ids.lumen]),
       );
+      const byManagement = await attempt("authenticated", users.lumenAdmin, () =>
+        client.query("select public.create_channel($1, 'ota', 'demo', 'OTA')", [ids.lumen]),
+      );
+      await supportOn(ids.lumen);
       const ch = await asIdentity(
         "authenticated",
-        users.lumenAdmin,
+        users.support,
         async () =>
           (
             await client.query(
@@ -1927,6 +1950,24 @@ describe.skipIf(!DB_URL)("RLS", () => {
           )
         ).rows[0].n,
       );
+      const managementLog = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (
+            await client.query(
+              "select count(*)::int n from public.channel_outbox where channel_id = $1",
+              [ch.id],
+            )
+          ).rows[0].n,
+      );
+      const managementRename = await attempt(
+        "authenticated",
+        users.lumenAdmin,
+        async () =>
+          (await client.query("update public.channels set name = 'x' where id = $1", [ch.id]))
+            .rowCount,
+      );
       const duplicate = await attempt("authenticated", users.lumenAdmin, () =>
         client.query(
           `insert into public.reservations (tenant_id, room_id, start_at, end_at, status, total, created_by_role, channel_id, external_ref)
@@ -1937,6 +1978,9 @@ describe.skipIf(!DB_URL)("RLS", () => {
       await client.query("rollback to savepoint setup");
 
       expect(byReception.ok).toBe(false);
+      expect(byManagement.ok).toBe(false);
+      expect(managementLog).toEqual({ ok: true, value: 0 });
+      expect(managementRename).toEqual({ ok: true, value: 0 });
       expect(ch.secret).toMatch(/^dsc_[0-9a-f]{48}$/);
       expect(readSecret.ok).toBe(false);
       expect(seen).toEqual({ ok: true, value: 1 });
@@ -3376,7 +3420,7 @@ describe.skipIf(!DB_URL)("RLS", () => {
   });
 
   describe("activity and consumption", () => {
-    it("is for the hotel's management only", async () => {
+    it("is for Melend/OS support only", async () => {
       const read = (who: string, tenant: string) =>
         attempt(
           "authenticated",
@@ -3384,9 +3428,14 @@ describe.skipIf(!DB_URL)("RLS", () => {
           async () =>
             (await client.query("select public.hotel_activity($1, 30) as a", [tenant])).rows[0].a,
         );
-      const admin = await read(users.lumenAdmin, ids.lumen);
+      await client.query("savepoint setup");
+      await supportOn(ids.lumen);
+      const admin = await read(users.support, ids.lumen);
+      const management = await read(users.lumenAdmin, ids.lumen);
       const reception = await read(users.lumenReception, ids.lumen);
       const other = await read(users.alboraAdmin, ids.lumen);
+      await client.query("rollback to savepoint setup");
+      expect(management.ok).toBe(false);
       expect(admin.ok && Object.keys(admin.value).sort()).toEqual(
         ["ai", "errors", "mcp_calls", "queues", "since", "storage"].sort(),
       );

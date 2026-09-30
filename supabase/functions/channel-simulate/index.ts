@@ -2,8 +2,8 @@
 //
 // Demo only (secret DEMO_ACCESS=true): plays the channel's side. Builds a
 // plausible booking with fictitious data for one of the mapped room types and
-// posts it, signed, to channel-webhook, exactly as an OTA would. Caller: an
-// admin of the channel's hotel.
+// posts it, signed, to channel-webhook, exactly as an OTA would. Caller:
+// Melend/OS support (the platform role) on the channel's hotel.
 import { adminClient, corsHeaders, json, verifiedUser } from "../_shared/http.ts";
 import { signBody } from "../_shared/channels/contract.ts";
 import { supabaseChannelStore } from "../_shared/channels/supabase-store.ts";
@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
         .eq("user_id", auth.user.id)
         .maybeSingle()
     : { data: null };
-  if (!member || !["admin", "group", "platform"].includes(member.role)) {
-    return json({ error: "Solo dirección" }, 403);
+  if (member?.role !== "platform") {
+    return json({ error: "Solo el soporte de Melend/OS" }, 403);
   }
 
   // A room type with free nights some weeks ahead.

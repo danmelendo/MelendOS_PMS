@@ -50,8 +50,10 @@ try {
     .not("rate_group_id", "is", null);
   const groups = [...new Set(rooms.map((r) => r.rate_group_id))].slice(0, 2);
   const roomMap = Object.fromEntries(groups.map((g, i) => [`E2E-${i}`, g]));
-  admin = await signIn("admin@lumen.demostays.example");
+  // Channels are set up by Melend/OS support (platform role), not by the hotel.
+  admin = await signIn("soporte@demostays.example");
   const reception = await signIn("recepcion@lumen.demostays.example");
+  const management = await signIn("admin@lumen.demostays.example");
 
   const denied = await reception.rpc("create_channel", {
     p_tenant: tenant.id,
@@ -61,6 +63,14 @@ try {
     p_room_map: roomMap,
   });
   check("reception cannot connect channels", !!denied.error, denied.error?.message);
+  const byManagement = await management.rpc("create_channel", {
+    p_tenant: tenant.id,
+    p_kind: "ota",
+    p_provider: "demo",
+    p_name: "No",
+    p_room_map: roomMap,
+  });
+  check("hotel management cannot either", !!byManagement.error, byManagement.error?.message);
   const { data: ch, error } = await admin.rpc("create_channel", {
     p_tenant: tenant.id,
     p_kind: "ota",
@@ -71,7 +81,10 @@ try {
   });
   if (error) throw error;
   channelId = ch.id;
-  check("admin connects a channel and gets its secret once", /^dsc_[0-9a-f]{48}$/.test(ch.secret));
+  check(
+    "support connects a channel and gets its secret once",
+    /^dsc_[0-9a-f]{48}$/.test(ch.secret),
+  );
 
   const post = async (payload, secret = ch.secret) => {
     const body = JSON.stringify(payload);

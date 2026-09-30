@@ -141,7 +141,7 @@ $$;
 
 -- Removes a channel and its signing secret (its bookings stay, unlinked).
 create or replace function public.delete_channel(p_channel uuid)
-returns void language plpgsql security definer set search_path = public, vault as $
+returns void language plpgsql security definer set search_path = public, vault as $$
 declare v_tenant uuid;
 begin
   select tenant_id into v_tenant from public.channels where id = p_channel;
@@ -153,7 +153,7 @@ begin
   insert into public.domain_events (tenant_id, event_type, entity, entity_id, actor_id, payload)
   values (v_tenant, 'channel.deleted', 'channel', p_channel, auth.uid(), '{}'::jsonb);
 end;
-$;
+$$;
 revoke execute on function public.delete_channel(uuid) from public, anon;
 grant execute on function public.delete_channel(uuid) to authenticated;
 
