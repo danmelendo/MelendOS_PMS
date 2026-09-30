@@ -29,7 +29,7 @@ export interface Field {
   max?: number;
   min?: number;
   /** Only shown (and required) when another field of the section has this value. */
-  when?: { key: string; is: string };
+  when?: { key: string; is: string | string[] };
 }
 
 export interface Section {
@@ -108,60 +108,76 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "brand",
-    title: "Imagen",
-    intro: "El logotipo y las fotos se suben en el último paso.",
+    id: "web",
+    title: "Tu web y tus emails",
+    intro:
+      "Primero dinos si quieres que te hagamos la web o si ya tienes la tuya: solo te pediremos lo que haga falta.",
     fields: [
       {
-        key: "accent",
-        label: "Color de tu marca",
-        type: "color",
-        help: "Botones, cabecera de los emails y detalles de la web.",
+        key: "web_mode",
+        label: "¿Qué web vas a usar?",
+        type: "select",
+        required: true,
+        options: [
+          { value: "template", label: "Quiero la web de Melend/OS (plantilla con reservas)" },
+          { value: "own", label: "Ya tengo mi web: solo quiero el botón de reservar" },
+        ],
+      },
+      // Their own web: where the booking button (and the assistant) go.
+      {
+        key: "own_url",
+        label: "Dirección de tu web",
+        type: "url",
+        required: true,
+        max: 200,
+        placeholder: "https://www.tuhotel.com",
+        help: "Ahí pondremos el botón «Reservar» (y el asistente, si lo has contratado).",
+        when: { key: "web_mode", is: "own" },
       },
       {
-        key: "tagline",
-        label: "Lema o frase corta",
+        key: "own_platform",
+        label: "¿Con qué está hecha?",
+        type: "select",
+        options: [
+          { value: "wordpress", label: "WordPress" },
+          { value: "wix", label: "Wix" },
+          { value: "squarespace", label: "Squarespace" },
+          { value: "webflow", label: "Webflow" },
+          { value: "custom", label: "A medida" },
+          { value: "unknown", label: "No lo sé" },
+        ],
+        when: { key: "web_mode", is: "own" },
+      },
+      {
+        key: "web_contact",
+        label: "¿Quién mantiene tu web?",
         type: "text",
         max: 160,
-        placeholder: "Un hotel familiar junto al mar",
+        placeholder: "Nombre y email o teléfono",
+        help: "Le enviaremos el código del botón, o se lo ponemos nosotros si nos das acceso.",
+        when: { key: "web_mode", is: "own" },
       },
+      // Where the booking pages answer (both cases).
       {
-        key: "email_header",
-        label: "Cabecera de los emails a tus huéspedes",
+        key: "booking_address",
+        label: "¿Dónde quieres las páginas de reserva?",
         type: "select",
         required: true,
         options: [
-          { value: "logo", label: "Mi logotipo sobre blanco" },
-          { value: "image", label: "Una foto de mi alojamiento" },
-          { value: "color", label: "Una banda con mi color y mi nombre" },
+          { value: "own_domain", label: "En mi dominio, p. ej. reservas.tuhotel.com" },
+          { value: "ours", label: "En la dirección que nos deis (tuhotel.melendo.app)" },
         ],
-      },
-    ],
-  },
-  {
-    id: "domain",
-    title: "Web y dominio",
-    intro: "Tu web de reservas puede ir en un subdominio tuyo, por ejemplo reservas.tuhotel.com.",
-    fields: [
-      {
-        key: "wants_domain",
-        label: "¿Quieres usar tu propio dominio?",
-        type: "select",
-        required: true,
-        options: [
-          { value: "yes", label: "Sí" },
-          { value: "later", label: "Más adelante" },
-          { value: "no", label: "No, usad el vuestro" },
-        ],
+        help: "Es la página que se abre al reservar y donde el huésped gestiona su reserva.",
+        when: { key: "web_mode", is: ["template", "own"] },
       },
       {
         key: "domain",
         label: "Dirección que quieres",
         type: "text",
+        required: true,
         max: 120,
         placeholder: "reservas.tuhotel.com",
-        when: { key: "wants_domain", is: "yes" },
-        required: true,
+        when: { key: "booking_address", is: "own_domain" },
       },
       {
         key: "dns_manager",
@@ -172,7 +188,36 @@ export const SECTIONS: Section[] = [
           { value: "provider", label: "Mi informático o la empresa de mi web" },
           { value: "unknown", label: "No lo sé" },
         ],
-        when: { key: "wants_domain", is: "yes" },
+        help: "Hay que añadir un registro DNS; te mandamos los pasos.",
+        when: { key: "booking_address", is: "own_domain" },
+      },
+      // Look of the template web and of the emails.
+      {
+        key: "accent",
+        label: "Color principal",
+        type: "color",
+        help: "Botones y detalles de la web y de los emails.",
+        when: { key: "web_mode", is: ["template", "own"] },
+      },
+      {
+        key: "tagline",
+        label: "Lema o frase corta de tu web",
+        type: "text",
+        max: 160,
+        placeholder: "Un hotel familiar junto al mar",
+        when: { key: "web_mode", is: "template" },
+      },
+      {
+        key: "email_header",
+        label: "Cabecera de los emails de reserva",
+        type: "select",
+        required: true,
+        options: [
+          { value: "logo", label: "Mi logotipo sobre blanco" },
+          { value: "image", label: "Una foto de mi alojamiento" },
+          { value: "color", label: "Una banda con mi color y mi nombre" },
+        ],
+        when: { key: "web_mode", is: ["template", "own"] },
       },
     ],
   },
@@ -282,47 +327,76 @@ export const SECTIONS: Section[] = [
   },
 ];
 
-export type FileKind = "rooms" | "reservations" | "logo" | "photos" | "other";
+export type FileKind = "rooms" | "reservations" | "logo" | "header" | "photos" | "other";
 
-export const FILE_KINDS: {
+export interface FileKindDef {
   kind: FileKind;
   label: string;
   help: string;
-  required?: boolean;
   accept: string[];
-}[] = [
+  /** Where it is uploaded: in its own step, or next to the web questions. */
+  section: "web" | "files";
+  /** Shown (and required, if required) only for these answers of the web section. */
+  when?: Field["when"];
+  required?: boolean;
+}
+
+export const FILE_KINDS: FileKindDef[] = [
+  {
+    kind: "logo",
+    label: "Logotipo",
+    help: "PNG con fondo transparente, de al menos 480 × 112 px (en el email se ve a 240 × 56). Si tienes una versión clara para fondos oscuros, súbela también.",
+    accept: ["png", "jpg", "jpeg", "webp", "pdf"],
+    section: "web",
+    when: { key: "email_header", is: "logo" },
+    required: true,
+  },
+  {
+    kind: "header",
+    label: "Foto de cabecera de los emails",
+    help: "JPG horizontal de 1200 × 440 px (se ve a 600 × 220), de menos de 1 MB. Sin texto ni detalles importantes cerca de los bordes.",
+    accept: ["jpg", "jpeg", "png", "webp"],
+    section: "web",
+    when: { key: "email_header", is: "image" },
+    required: true,
+  },
+  {
+    kind: "photos",
+    label: "Fotos para tu web",
+    help: "Fachada, recepción, habitaciones… en JPG de al menos 1600 px de ancho. La primera será la portada. Si no tienes logotipo, tu nombre irá en texto.",
+    accept: ["jpg", "jpeg", "png", "webp", "zip"],
+    section: "web",
+    when: { key: "web_mode", is: "template" },
+  },
   {
     kind: "rooms",
     label: "Habitaciones y tarifas",
     help: "Tu Excel o CSV con cada habitación, su tipo, capacidad y precio por noche (y de fin de semana, si cambia). En el formato que tengas: lo adaptamos nosotros.",
-    required: true,
     accept: ["xlsx", "xls", "ods", "csv", "pdf"],
+    section: "files",
+    required: true,
   },
   {
     kind: "reservations",
     label: "Reservas futuras",
     help: "Si vienes de otro programa, exporta las reservas a partir de hoy para pasarlas a Melend/OS.",
     accept: ["xlsx", "xls", "ods", "csv", "pdf", "zip"],
-  },
-  {
-    kind: "logo",
-    label: "Logotipo",
-    help: "PNG con fondo transparente, si lo tienes.",
-    accept: ["png", "jpg", "jpeg", "webp", "pdf"],
-  },
-  {
-    kind: "photos",
-    label: "Fotos",
-    help: "Fachada, recepción, habitaciones… La primera será la portada.",
-    accept: ["jpg", "jpeg", "png", "webp", "zip"],
+    section: "files",
   },
   {
     kind: "other",
     label: "Otros documentos",
     help: "Cualquier cosa que nos ayude: condiciones, carta de servicios…",
     accept: ["pdf", "xlsx", "xls", "ods", "csv", "txt", "zip", "jpg", "jpeg", "png"],
+    section: "files",
   },
 ];
+
+/** The file kinds that apply to these answers (the web section decides some). */
+export function fileKindsFor(data: OnboardingData, section?: "web" | "files"): FileKindDef[] {
+  const web = data.web ?? {};
+  return FILE_KINDS.filter((k) => (!section || k.section === section) && fieldShown(k, web));
+}
 
 export const MAX_FILE_BYTES = 20 * 1024 * 1024;
 export const MAX_FILES = 40;
@@ -407,8 +481,10 @@ export function cleanOnboardingData(raw: unknown): OnboardingData {
 }
 
 /** Whether a field applies, given the other answers of its section. */
-export function fieldShown(f: Field, values: Record<string, unknown>): boolean {
-  return !f.when || values[f.when.key] === f.when.is;
+export function fieldShown(f: Pick<Field, "when">, values: Record<string, unknown>): boolean {
+  if (!f.when) return true;
+  const is = Array.isArray(f.when.is) ? f.when.is : [f.when.is];
+  return is.includes(values[f.when.key] as string);
 }
 
 function missing(f: Field, v: unknown): boolean {
@@ -434,7 +510,10 @@ export function onboardingProblems(data: OnboardingData, fileKinds: FileKind[]):
         problems.push(`${s.title}: «${f.label}» debe empezar por https://`);
     }
   }
-  for (const k of FILE_KINDS)
-    if (k.required && !fileKinds.includes(k.kind)) problems.push(`Archivos: falta «${k.label}»`);
+  for (const k of fileKindsFor(data))
+    if (k.required && !fileKinds.includes(k.kind))
+      problems.push(
+        `${k.section === "web" ? "Tu web y tus emails" : "Archivos"}: falta «${k.label}»`,
+      );
   return problems;
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cleanOnboardingData, fileContentType, onboardingProblems } from "./onboarding.ts";
+import {
+  cleanOnboardingData,
+  fileContentType,
+  fileKindsFor,
+  onboardingProblems,
+} from "./onboarding.ts";
 
 const complete = {
   establishment: {
@@ -21,8 +26,12 @@ const complete = {
     fiscal_address: "Calle Mayor 1",
     invoicing: "yes",
   },
-  brand: { accent: "#7a4b2a", email_header: "logo" },
-  domain: { wants_domain: "later" },
+  web: {
+    web_mode: "own",
+    own_url: "https://hostalsol.example",
+    booking_address: "ours",
+    email_header: "color",
+  },
   policies: {
     payment_modes: ["prepay", "at_hotel"],
     free_cancellation_hours: 48,
@@ -46,11 +55,11 @@ describe("cleanOnboardingData", () => {
   it("drops values out of range or not among the options", () => {
     const d = cleanOnboardingData({
       establishment: { rooms: 0, checkin_hour: 25, kind: "castle" },
-      brand: { accent: "red" },
+      web: { accent: "red" },
       policies: { payment_modes: ["prepay", "cash"] },
     });
     expect(d.establishment).toEqual({});
-    expect(d.brand).toEqual({});
+    expect(d.web).toEqual({});
     expect(d.policies.payment_modes).toEqual(["prepay"]);
   });
 });
@@ -66,10 +75,33 @@ describe("onboardingProblems", () => {
     expect(p).toContain("Archivos: falta «Habitaciones y tarifas»");
   });
 
-  it("asks for the domain only when they want their own", () => {
-    const data = cleanOnboardingData({ ...complete, domain: { wants_domain: "yes" } });
+  it("asks for the domain only when the booking pages go on theirs", () => {
+    const data = cleanOnboardingData({
+      ...complete,
+      web: { ...complete.web, booking_address: "own_domain" },
+    });
     expect(onboardingProblems(data, ["rooms"])).toEqual([
-      "Web y dominio: falta «Dirección que quieres»",
+      "Tu web y tus emails: falta «Dirección que quieres»",
+    ]);
+  });
+
+  it("asks what each web option needs, files included", () => {
+    const template = cleanOnboardingData({
+      ...complete,
+      web: { web_mode: "template", booking_address: "ours", email_header: "logo" },
+    });
+    // No own_url for the template web, but the logo it chose for the emails.
+    expect(onboardingProblems(template, ["rooms"])).toEqual([
+      "Tu web y tus emails: falta «Logotipo»",
+    ]);
+    expect(onboardingProblems(template, ["rooms", "logo"])).toEqual([]);
+    const own = cleanOnboardingData({
+      ...complete,
+      web: { web_mode: "own", booking_address: "ours", email_header: "image" },
+    });
+    expect(onboardingProblems(own, ["rooms"])).toEqual([
+      "Tu web y tus emails: falta «Dirección de tu web»",
+      "Tu web y tus emails: falta «Foto de cabecera de los emails»",
     ]);
   });
 
@@ -89,5 +121,15 @@ describe("fileContentType", () => {
     expect(fileContentType("photos", "fachada.jpg")).toBe("image/jpeg");
     expect(fileContentType("rooms", "virus.exe")).toBeNull();
     expect(fileContentType("logo", "logo.xlsx")).toBeNull();
+  });
+});
+
+describe("fileKindsFor", () => {
+  it("puts web photos only with the template web", () => {
+    const kinds = (web: Record<string, unknown>) =>
+      fileKindsFor(cleanOnboardingData({ web }), "web").map((k) => k.kind);
+    expect(kinds({ web_mode: "template", email_header: "color" })).toEqual(["photos"]);
+    expect(kinds({ web_mode: "own", email_header: "logo" })).toEqual(["logo"]);
+    expect(kinds({ web_mode: "own", email_header: "image" })).toEqual(["header"]);
   });
 });

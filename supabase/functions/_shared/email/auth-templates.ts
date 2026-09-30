@@ -72,14 +72,15 @@ const COPY: Record<AuthEmailKind, AuthCopy> = {
 };
 
 /**
- * The Melend/OS logo on white (it stays white in dark mode: the logo is drawn
- * for a light background) over a thin gold line. `assets` is where the
+ * The Melend/OS logo (its light version, transparent) on a navy band with a
+ * gold line: dark already, so mail apps in dark mode leave it as it is (a
+ * white band showed as a white box in them). `assets` is where the
  * images are served: the installation's web ({{ .SiteURL }}) for Auth's
  * emails, the sales web for the ones it sends. The alt text keeps the name
  * when a client blocks images.
  */
 export function melendosHeader(assets: string): string {
-  return `<tr><td align="center" class="px" style="padding:30px 32px 24px;background:#ffffff;border-bottom:3px solid ${GOLD}"><img src="${assets}/melendos-logo.png" width="260" alt="Melend/OS" style="display:block;width:260px;max-width:100%;height:auto;border:0;font-family:${SERIF};font-size:24px;color:${NAVY}"></td></tr>`;
+  return `<tr><td align="center" class="px" style="padding:28px 32px 22px;background:${NAVY};border-bottom:3px solid ${GOLD}"><img src="${assets}/melendos-logo.png" width="240" alt="Melend/OS" style="display:block;width:240px;max-width:100%;height:auto;border:0;font-family:${SERIF};font-size:24px;color:#ffffff"><div style="margin-top:8px;font-size:11px;letter-spacing:.14em;color:#aab4c8">THE OPERATING SYSTEM FOR INDEPENDENT HOTELS</div></td></tr>`;
 }
 
 /** The brand picture (the logo at a hotel reception) closing the card. */

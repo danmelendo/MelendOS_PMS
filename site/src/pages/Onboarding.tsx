@@ -4,13 +4,14 @@ import { Logo } from "../components/Layout";
 import { SALES } from "../config";
 import { sales } from "../lib/supabase";
 import {
-  FILE_KINDS,
+  fileKindsFor,
   MAX_FILE_BYTES,
   SECTIONS,
   fieldShown,
   onboardingProblems,
   type Field,
   type FileKind,
+  type FileKindDef,
   type OnboardingData,
 } from "../../supabase/functions/_shared/onboarding.ts";
 
@@ -191,7 +192,7 @@ export function OnboardingPage() {
                       key={f.key}
                       field={f}
                       value={(data[section.id] ?? {})[f.key]}
-                      accent={(data.brand?.accent as string | undefined) ?? "#16233f"}
+                      accent={(data.web?.accent as string | undefined) ?? "#16233f"}
                       name={
                         (data.establishment?.trade_name as string | undefined) || loaded.client.name
                       }
@@ -199,9 +200,31 @@ export function OnboardingPage() {
                     />
                   ))}
               </div>
+              {section.id === "web" && (
+                <>
+                  {data.web?.web_mode === "template" && (
+                    <WebPreview
+                      accent={(data.web?.accent as string | undefined) ?? "#16233f"}
+                      name={
+                        (data.establishment?.trade_name as string | undefined) || loaded.client.name
+                      }
+                      tagline={(data.web?.tagline as string | undefined) ?? ""}
+                    />
+                  )}
+                  <FileBoxes kinds={fileKindsFor(data, "web")} files={files} setFiles={setFiles} />
+                </>
+              )}
             </>
           )}
-          {current.id === "files" && <FilesStep files={files} setFiles={setFiles} />}
+          {current.id === "files" && (
+            <>
+              <h2 className="font-display text-2xl">Archivos</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Hasta 20 MB cada uno. Los usamos solo para preparar tu alta y los borramos después.
+              </p>
+              <FileBoxes kinds={fileKindsFor(data, "files")} files={files} setFiles={setFiles} />
+            </>
+          )}
           {current.id === "send" && (
             <SendStep
               data={data}
@@ -497,10 +520,13 @@ function HeaderChoice({
   );
 }
 
-function FilesStep({
+/** Upload boxes for some kinds of file, with what is already uploaded. */
+function FileBoxes({
+  kinds,
   files,
   setFiles,
 }: {
+  kinds: FileKindDef[];
   files: FileRow[];
   setFiles: (f: FileRow[] | ((f: FileRow[]) => FileRow[])) => void;
 }) {
@@ -549,14 +575,11 @@ function FilesStep({
     }
   }
 
+  if (!kinds.length) return null;
   return (
     <>
-      <h2 className="font-display text-2xl">Archivos</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Hasta 20 MB cada uno. Los usamos solo para preparar tu alta y los borramos después.
-      </p>
       <div className="mt-6 space-y-4">
-        {FILE_KINDS.map((k) => {
+        {kinds.map((k) => {
           const mine = files.filter((f) => f.kind === k.kind);
           return (
             <div key={k.kind} className="rounded-xl border border-border p-4">
@@ -723,5 +746,66 @@ function SendStep({
         {submitted ? "Enviar de nuevo" : "Enviar a Melend/OS"}
       </button>
     </>
+  );
+}
+
+/** What the template web will look like with their colour, name and tagline. */
+function WebPreview({ accent, name, tagline }: { accent: string; name: string; tagline: string }) {
+  return (
+    <div className="mt-6">
+      <p className="text-sm font-semibold">Así se verá tu web</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Una idea con tu color y tu nombre; la montamos con tus fotos y textos.
+      </p>
+      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-white text-slate-900 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 text-xs">
+          <span className="font-serif text-sm font-semibold">{name}</span>
+          <span className="flex gap-3 text-slate-500">
+            <span>Inicio</span>
+            <span>Habitaciones</span>
+            <span
+              className="rounded px-2 py-0.5 font-semibold text-white"
+              style={{ background: accent }}
+            >
+              Mi reserva
+            </span>
+          </span>
+        </div>
+        <div
+          className="relative flex h-40 flex-col justify-end p-5 text-white"
+          style={{
+            background: `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.55)), linear-gradient(135deg, #8aa4b8, #d9c7a7 55%, #6b7f5e)`,
+          }}
+        >
+          <p className="font-serif text-2xl font-semibold drop-shadow">{name}</p>
+          {tagline && <p className="mt-1 text-sm opacity-90">{tagline}</p>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 p-4">
+          <span className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500">
+            Entrada → Salida
+          </span>
+          <span className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500">
+            2 personas
+          </span>
+          <span
+            className="rounded-lg px-4 py-2 text-xs font-semibold text-white"
+            style={{ background: accent }}
+          >
+            Ver habitaciones
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-3 px-4 pb-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="h-12 bg-[linear-gradient(135deg,#cfd8df,#e9e1d3)]" />
+              <div className="space-y-1 p-2">
+                <div className="h-1.5 w-3/4 rounded bg-slate-200" />
+                <div className="h-1.5 w-1/2 rounded" style={{ background: accent, opacity: 0.6 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
