@@ -357,6 +357,12 @@ function ClientDrawer({
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Shown next to the delete button (the save message is far up the drawer).
+  const [deleteMsg, setDeleteMsg] = useState<{
+    text: string;
+    ok?: boolean;
+    canCancel?: boolean;
+  } | null>(null);
   const [hotels, setHotels] = useState<ClientHotel[]>([]);
   const [links, setLinks] = useState<ClientLink[]>([]);
   const [access, setAccess] = useState<ClientAccess[]>([]);
@@ -425,17 +431,30 @@ function ClientDrawer({
     else setD(res.data as Client);
   };
 
+  // Drafts go with the client; with issued invoices the database refuses
+  // (they must be kept) and we offer to mark the client as «Baja» instead.
   const remove = async () => {
     if (!id) return;
-    const { error } = await sales().from("clients").delete().eq("id", id);
-    if (error)
-      return setMsg(
-        error.message.includes("client_invoices")
-          ? "Tiene facturas: no se puede borrar. Márcalo como «Baja»."
-          : error.message,
-      );
+    setDeleteMsg(null);
+    const { error } = await sales().rpc("delete_client", { p_id: id });
+    if (error) {
+      return setDeleteMsg({
+        text: error.message,
+        canCancel: error.code === "23514" && d.status !== "cancelled",
+      });
+    }
     onChanged();
     onClose();
+  };
+
+  const markCancelled = async () => {
+    if (!id) return;
+    const { error } = await sales().from("clients").update({ status: "cancelled" }).eq("id", id);
+    if (error) return setDeleteMsg({ text: error.message });
+    setD((x) => ({ ...x, status: "cancelled" }));
+    setConfirmDelete(false);
+    setDeleteMsg({ text: "Dado de baja. Sus facturas se conservan.", ok: true });
+    onChanged();
   };
 
   return (
@@ -715,7 +734,10 @@ function ClientDrawer({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setConfirmDelete(false)}
+                    onClick={() => {
+                      setConfirmDelete(false);
+                      setDeleteMsg(null);
+                    }}
                     className={BTN_OUTLINE}
                   >
                     No
@@ -729,6 +751,18 @@ function ClientDrawer({
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" /> Borrar cliente
                 </button>
+              )}
+              {deleteMsg && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" role="status">
+                  <span className={deleteMsg.ok ? "text-muted-foreground" : "text-destructive"}>
+                    {deleteMsg.text}
+                  </span>
+                  {deleteMsg.canCancel && (
+                    <button type="button" onClick={markCancelled} className={BTN_OUTLINE}>
+                      Dar de baja
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>
