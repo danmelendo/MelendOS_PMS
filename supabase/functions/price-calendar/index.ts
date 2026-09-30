@@ -24,29 +24,32 @@ Deno.serve(async (req) => {
   }
   const roomId = id(body.room_id);
   const propertyId = id(body.property_id);
-  let tenantId = id(body.tenant_id);
+  const tenantId = id(body.tenant_id);
 
   const db = adminClient();
   // The hotel comes from what is being priced; only active hotels answer.
-  if (roomId) {
-    const { data } = await db.from("rooms").select("tenant_id").eq("id", roomId).maybeSingle();
-    tenantId = data?.tenant_id ?? null;
-  } else if (propertyId) {
+  // One query whatever the entry point (the hotel is embedded in the room or
+  // the property), instead of two in a row.
+  const ACTIVE = ["trial", "active"];
+  type Owner = { tenant_id: string; tenants: { status: string } | null } | null;
+  let tenant: { id: string } | null = null;
+  if (roomId || propertyId) {
     const { data } = await db
-      .from("properties")
-      .select("tenant_id")
-      .eq("id", propertyId)
+      .from(roomId ? "rooms" : "properties")
+      .select("tenant_id, tenants(status)")
+      .eq("id", (roomId ?? propertyId)!)
       .maybeSingle();
-    tenantId = data?.tenant_id ?? null;
+    const owner = data as unknown as Owner;
+    if (owner && ACTIVE.includes(owner.tenants?.status ?? "")) tenant = { id: owner.tenant_id };
+  } else if (tenantId) {
+    const { data } = await db
+      .from("tenants")
+      .select("id")
+      .eq("id", tenantId)
+      .in("status", ACTIVE)
+      .maybeSingle();
+    tenant = data;
   }
-  const { data: tenant } = tenantId
-    ? await db
-        .from("tenants")
-        .select("id")
-        .eq("id", tenantId)
-        .in("status", ["trial", "active"])
-        .maybeSingle()
-    : { data: null };
   if (!tenant) return json({ error: "Hotel no encontrado" }, 404);
 
   try {

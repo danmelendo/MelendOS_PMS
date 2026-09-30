@@ -48,7 +48,15 @@ export async function priceCalendar(
   const days = Math.min(Math.max(Math.trunc(q.days) || 0, 1), MAX_CALENDAR_DAYS);
   const guests = Math.max(Math.trunc(q.guests) || 1, 1);
 
-  const settings = await store.getTenantSettings(q.tenantId);
+  // Two rounds of queries in parallel instead of one after another: each round
+  // trip to the database costs tens of milliseconds, and the calendar used to
+  // make one per rate group.
+  const [settings, rooms, ruleRows, totalRooms] = await Promise.all([
+    store.getTenantSettings(q.tenantId),
+    store.listRooms(q.tenantId),
+    store.getActiveRules(q.tenantId),
+    store.countActiveRooms(q.tenantId),
+  ]);
   const tz = settings.timezone;
   const today = ymdInZone(now, tz);
   const first = q.from < today ? today : q.from;
@@ -57,16 +65,6 @@ export async function priceCalendar(
 
   const rangeStart = zonedHourToUtc(first, settings.checkin_hour, tz);
   const rangeEnd = zonedHourToUtc(last, settings.checkout_hour, tz);
-  const [rooms, busy, ruleRows, totalRooms] = await Promise.all([
-    store.listRooms(q.tenantId),
-    store.getBusyWindows(
-      q.tenantId,
-      new Date(rangeStart.getTime() - 86_400_000),
-      new Date(rangeEnd.getTime() + 86_400_000),
-    ),
-    store.getActiveRules(q.tenantId),
-    store.countActiveRooms(q.tenantId),
-  ]);
   const candidates = rooms.filter(
     (r) =>
       r.active &&
@@ -77,17 +75,21 @@ export async function priceCalendar(
       (!q.roomId || r.id === q.roomId) &&
       (!q.rateGroupId || r.rate_group_id === q.rateGroupId),
   );
+  const groups = [...new Set(candidates.map((r) => r.rate_group_id!))];
+  const [busy, groupRates] = await Promise.all([
+    store.getBusyWindows(
+      q.tenantId,
+      new Date(rangeStart.getTime() - 86_400_000),
+      new Date(rangeEnd.getTime() + 86_400_000),
+    ),
+    Promise.all(groups.map((g) => store.getRate(g))),
+  ]);
   const rules = toRules(ruleRows);
   const occupied = busy.map((b) => ({
     checkIn: ymdInZone(b.start_at, tz),
     checkOut: ymdInZone(b.end_at, tz),
   }));
-  const rates = new Map<string, { price: number; weekend_price: number | null } | null>();
-  for (const r of candidates) {
-    if (!rates.has(r.rate_group_id!)) {
-      rates.set(r.rate_group_id!, await store.getRate(r.rate_group_id!));
-    }
-  }
+  const rates = new Map(groups.map((g, i) => [g, groupRates[i]]));
 
   const nights: CalendarNight[] = [];
   for (let d = first; d < last; d = addDays(d, 1)) {

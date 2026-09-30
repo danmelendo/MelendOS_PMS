@@ -247,12 +247,13 @@ export function NewReservationDialog({
 
   // recompute price
   useEffect(() => {
-    if (!rateGroupId || !startAt || !endAt) {
+    if (!rateGroupId || !room?.tenant_id || !startAt || !endAt) {
       setBreakdown(null);
       return;
     }
     let cancel = false;
     calculateNightlyPrice({
+      tenantId: room.tenant_id,
       rateGroupId,
       checkIn: startAt,
       checkOut: endAt,
@@ -269,7 +270,7 @@ export function NewReservationDialog({
     return () => {
       cancel = true;
     };
-  }, [rateGroupId, startAt, endAt, selectedExtras]);
+  }, [rateGroupId, room?.tenant_id, startAt, endAt, selectedExtras]);
 
   const create = useMutation({
     mutationFn: async () => {
