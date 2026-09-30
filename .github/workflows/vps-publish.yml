@@ -1,0 +1,82 @@
+name: Publish to VPS
+
+# Manual (Dan): installs a release on the VPS installations, one at a time and
+# in the inventory's order (put the test installation first), and stops at the
+# first failure. On each installation `melendos update` takes a restore point,
+# applies the migrations, switches web and functions and runs a smoke test; if
+# that fails, the installation goes back to its previous release.
+#
+# Repository secrets:
+#   VPS_SSH_KEY      private key of the GitHub Actions deploy key (in each VPS's authorized_keys)
+#   VPS_KNOWN_HOSTS  ssh-keyscan lines of every VPS
+#   VPS_INVENTORY    one line per VPS: "<name> <user@host> <installation> [installation…]"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión publicada (tag), p. ej. v0.1.0"
+        required: true
+      targets:
+        description: "all, o lista separada por espacios: <vps> o <vps>:<instalación>"
+        required: true
+        default: all
+
+concurrency:
+  group: vps-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      TARGETS: ${{ inputs.targets }}
+    steps:
+      - name: Download the release bundle
+        run: |
+          set -euo pipefail
+          gh release download "$VERSION" --repo "$GITHUB_REPOSITORY" --pattern 'melendos-*' --dir bundle
+          (cd bundle && sha256sum -c "melendos-$VERSION.tar.gz.sha256")
+      - name: SSH access
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Install, one installation at a time
+        env:
+          VPS_INVENTORY: ${{ secrets.VPS_INVENTORY }}
+        run: |
+          set -euo pipefail
+          file="melendos-$VERSION.tar.gz"
+          wanted() { # $1 vps, $2 installation
+            [ "$TARGETS" = all ] && return 0
+            for t in $TARGETS; do [ "$t" = "$1" ] || [ "$t" = "$1:$2" ] && return 0; done
+            return 1
+          }
+          done_any=0
+          while read -r name dest instances; do
+            [ -z "$name" ] || [ "${name#\#}" != "$name" ] && continue
+            selected=()
+            for i in $instances; do wanted "$name" "$i" && selected+=("$i"); done
+            [ ${#selected[@]} -gt 0 ] || continue
+            echo "::group::$name → ${selected[*]}"
+            scp -q -o BatchMode=yes "bundle/$file" "bundle/$file.sha256" "$dest:/opt/melendos/incoming/"
+            # The bundle carries the matching melendos command: install it first.
+            # -n: ssh must not read the inventory this loop reads from stdin.
+            ssh -n -o BatchMode=yes "$dest" "set -e; cd /opt/melendos/incoming
+              tar -xzOf '$file' ./deploy/melendos > /opt/melendos/bin/melendos.new
+              chmod 755 /opt/melendos/bin/melendos.new && mv /opt/melendos/bin/melendos.new /opt/melendos/bin/melendos
+              /opt/melendos/bin/melendos update '/opt/melendos/incoming/$file' ${selected[*]}
+              /opt/melendos/bin/melendos status
+              ls -1t /opt/melendos/incoming/melendos-*.tar.gz | tail -n +3 | xargs -r -I{} rm -f {} {}.sha256"
+            echo "::endgroup::"
+            done_any=1
+          done <<< "$VPS_INVENTORY"
+          [ "$done_any" = 1 ] || { echo "::error::ninguna instalación coincide con '$TARGETS'"; exit 1; }

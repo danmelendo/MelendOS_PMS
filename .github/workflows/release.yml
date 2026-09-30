@@ -1,0 +1,40 @@
+name: Release (VPS bundle)
+
+# Pushing a tag vX.Y.Z builds the bundle every VPS installation is updated
+# from (deploy/vps/bundle.sh) and attaches it to a GitHub Release of this
+# private repository. Nothing is installed here: "Publish to VPS" does that.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: The tag is on main and its CI passed
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse "$TAG^{commit}")
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$TAG no está en main"; exit 1; }
+          ci=$(gh run list --workflow ci.yml --commit "$sha" --status success --json databaseId --jq 'length')
+          [ "$ci" -gt 0 ] || { echo "::error::la CI de $sha no está en verde"; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: deploy/vps/bundle.sh "$TAG" dist-release
+      - name: GitHub Release with the bundle
+        run: |
+          gh release create "$TAG" dist-release/melendos-"$TAG".tar.gz dist-release/melendos-"$TAG".tar.gz.sha256 \
+            --title "$TAG" --generate-notes --verify-tag

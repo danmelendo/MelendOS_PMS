@@ -52,3 +52,4 @@ lake/out/
 # Agent eval reports (local)
 supabase/evals/results/
 probe-out.txt
+dist-release/

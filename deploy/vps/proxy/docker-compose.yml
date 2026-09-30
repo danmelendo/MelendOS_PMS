@@ -16,6 +16,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./sites:/etc/caddy/sites:ro
       - /opt/melendos/instances:/srv/instances:ro
+      # Each installation's web is a relative link into the shared releases.
+      - /opt/melendos/releases:/srv/releases:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge]
