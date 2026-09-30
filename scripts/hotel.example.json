@@ -12,6 +12,7 @@
   "cancellation_penalty": "first_night",
   "brand": {
     "accent": "#7A4B2A",
+    "email_header": "color",
     "tagline": "Un hostal familiar junto a la estación",
     "email": "reservas@hostal-ejemplo.example",
     "phone": "+34 900 000 000",

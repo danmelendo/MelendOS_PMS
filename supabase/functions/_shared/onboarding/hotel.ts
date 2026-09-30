@@ -37,6 +37,16 @@ export const hotelSpec = z
         email: z.string().email(),
         phone: text(40),
         address: text(200),
+        /** Logo and cover of the template web (public https URLs). */
+        logo_url: z.string().url().startsWith("https://"),
+        hero_image_url: z.string().url().startsWith("https://"),
+        /**
+         * Header of the emails to guests, chosen at onboarding: its logo on
+         * white, a photo across the top (email_header_image_url, else the
+         * cover; about 1200×440) or a band in its colour.
+         */
+        email_header: z.enum(["logo", "image", "color"]),
+        email_header_image_url: z.string().url().startsWith("https://"),
       })
       .partial()
       .default({}),

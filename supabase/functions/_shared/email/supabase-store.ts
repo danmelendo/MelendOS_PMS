@@ -4,6 +4,9 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ymdInZone } from "../domain/dates.ts";
 import type { BookingForEmail, EmailStore, PendingEmail } from "./dispatch.ts";
 
+// Email header styles a hotel can have (tenants.brand.email_header, set up at onboarding).
+const HEADER_STYLES = ["logo", "image", "color"] as const;
+
 interface Row {
   tenant_id: string;
   reference: string;
@@ -62,6 +65,13 @@ export function supabaseEmailStore(db: SupabaseClient, publicWebUrl: string | nu
         hotelName: text(b.name) ?? r.tenants.name,
         hotelSlug: r.tenants.slug,
         accent: text(b.accent),
+        header: {
+          style: HEADER_STYLES.includes(b.email_header as never)
+            ? (b.email_header as "logo" | "image" | "color")
+            : null,
+          logoUrl: text(b.logo_url),
+          imageUrl: text(b.email_header_image_url) ?? text(b.hero_image_url),
+        },
         hotelEmail: text(b.email),
         hotelPhone: text(b.phone),
         hotelAddress: text(b.address),
