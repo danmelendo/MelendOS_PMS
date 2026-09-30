@@ -40,6 +40,7 @@ import {
   type SlaId,
 } from "../../supabase/functions/_shared/plans.ts";
 import { BTN, BTN_OUTLINE, BTN_PRIMARY, Drawer, FIELD, Field, Stat } from "./admin-ui";
+import { OnboardingSection } from "./AdminOnboarding";
 
 // Clientes: who pays, what they contracted, their hotels, links and where each
 // credential lives. Access is enforced in the database (sales admins only).
@@ -404,6 +405,7 @@ function ClientDrawer({
       billing_email: d.billing_email || null,
       billing_address: d.billing_address || null,
       contact_name: d.contact_name || null,
+      contact_email: d.contact_email?.trim().toLowerCase() || null,
       phone: d.phone || null,
       status: d.status ?? "onboarding",
       plan: d.plan,
@@ -517,6 +519,15 @@ function ClientDrawer({
                 onChange={(e) => set("phone", e.target.value)}
               />
             </Field>
+            <Field label="Email de contacto (formulario de alta)">
+              <input
+                type="email"
+                className={`${FIELD} w-full`}
+                placeholder={d.billing_email ?? "si no, el de facturación"}
+                value={d.contact_email ?? ""}
+                onChange={(e) => set("contact_email", e.target.value)}
+              />
+            </Field>
             <Field label="Email de facturación">
               <input
                 type="email"
@@ -533,7 +544,15 @@ function ClientDrawer({
               />
             </Field>
           </div>
+          {(d.status ?? "onboarding") === "onboarding" && !id && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Al guardarlo «En implantación» y con un email de contacto (o de facturación), le
+              enviamos el formulario de alta automáticamente.
+            </p>
+          )}
         </Section>
+
+        {id && <OnboardingSection clientId={id} status={d.status ?? "onboarding"} />}
 
         <Section title="Contrato y facturación">
           <div className="grid gap-3 sm:grid-cols-3">
