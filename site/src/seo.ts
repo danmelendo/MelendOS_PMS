@@ -88,6 +88,13 @@ export const SEO: PageSeo[] = [
     noindex: true,
   },
   {
+    file: "alta/index.html",
+    path: "/alta/",
+    title: "Alta en Melend/OS",
+    description: "Formulario de alta de tu alojamiento.",
+    noindex: true,
+  },
+  {
     file: "404.html",
     path: "/404",
     title: "Página no encontrada · Melend/OS",

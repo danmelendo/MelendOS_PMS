@@ -71,8 +71,23 @@ const COPY: Record<AuthEmailKind, AuthCopy> = {
   },
 };
 
-/** The Melend/OS mark, as text: images of the logo are blocked by many clients. */
-const HEADER = `<tr><td class="px" style="background:${NAVY};padding:26px 32px"><span style="font-family:${SERIF};font-size:24px;color:#ffffff;letter-spacing:.01em">Melend<span style="color:${GOLD}">/OS</span></span></td></tr>`;
+/**
+ * The Melend/OS logo on white (it stays white in dark mode: the logo is drawn
+ * for a light background) over a thin gold line. `assets` is where the
+ * images are served: the installation's web ({{ .SiteURL }}) for Auth's
+ * emails, the sales web for the ones it sends. The alt text keeps the name
+ * when a client blocks images.
+ */
+export function melendosHeader(assets: string): string {
+  return `<tr><td align="center" class="px" style="padding:30px 32px 24px;background:#ffffff;border-bottom:3px solid ${GOLD}"><img src="${assets}/melendos-logo.png" width="260" alt="Melend/OS" style="display:block;width:260px;max-width:100%;height:auto;border:0;font-family:${SERIF};font-size:24px;color:${NAVY}"></td></tr>`;
+}
+
+/** The brand picture (the logo at a hotel reception) closing the card. */
+export function melendosFooter(assets: string): string {
+  return `<tr><td style="font-size:0;line-height:0;background:${NAVY}"><img src="${assets}/melendos-footer.jpg" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>`;
+}
+
+const ASSETS = "{{ .SiteURL }}/email-templates";
 
 export function authEmail(kind: AuthEmailKind): { subject: string; html: string } {
   const c = COPY[kind];
@@ -84,14 +99,15 @@ export function authEmail(kind: AuthEmailKind): { subject: string; html: string 
 </td></tr>
 <tr><td align="center" class="px" style="padding:28px 32px 8px">${button("{{ .ConfirmationURL }}", c.cta, NAVY)}</td></tr>
 <tr><td class="px t3" style="padding:12px 32px 0;font-size:13px;line-height:1.5;color:#64748b">${esc(c.note)}</td></tr>
-<tr><td class="px" style="padding:24px 32px 28px"><div class="t3 line" style="padding-top:16px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;color:#94a3b8">${esc(c.english)}</div></td></tr>`;
+<tr><td class="px" style="padding:24px 32px 28px"><div class="t3 line" style="padding-top:16px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;color:#94a3b8">${esc(c.english)}</div></td></tr>
+${melendosFooter(ASSETS)}`;
   return {
     subject: c.subject,
     html: shell({
       lang: "es",
       title: c.subject,
       preheader: c.intro,
-      header: HEADER,
+      header: melendosHeader(ASSETS),
       body,
       below: "Melend/OS &middot; Gestión hotelera",
     }),

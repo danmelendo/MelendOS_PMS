@@ -14,3 +14,8 @@ verify_jwt = false
 [functions.verifactu-dispatch]
 # Called by the database (cron key) or with the service key; checks it itself.
 verify_jwt = false
+
+[functions.onboarding]
+# Called by the database (cron key) and by the public /alta/ page, whose
+# private link is the only credential; it checks both itself.
+verify_jwt = false

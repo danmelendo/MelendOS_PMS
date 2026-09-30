@@ -38,6 +38,8 @@ export interface Client {
   billing_email: string | null;
   billing_address: string | null;
   contact_name: string | null;
+  /** Who fills in the onboarding form; falls back to billing_email. */
+  contact_email: string | null;
   phone: string | null;
   status: ClientStatus;
   plan: "hostal" | "starter" | "pro" | "group";
@@ -54,6 +56,41 @@ export interface Client {
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export const ONBOARDING_STATUSES = {
+  queued: "Enviándose",
+  sent: "Enviado",
+  in_progress: "Rellenándolo",
+  submitted: "Recibido",
+  completed: "Alta hecha",
+  cancelled: "Anulado",
+} as const;
+export type OnboardingStatus = keyof typeof ONBOARDING_STATUSES;
+
+export interface ClientOnboarding {
+  id: string;
+  client_id: string;
+  status: OnboardingStatus;
+  email: string;
+  data: Record<string, Record<string, unknown>>;
+  send_attempts: number;
+  last_error: string | null;
+  sent_at: string | null;
+  opened_at: string | null;
+  submitted_at: string | null;
+  completed_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface ClientOnboardingFile {
+  id: string;
+  kind: string;
+  name: string;
+  path: string;
+  size: number;
+  created_at: string;
 }
 
 export interface ClientHotel {
