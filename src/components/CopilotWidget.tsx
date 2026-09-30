@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Formatted } from "@/components/FormattedText";
 import { useHotelsWith } from "@/lib/features";
+import { t } from "@/lib/i18n";
 
 interface Line {
   role: "user" | "assistant" | "error";
@@ -95,21 +96,21 @@ export function CopilotWidget() {
         onClick={() => setOpen(true)}
         className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none"
       >
-        <Sparkles className="h-4 w-4 text-gold" /> Copiloto
+        <Sparkles className="h-4 w-4 text-gold" /> {t("Copiloto")}
       </button>
     );
   }
 
   return (
     <section
-      aria-label="Copiloto de gestión"
+      aria-label={t("Copiloto de gestión")}
       className="copilot-panel fixed inset-x-2 bottom-2 z-40 flex max-h-[min(640px,calc(100dvh-4rem))] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[400px]"
     >
       <header className="flex items-center gap-2 border-b bg-primary px-3 py-2.5 text-primary-foreground">
         <Sparkles className="h-4 w-4 shrink-0 text-gold" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-tight">Copiloto</p>
-          <p className="truncate text-[11px] opacity-75">Datos del hotel · solo consulta</p>
+          <p className="text-sm font-semibold leading-tight">{t("Copiloto")}</p>
+          <p className="truncate text-[11px] opacity-75">{t("Datos del hotel · solo consulta")}</p>
         </div>
         {lines.length > 0 && (
           <button
@@ -117,8 +118,8 @@ export function CopilotWidget() {
             onClick={reset}
             disabled={busy}
             className="rounded p-1.5 hover:bg-white/10"
-            aria-label="Nueva conversación"
-            title="Nueva conversación"
+            aria-label={t("Nueva conversación")}
+            title={t("Nueva conversación")}
           >
             <RotateCcw className="h-4 w-4" />
           </button>
@@ -127,7 +128,7 @@ export function CopilotWidget() {
           type="button"
           onClick={() => setOpen(false)}
           className="rounded p-1.5 hover:bg-white/10"
-          aria-label="Cerrar el copiloto"
+          aria-label={t("Cerrar el copiloto")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -160,7 +161,7 @@ export function CopilotWidget() {
         {lines.length === 0 ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Pregunta por el negocio en lenguaje natural. Por ejemplo:
+              {t("Pregunta por el negocio en lenguaje natural. Por ejemplo:")}
             </p>
             <div className="flex flex-col items-start gap-1.5">
               {SUGGESTIONS.map((s) => (
@@ -209,7 +210,7 @@ export function CopilotWidget() {
             ),
           )
         )}
-        {busy && <p className="text-sm text-muted-foreground">Consultando los datos…</p>}
+        {busy && <p className="text-sm text-muted-foreground">{t("Consultando los datos…")}</p>}
         <div ref={end} />
       </div>
 
@@ -233,13 +234,13 @@ export function CopilotWidget() {
           }}
           rows={1}
           maxLength={1000}
-          placeholder="¿Qué quieres saber del negocio?"
+          placeholder={t("¿Qué quieres saber del negocio?")}
           className="min-h-9 resize-none text-sm"
-          aria-label="Pregunta al copiloto"
+          aria-label={t("Pregunta al copiloto")}
         />
         <Button type="submit" size="icon" disabled={busy || !text.trim() || !hotel}>
           <SendHorizonal className="h-4 w-4" />
-          <span className="sr-only">Enviar</span>
+          <span className="sr-only">{t("Enviar")}</span>
         </Button>
       </form>
     </section>

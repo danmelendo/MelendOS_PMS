@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Hotel, ArrowUpRight, UserRound } from "lucide-react";
 import { LEGAL_PAGES, type LegalPage } from "@/lib/legal";
 import { useBrand } from "@/lib/brand";
-import { LANGS, preferredLang, setActiveLang, useLang, type Lang } from "@/lib/i18n";
+import { LANGS, preferredLang, setActiveLang, setPanelScope, useLang, type Lang } from "@/lib/i18n";
 import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { AgentChat } from "@/components/AgentChat";
 import { adoptGuestToken } from "@/integrations/pms/demo-stays-connector";
@@ -48,7 +48,10 @@ function WebLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { brand, ready, locked } = useBrand();
   // The guest's language, set before the first paint of the web.
-  useState(() => setActiveLang(preferredLang()));
+  useState(() => {
+    setPanelScope(false);
+    setActiveLang(preferredLang());
+  });
   const { t } = useLang();
 
   // Until the hotel is known (domain lookup), nothing of another hotel shows.

@@ -35,6 +35,7 @@ import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useHotelsWith } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
 import { PlatformOnly } from "@/components/settings/AdminOnly";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/channels")({
   component: () => (
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/_app/channels")({
 
 const when = (iso: string | null) =>
   iso
-    ? new Date(iso).toLocaleString("es-ES", {
+    ? new Date(iso).toLocaleString(currentLocale(), {
         day: "numeric",
         month: "short",
         hour: "2-digit",
@@ -98,16 +99,16 @@ function RoomMapEditor({
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
-        Código de cada tipo de habitación en el canal (vacío = no se vende en este canal).
+        {t("Código de cada tipo de habitación en el canal (vacío = no se vende en este canal).")}
       </p>
-      {types.map((t) => (
-        <div key={t.id} className="flex items-center gap-2">
-          <span className="w-40 shrink-0 truncate text-sm">{t.name}</span>
+      {types.map((rt) => (
+        <div key={rt.id} className="flex items-center gap-2">
+          <span className="w-40 shrink-0 truncate text-sm">{rt.name}</span>
           <Input
             className="h-8 font-mono text-xs"
-            value={codes[t.id] ?? ""}
-            placeholder="Sin vender"
-            onChange={(e) => setCodes((c) => ({ ...c, [t.id]: e.target.value.toUpperCase() }))}
+            value={codes[rt.id] ?? ""}
+            placeholder={t("Sin vender")}
+            onChange={(e) => setCodes((c) => ({ ...c, [rt.id]: e.target.value.toUpperCase() }))}
           />
         </div>
       ))}
@@ -124,7 +125,7 @@ function RoomMapEditor({
           )
         }
       >
-        Guardar códigos
+        {t("Guardar códigos")}
       </Button>
     </div>
   );
@@ -175,7 +176,7 @@ function ChannelsPage() {
           setCreated(c);
           setForm((f) => ({ ...f, name: "" }));
         },
-        onError: (e) => toast.error(e.message),
+        onError: (e) => toast.error(t(e.message)),
       },
     );
   };
@@ -185,11 +186,12 @@ function ChannelsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Network className="h-5 w-5 text-info" /> Canales
+            <Network className="h-5 w-5 text-info" /> {t("Canales")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            OTAs, channel managers y touroperadores: sus reservas entran en el PMS y reciben tu
-            disponibilidad.
+            {t(
+              "OTAs, channel managers y touroperadores: sus reservas entran en el PMS y reciben tu disponibilidad.",
+            )}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -218,11 +220,11 @@ function ChannelsPage() {
                       ? `Disponibilidad enviada (${r.sent} cambios${r.failed ? `, ${r.failed} con error` : ""})`
                       : "No había cambios pendientes",
                   ),
-                onError: (e) => toast.error(e.message),
+                onError: (e) => toast.error(t(e.message)),
               })
             }
           >
-            <Send className="mr-1 h-4 w-4" /> Enviar disponibilidad
+            <Send className="mr-1 h-4 w-4" /> {t("Enviar disponibilidad")}
             {activity?.pending ? ` (${activity.pending})` : ""}
           </Button>
         </div>
@@ -232,49 +234,50 @@ function ChannelsPage() {
         <Card className="border-gold/60">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <KeyRound className="h-4 w-4 text-gold" /> Datos para configurar el canal
+              <KeyRound className="h-4 w-4 text-gold" /> {t("Datos para configurar el canal")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              El secreto no se volverá a mostrar. El canal firma cada envío con él (cabecera
-              X-Signature, HMAC-SHA256 del cuerpo).
+              {t(
+                "El secreto no se volverá a mostrar. El canal firma cada envío con él (cabecera X-Signature, HMAC-SHA256 del cuerpo).",
+              )}
             </p>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>
-              <div className="text-xs text-muted-foreground">URL de reservas (webhook)</div>
+              <div className="text-xs text-muted-foreground">{t("URL de reservas (webhook)")}</div>
               <code className="block overflow-x-auto rounded bg-muted px-2 py-1 text-xs">
                 {webhookUrl(created.id)}
               </code>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Secreto de firma</div>
+              <div className="text-xs text-muted-foreground">{t("Secreto de firma")}</div>
               <code className="block overflow-x-auto rounded bg-muted px-2 py-1 text-xs">
                 {created.secret}
               </code>
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => setCreated(null)}>Ya lo he guardado</Button>
+              <Button onClick={() => setCreated(null)}>{t("Ya lo he guardado")}</Button>
             </div>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Conectar un canal</CardTitle>
+            <CardTitle className="text-base">{t("Conectar un canal")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto]">
             <div className="space-y-1">
-              <Label htmlFor="ch-name">Nombre</Label>
+              <Label htmlFor="ch-name">{t("Nombre")}</Label>
               <Input
                 id="ch-name"
                 maxLength={80}
-                placeholder="Booking.com, Viajes Sol…"
+                placeholder={t("Booking.com, Viajes Sol…")}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <Label>Tipo</Label>
+              <Label>{t("Tipo")}</Label>
               <Select
                 value={form.kind}
                 onValueChange={(v) => setForm((f) => ({ ...f, kind: v as ChannelKind }))}
@@ -285,14 +288,14 @@ function ChannelsPage() {
                 <SelectContent>
                   {Object.entries(CHANNEL_KINDS).map(([k, v]) => (
                     <SelectItem key={k} value={k}>
-                      {v}
+                      {t(v)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Proveedor</Label>
+              <Label>{t("Proveedor")}</Label>
               <Select
                 value={form.provider}
                 onValueChange={(v) => setForm((f) => ({ ...f, provider: v as ChannelProvider }))}
@@ -303,14 +306,14 @@ function ChannelsPage() {
                 <SelectContent>
                   {Object.entries(CHANNEL_PROVIDERS).map(([k, v]) => (
                     <SelectItem key={k} value={k}>
-                      {v}
+                      {t(v)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="ch-fee">Comisión %</Label>
+              <Label htmlFor="ch-fee">{t("Comisión %")}</Label>
               <Input
                 id="ch-fee"
                 type="number"
@@ -323,7 +326,7 @@ function ChannelsPage() {
             </div>
             <div className="flex items-end">
               <Button disabled={!hotel || actions.create.isPending} onClick={create}>
-                Conectar
+                {t("Conectar")}
               </Button>
             </div>
           </CardContent>
@@ -339,17 +342,17 @@ function ChannelsPage() {
                 <div className="min-w-0">
                   <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                     {c.name}
-                    <Badge variant="secondary">{CHANNEL_KINDS[c.kind]}</Badge>
-                    <Badge variant="outline">{CHANNEL_PROVIDERS[c.provider]}</Badge>
+                    <Badge variant="secondary">{t(CHANNEL_KINDS[c.kind])}</Badge>
+                    <Badge variant="outline">{t(CHANNEL_PROVIDERS[c.provider])}</Badge>
                   </CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Comisión {c.commission_pct} % · {Object.keys(c.room_map).length} tipos de
-                    habitación · último mensaje {when(c.last_message_at)}
+                    {t("Comisión")} {c.commission_pct} % · {Object.keys(c.room_map).length}{" "}
+                    {t("tipos de habitación · último mensaje")} {when(c.last_message_at)}
                   </p>
                 </div>
                 <Switch
                   checked={c.status === "active"}
-                  aria-label={`Canal ${c.name} activo`}
+                  aria-label={t("Canal {0} activo", { 0: c.name })}
                   onCheckedChange={(on) =>
                     actions.update.mutate({ id: c.id, patch: { status: on ? "active" : "paused" } })
                   }
@@ -358,15 +361,15 @@ function ChannelsPage() {
               <CardContent className="space-y-3 text-sm">
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <div className="text-xs text-muted-foreground">Reservas 30 días</div>
+                    <div className="text-xs text-muted-foreground">{t("Reservas 30 días")}</div>
                     <div className="font-semibold tabular-nums">{stats?.bookings ?? 0}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">Importe</div>
+                    <div className="text-xs text-muted-foreground">{t("Importe")}</div>
                     <div className="font-semibold tabular-nums">{eur(stats?.revenue ?? 0)}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">Comisión</div>
+                    <div className="text-xs text-muted-foreground">{t("Comisión")}</div>
                     <div className="font-semibold tabular-nums">{eur(stats?.commission ?? 0)}</div>
                   </div>
                 </div>
@@ -380,9 +383,9 @@ function ChannelsPage() {
                         {
                           onSuccess: () => {
                             setEditing(null);
-                            toast.success("Códigos guardados");
+                            toast.success(t("Códigos guardados"));
                           },
-                          onError: (e) => toast.error(e.message),
+                          onError: (e) => toast.error(t(e.message)),
                         },
                       )
                     }
@@ -394,7 +397,7 @@ function ChannelsPage() {
                     variant="outline"
                     onClick={() => setEditing(editing === c.id ? null : c.id)}
                   >
-                    {editing === c.id ? "Cerrar" : "Tipos de habitación"}
+                    {editing === c.id ? t("Cerrar") : t("Tipos de habitación")}
                   </Button>
                   {DEMO_ACCESS && c.status === "active" && (
                     <Button
@@ -406,14 +409,17 @@ function ChannelsPage() {
                           onSuccess: (r) =>
                             r.response?.reference
                               ? toast.success(
-                                  `Reserva ${r.response.reference} recibida de ${c.name}`,
+                                  t("Reserva {0} recibida de {1}", {
+                                    0: r.response.reference,
+                                    1: c.name,
+                                  }),
                                 )
                               : toast.error(r.response?.error ?? "No se recibió la reserva"),
-                          onError: (e) => toast.error(e.message),
+                          onError: (e) => toast.error(t(e.message)),
                         })
                       }
                     >
-                      <ArrowDownLeft className="mr-1 h-3.5 w-3.5" /> Simular reserva
+                      <ArrowDownLeft className="mr-1 h-3.5 w-3.5" /> {t("Simular reserva")}
                     </Button>
                   )}
                   <Button
@@ -422,11 +428,11 @@ function ChannelsPage() {
                     className="text-muted-foreground"
                     onClick={() => {
                       if (window.confirm(`¿Desconectar ${c.name}? Sus reservas se conservan.`)) {
-                        actions.remove.mutate(c.id, { onError: (e) => toast.error(e.message) });
+                        actions.remove.mutate(c.id, { onError: (e) => toast.error(t(e.message)) });
                       }
                     }}
                   >
-                    Desconectar
+                    {t("Desconectar")}
                   </Button>
                 </div>
               </CardContent>
@@ -435,14 +441,14 @@ function ChannelsPage() {
         })}
         {channels && channels.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Aún no hay canales conectados. Las reservas de la web propia no necesitan canal.
+            {t("Aún no hay canales conectados. Las reservas de la web propia no necesitan canal.")}
           </p>
         )}
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base">Registro de mensajes</CardTitle>
+          <CardTitle className="text-base">{t("Registro de mensajes")}</CardTitle>
           <RefreshCw className="h-4 w-4 text-muted-foreground" aria-hidden />
         </CardHeader>
         <CardContent className="p-0">
@@ -450,11 +456,11 @@ function ChannelsPage() {
             <table className="w-full min-w-[40rem] text-sm">
               <thead className="border-y bg-muted/30">
                 <tr>
-                  <th className="p-2 pl-4 text-left">Fecha</th>
-                  <th className="p-2 text-left">Canal</th>
-                  <th className="p-2 text-left">Mensaje</th>
-                  <th className="p-2 text-left">Reserva</th>
-                  <th className="p-2 text-left">Resultado</th>
+                  <th className="p-2 pl-4 text-left">{t("Fecha")}</th>
+                  <th className="p-2 text-left">{t("Canal")}</th>
+                  <th className="p-2 text-left">{t("Mensaje")}</th>
+                  <th className="p-2 text-left">{t("Reserva")}</th>
+                  <th className="p-2 text-left">{t("Resultado")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -479,7 +485,7 @@ function ChannelsPage() {
                     </td>
                     <td className="p-2 text-xs">
                       <span className={m.status === "ok" ? "text-info" : "text-destructive"}>
-                        {m.status === "ok" ? "OK" : "Error"}
+                        {m.status === "ok" ? t("OK") : t("Error")}
                       </span>
                       {m.detail && <span className="ml-1 text-muted-foreground">· {m.detail}</span>}
                     </td>
@@ -488,7 +494,7 @@ function ChannelsPage() {
                 {!activity?.messages.length && (
                   <tr>
                     <td colSpan={5} className="p-6 text-center text-muted-foreground">
-                      Sin mensajes todavía.
+                      {t("Sin mensajes todavía.")}
                     </td>
                   </tr>
                 )}

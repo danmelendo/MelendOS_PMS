@@ -31,6 +31,7 @@ import {
   type NewMcpToken,
 } from "@/lib/mcp";
 import { PlatformOnly } from "@/components/settings/AdminOnly";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/integrations")({
   component: () => (
@@ -55,7 +56,7 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("No se pudo copiar: selecciónalo a mano");
+      toast.error(t("No se pudo copiar: selecciónalo a mano"));
     }
   };
   return (
@@ -64,7 +65,7 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={copy}>
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          <span className="ml-1 text-xs">{copied ? "Copiado" : "Copiar"}</span>
+          <span className="ml-1 text-xs">{copied ? t("Copiado") : t("Copiar")}</span>
         </Button>
       </div>
       <pre className="max-w-full overflow-x-auto whitespace-pre rounded-md bg-muted px-3 py-2 font-mono text-xs">
@@ -81,32 +82,33 @@ function NewTokenCard({ created, onDone }: { created: NewMcpToken; onDone: () =>
     <Card className="border-gold/60">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <KeyRound className="h-4 w-4 text-gold" /> Copia el token ahora
+          <KeyRound className="h-4 w-4 text-gold" /> {t("Copia el token ahora")}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          No se volverá a mostrar: solo guardamos una huella para comprobarlo. Si lo pierdes,
-          revócalo y crea otro.
+          {t(
+            "No se volverá a mostrar: solo guardamos una huella para comprobarlo. Si lo pierdes, revócalo y crea otro.",
+          )}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <CopyBlock label="Token" text={created.token} />
+        <CopyBlock label={t("Token")} text={created.token} />
         <Tabs defaultValue="code">
           <TabsList>
-            <TabsTrigger value="code">Claude Code</TabsTrigger>
-            <TabsTrigger value="desktop">Claude Desktop</TabsTrigger>
+            <TabsTrigger value="code">{t("Claude Code")}</TabsTrigger>
+            <TabsTrigger value="desktop">{t("Claude Desktop")}</TabsTrigger>
           </TabsList>
           <TabsContent value="code" className="pt-2">
-            <CopyBlock label="Ejecuta en una terminal" text={s.claudeCode} />
+            <CopyBlock label={t("Ejecuta en una terminal")} text={s.claudeCode} />
           </TabsContent>
           <TabsContent value="desktop" className="space-y-2 pt-2">
             <CopyBlock label="claude_desktop_config.json" text={s.claudeDesktop} />
             <p className="text-xs text-muted-foreground">
-              Necesita Node.js. Reinicia Claude Desktop después de guardar el archivo.
+              {t("Necesita Node.js. Reinicia Claude Desktop después de guardar el archivo.")}
             </p>
           </TabsContent>
         </Tabs>
         <div className="flex justify-end">
-          <Button onClick={onDone}>Ya lo he guardado</Button>
+          <Button onClick={onDone}>{t("Ya lo he guardado")}</Button>
         </div>
       </CardContent>
     </Card>
@@ -133,42 +135,43 @@ function TokenRow({
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{token.token_prefix}…</code>
             {token.scopes.includes("write") ? (
               <Badge className="bg-gold text-gold-foreground hover:bg-gold">
-                Lectura y escritura
+                {t("Lectura y escritura")}
               </Badge>
             ) : (
-              <Badge variant="secondary">Solo lectura</Badge>
+              <Badge variant="secondary">{t("Solo lectura")}</Badge>
             )}
             {status !== "active" && (
               <Badge variant="outline" className="text-muted-foreground">
-                {status === "revoked" ? "Revocado" : "Caducado"}
+                {status === "revoked" ? t("Revocado") : t("Caducado")}
               </Badge>
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Creado {when(token.created_at)} ·{" "}
+            {t("Creado")} {when(token.created_at)} ·{" "}
             {status === "revoked"
-              ? `revocado ${when(token.revoked_at)}`
-              : `caduca ${when(token.expires_at)}`}{" "}
-            · último uso {when(token.last_used_at)} · {token.calls_30d} llamadas en 30 días
+              ? t("revocado {0}", { 0: when(token.revoked_at) })
+              : t("caduca {0}", { 0: when(token.expires_at) })}{" "}
+            {t("· último uso")} {when(token.last_used_at)} · {token.calls_30d}{" "}
+            {t("llamadas en 30 días")}
           </p>
         </div>
         {status === "active" && !confirming && (
           <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
-            Revocar
+            {t("Revocar")}
           </Button>
         )}
       </div>
       {confirming && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2">
           <span className="text-sm">
-            Las integraciones que lo usen dejarán de funcionar al momento.
+            {t("Las integraciones que lo usen dejarán de funcionar al momento.")}
           </span>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-              Cancelar
+              {t("Cancelar")}
             </Button>
             <Button size="sm" variant="destructive" disabled={revoking} onClick={onRevoke}>
-              Revocar acceso
+              {t("Revocar acceso")}
             </Button>
           </div>
         </div>
@@ -209,7 +212,7 @@ function IntegrationsPage() {
           setName("");
           setWrite(false);
         },
-        onError: (err) => toast.error(err.message),
+        onError: (err) => toast.error(t(err.message)),
       },
     );
   };
@@ -221,9 +224,11 @@ function IntegrationsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Integraciones IA</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("Integraciones IA")}</h1>
           <p className="text-sm text-muted-foreground">
-            Conecta asistentes como Claude a las herramientas de reservas del hotel mediante MCP.
+            {t(
+              "Conecta asistentes como Claude a las herramientas de reservas del hotel mediante MCP.",
+            )}
           </p>
         </div>
         {hotels && hotels.length > 1 && (
@@ -252,23 +257,26 @@ function IntegrationsPage() {
         <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
           <div className="space-y-2 text-sm">
             <p className="flex items-center gap-2 font-medium">
-              <PlugZap className="h-4 w-4 text-info" /> Servidor MCP del hotel
+              <PlugZap className="h-4 w-4 text-info" /> {t("Servidor MCP del hotel")}
             </p>
-            <CopyBlock label="URL (HTTP)" text={MCP_URL} />
+            <CopyBlock label={t("URL (HTTP)")} text={MCP_URL} />
           </div>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p className="flex items-center gap-2 font-medium text-foreground">
-              <ShieldCheck className="h-4 w-4 text-info" /> Qué puede hacer cada acceso
+              <ShieldCheck className="h-4 w-4 text-info" /> {t("Qué puede hacer cada acceso")}
             </p>
             <p>
-              <span className="font-medium text-foreground">Solo lectura:</span> {READ_TOOLS}.
+              <span className="font-medium text-foreground">{t("Solo lectura:")}</span> {READ_TOOLS}
+              .
             </p>
             <p>
-              <span className="font-medium text-foreground">Lectura y escritura:</span> además,{" "}
-              {WRITE_TOOLS}. Nada es irreversible: las reservas online quedan pendientes de pago y
-              las cancelaciones las decide recepción.
+              <span className="font-medium text-foreground">{t("Lectura y escritura:")}</span>{" "}
+              {t("además,")} {WRITE_TOOLS}
+              {t(
+                ". Nada es irreversible: las reservas online quedan pendientes de pago y las cancelaciones las decide recepción.",
+              )}
             </p>
-            <p>Cada acceso ve solo este hotel. Máximo 60 llamadas por minuto.</p>
+            <p>{t("Cada acceso ve solo este hotel. Máximo 60 llamadas por minuto.")}</p>
           </div>
         </CardContent>
       </Card>
@@ -278,22 +286,22 @@ function IntegrationsPage() {
       ) : (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Nuevo acceso</CardTitle>
+            <CardTitle className="text-base">{t("Nuevo acceso")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="grid gap-4 sm:grid-cols-[1fr_auto_auto_auto]">
               <div className="space-y-1.5">
-                <Label htmlFor="mcp-name">Nombre</Label>
+                <Label htmlFor="mcp-name">{t("Nombre")}</Label>
                 <Input
                   id="mcp-name"
                   value={name}
                   maxLength={80}
-                  placeholder="Claude de dirección"
+                  placeholder={t("Claude de dirección")}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Permisos</Label>
+                <Label>{t("Permisos")}</Label>
                 <Select
                   value={write ? "write" : "read"}
                   onValueChange={(v) => setWrite(v === "write")}
@@ -302,13 +310,13 @@ function IntegrationsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="read">Solo lectura</SelectItem>
-                    <SelectItem value="write">Lectura y escritura</SelectItem>
+                    <SelectItem value="read">{t("Solo lectura")}</SelectItem>
+                    <SelectItem value="write">{t("Lectura y escritura")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Caduca en</Label>
+                <Label>{t("Caduca en")}</Label>
                 <Select value={days} onValueChange={(v) => setDays(v as keyof typeof DAYS)}>
                   <SelectTrigger className="sm:w-32">
                     <SelectValue />
@@ -316,7 +324,7 @@ function IntegrationsPage() {
                   <SelectContent>
                     {Object.entries(DAYS).map(([v, label]) => (
                       <SelectItem key={v} value={v}>
-                        {label}
+                        {t(label)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -328,7 +336,7 @@ function IntegrationsPage() {
                   className="w-full sm:w-auto"
                   disabled={!hotel || !name.trim() || create.isPending}
                 >
-                  Crear token
+                  {t("Crear token")}
                 </Button>
               </div>
             </form>
@@ -338,26 +346,26 @@ function IntegrationsPage() {
 
       <Card>
         <CardHeader className="pb-0">
-          <CardTitle className="text-base">Accesos</CardTitle>
+          <CardTitle className="text-base">{t("Accesos")}</CardTitle>
         </CardHeader>
         <CardContent>
           {error ? (
             <p className="py-4 text-sm text-destructive">{error.message}</p>
           ) : !tokens?.length ? (
             <p className="py-4 text-sm text-muted-foreground">
-              Todavía no hay accesos. Crea uno para conectar un asistente.
+              {t("Todavía no hay accesos. Crea uno para conectar un asistente.")}
             </p>
           ) : (
             <ul className="divide-y">
-              {tokens.map((t) => (
+              {tokens.map((token) => (
                 <TokenRow
-                  key={t.id}
-                  token={t}
+                  key={token.id}
+                  token={token}
                   revoking={revoke.isPending}
                   onRevoke={() =>
-                    revoke.mutate(t.id, {
-                      onSuccess: () => toast.success("Acceso revocado"),
-                      onError: (err) => toast.error(err.message),
+                    revoke.mutate(token.id, {
+                      onSuccess: () => toast.success(t("Acceso revocado")),
+                      onError: (err) => toast.error(t(err.message)),
                     })
                   }
                 />

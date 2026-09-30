@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useInvoiceActions, type FiscalSettings } from "@/lib/invoices";
+import { t } from "@/lib/i18n";
 
 const ENVIRONMENTS: Record<FiscalSettings["environment"], string> = {
   simulated: "Simulado (no sale del PMS)",
@@ -43,18 +44,20 @@ export function FiscalSettingsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Configuración fiscal</CardTitle>
+        <CardTitle className="text-base">{t("Configuración fiscal")}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Datos del emisor de las facturas y certificado electrónico con el que el PMS se identifica
-          ante la AEAT.
+          {t(
+            "Datos del emisor de las facturas y certificado electrónico con el que el PMS se identifica ante la AEAT.",
+          )}
         </p>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
         {locked && (
           <p className="flex items-start gap-2 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" /> VERI*FACTU está en producción: no se
-            desactiva ni se cambia de entorno desde el panel (la norma no permite usar el sistema a
-            voluntad).
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />{" "}
+            {t(
+              "VERI*FACTU está en producción: no se desactiva ni se cambia de entorno desde el panel (la norma no permite usar el sistema a voluntad).",
+            )}
           </p>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -64,10 +67,11 @@ export function FiscalSettingsCard({
               disabled={locked}
               onCheckedChange={(v) => setF({ ...f, enabled: v })}
             />
-            Facturar con VERI*FACTU
+
+            {t("Facturar con VERI*FACTU")}
           </label>
           <div className="space-y-1">
-            <Label>Entorno</Label>
+            <Label>{t("Entorno")}</Label>
             <Select
               value={f.environment}
               disabled={locked}
@@ -79,14 +83,14 @@ export function FiscalSettingsCard({
               <SelectContent>
                 {Object.entries(ENVIRONMENTS).map(([v, l]) => (
                   <SelectItem key={v} value={v}>
-                    {l}
+                    {t(l)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="fs-nif">NIF del emisor</Label>
+            <Label htmlFor="fs-nif">{t("NIF del emisor")}</Label>
             <Input
               id="fs-nif"
               className="font-mono uppercase"
@@ -96,7 +100,7 @@ export function FiscalSettingsCard({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="fs-name">Razón social</Label>
+            <Label htmlFor="fs-name">{t("Razón social")}</Label>
             <Input
               id="fs-name"
               maxLength={120}
@@ -105,7 +109,7 @@ export function FiscalSettingsCard({
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="fs-addr">Domicilio fiscal (sale en la factura)</Label>
+            <Label htmlFor="fs-addr">{t("Domicilio fiscal (sale en la factura)")}</Label>
             <Input
               id="fs-addr"
               maxLength={200}
@@ -114,7 +118,7 @@ export function FiscalSettingsCard({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="fs-limit">Límite de la factura simplificada (€)</Label>
+            <Label htmlFor="fs-limit">{t("Límite de la factura simplificada (€)")}</Label>
             <Input
               id="fs-limit"
               inputMode="decimal"
@@ -122,13 +126,14 @@ export function FiscalSettingsCard({
               onChange={(e) => setF({ ...f, simplified_limit: e.target.value })}
             />
             <p className="text-xs text-muted-foreground">
-              400 € con carácter general; hasta 3.000 € según la actividad (consúltalo con tu
-              gestoría).
+              {t(
+                "400 € con carácter general; hasta 3.000 € según la actividad (consúltalo con tu gestoría).",
+              )}
             </p>
           </div>
           {settings?.installation_number && (
             <div className="space-y-1">
-              <Label>Número de instalación</Label>
+              <Label>{t("Número de instalación")}</Label>
               <p className="font-mono text-xs">{settings.installation_number}</p>
             </div>
           )}
@@ -139,45 +144,46 @@ export function FiscalSettingsCard({
             actions.saveSettings.mutate(
               { ...f, simplified_limit: Number(f.simplified_limit.replace(",", ".")) || 400 },
               {
-                onSuccess: () => toast.success("Configuración guardada"),
-                onError: (e) => toast.error(e.message),
+                onSuccess: () => toast.success(t("Configuración guardada")),
+                onError: (e) => toast.error(t(e.message)),
               },
             )
           }
         >
-          Guardar configuración
+          {t("Guardar configuración")}
         </Button>
 
         <div className="space-y-3 border-t pt-4">
           <p className="flex items-center gap-2 font-medium">
-            <KeyRound className="h-4 w-4" /> Certificado electrónico
+            <KeyRound className="h-4 w-4" /> {t("Certificado electrónico")}
             {settings?.has_certificate && (
               <Badge variant="secondary" className="font-normal">
-                Guardado
+                {t("Guardado")}
               </Badge>
             )}
           </p>
           <p className="text-xs text-muted-foreground">
-            Certificado cualificado del hotel (o de su representante) en formato PEM. Si lo tienes
-            en .p12/.pfx:{" "}
+            {t(
+              "Certificado cualificado del hotel (o de su representante) en formato PEM. Si lo tienes en .p12/.pfx:",
+            )}{" "}
             <code className="rounded bg-muted px-1">
-              openssl pkcs12 -in cert.p12 -clcerts -nokeys
+              {t("openssl pkcs12 -in cert.p12 -clcerts -nokeys")}
             </code>{" "}
-            para el certificado y{" "}
+            {t("para el certificado y")}{" "}
             <code className="rounded bg-muted px-1">
-              openssl pkcs12 -in cert.p12 -nocerts -nodes
+              {t("openssl pkcs12 -in cert.p12 -nocerts -nodes")}
             </code>{" "}
-            para la clave. Se guarda cifrado y solo lo usa el servidor.
+            {t("para la clave. Se guarda cifrado y solo lo usa el servidor.")}
           </p>
           <textarea
             className="min-h-20 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-            placeholder="-----BEGIN CERTIFICATE-----"
+            placeholder={t("-----BEGIN CERTIFICATE-----")}
             value={cert.cert}
             onChange={(e) => setCert({ ...cert, cert: e.target.value })}
           />
           <textarea
             className="min-h-20 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-            placeholder="-----BEGIN PRIVATE KEY-----"
+            placeholder={t("-----BEGIN PRIVATE KEY-----")}
             value={cert.key}
             onChange={(e) => setCert({ ...cert, key: e.target.value })}
           />
@@ -187,14 +193,14 @@ export function FiscalSettingsCard({
             onClick={() =>
               actions.saveCertificate.mutate(cert, {
                 onSuccess: () => {
-                  toast.success("Certificado guardado");
+                  toast.success(t("Certificado guardado"));
                   setCert({ cert: "", key: "" });
                 },
-                onError: (e) => toast.error(e.message),
+                onError: (e) => toast.error(t(e.message)),
               })
             }
           >
-            Guardar certificado
+            {t("Guardar certificado")}
           </Button>
         </div>
       </CardContent>

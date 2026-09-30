@@ -27,6 +27,7 @@ import {
 } from "@/lib/website";
 import { AdminOnly } from "@/components/settings/AdminOnly";
 import { DnsTutorial } from "@/components/DnsTutorial";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/website")({
   component: () => (
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/_app/website")({
 });
 
 const copy = (text: string) =>
-  navigator.clipboard.writeText(text).then(() => toast.success("Copiado"));
+  navigator.clipboard.writeText(text).then(() => toast.success(t("Copiado")));
 
 function WebsitePage() {
   const { isAdmin, loading } = useRoles();
@@ -56,11 +57,12 @@ function WebsitePage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Globe className="h-5 w-5 text-info" /> Web y dominio
+            <Globe className="h-5 w-5 text-info" /> {t("Web y dominio")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Dónde reservan tus huéspedes: tu motor de reservas en un subdominio propio, enlazado
-            desde la web que ya tienes.
+            {t(
+              "Dónde reservan tus huéspedes: tu motor de reservas en un subdominio propio, enlazado desde la web que ya tienes.",
+            )}
           </p>
         </div>
         {hotels && hotels.length > 1 && (
@@ -84,12 +86,11 @@ function WebsitePage() {
       {data && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Textos legales de tu web</CardTitle>
+            <CardTitle className="text-base">{t("Textos legales de tu web")}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Tu web muestra en el pie el aviso legal, la política de privacidad, la de cookies y
-              las condiciones de reserva. Se rellenan solos con tus datos fiscales (Facturación →
-              Datos fiscales) y tus políticas de pago y cancelación. Son una plantilla: revísalos
-              con tu asesoría.
+              {t(
+                "Tu web muestra en el pie el aviso legal, la política de privacidad, la de cookies y las condiciones de reserva. Se rellenan solos con tus datos fiscales (Facturación → Datos fiscales) y tus políticas de pago y cancelación. Son una plantilla: revísalos con tu asesoría.",
+              )}
             </p>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -127,17 +128,17 @@ function DomainCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Dirección de tu web de reservas</CardTitle>
+        <CardTitle className="text-base">{t("Dirección de tu web de reservas")}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Tu motor de reservas vive en un subdominio de tu web, por ejemplo{" "}
-          <span className="font-mono">reservas.tuhotel.com</span>. Enlázalo desde el botón
-          «Reservar» de tu web actual: no hace falta cambiarla.
+          {t("Tu motor de reservas vive en un subdominio de tu web, por ejemplo")}{" "}
+          <span className="font-mono">{t("reservas.tuhotel.com")}</span>
+          {t(". Enlázalo desde el botón «Reservar» de tu web actual: no hace falta cambiarla.")}
         </p>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
         {data.url ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted px-3 py-2">
-            <span className="text-muted-foreground">Ahora responde en</span>
+            <span className="text-muted-foreground">{t("Ahora responde en")}</span>
             <a
               href={data.url}
               target="_blank"
@@ -150,13 +151,14 @@ function DomainCard({
           </div>
         ) : (
           <p className="rounded-md bg-muted px-3 py-2 text-muted-foreground">
-            La dirección se asigna al publicar el motor de reservas. En la demo se ve en «Web
-            pública».
+            {t(
+              "La dirección se asigna al publicar el motor de reservas. En la demo se ve en «Web pública».",
+            )}
           </p>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="ws-domain">Tu subdominio (opcional)</Label>
+          <Label htmlFor="ws-domain">{t("Tu subdominio (opcional)")}</Label>
           <Input
             id="ws-domain"
             placeholder="reservas.tuhotel.com"
@@ -168,22 +170,23 @@ function DomainCard({
             }}
           />
           <div className="space-y-2 rounded-md border p-3">
-            <p className="font-medium">Cómo conectarlo (una vez)</p>
+            <p className="font-medium">{t("Cómo conectarlo (una vez)")}</p>
             <p className="text-muted-foreground">
-              En el panel de tu dominio (donde lo compraste o tu informático), crea este registro
-              DNS:
+              {t(
+                "En el panel de tu dominio (donde lo compraste o tu informático), crea este registro DNS:",
+              )}
             </p>
             <table className="w-full text-left text-xs">
               <thead className="text-muted-foreground">
                 <tr>
-                  <th className="py-1 font-medium">Tipo</th>
-                  <th className="py-1 font-medium">Nombre</th>
-                  <th className="py-1 font-medium">Valor</th>
+                  <th className="py-1 font-medium">{t("Tipo")}</th>
+                  <th className="py-1 font-medium">{t("Nombre")}</th>
+                  <th className="py-1 font-medium">{t("Valor")}</th>
                 </tr>
               </thead>
               <tbody className="font-mono">
                 <tr>
-                  <td className="py-1">CNAME</td>
+                  <td className="py-1">{t("CNAME")}</td>
                   <td className="py-1">{label}</td>
                   <td className="py-1">
                     {PLATFORM_CNAME ? (
@@ -196,7 +199,7 @@ function DomainCard({
                       </button>
                     ) : (
                       <span className="font-sans text-muted-foreground">
-                        te lo damos al activar tu cuenta
+                        {t("te lo damos al activar tu cuenta")}
                       </span>
                     )}
                   </td>
@@ -204,7 +207,9 @@ function DomainCard({
               </tbody>
             </table>
             <p className="text-xs text-muted-foreground">
-              El cambio tarda de unos minutos a unas horas. El certificado HTTPS se crea solo.
+              {t(
+                "El cambio tarda de unos minutos a unas horas. El certificado HTTPS se crea solo.",
+              )}
             </p>
             <DnsTutorial
               subdomain={domain || "reservas.tuhotel.com"}
@@ -227,7 +232,7 @@ function DomainCard({
                   {dns === "checking" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    "Comprobar DNS"
+                    t("Comprobar DNS")
                   )}
                 </Button>
                 {dns && dns !== "checking" && (
@@ -236,7 +241,7 @@ function DomainCard({
                   >
                     {dns.ok ? (
                       <>
-                        <CheckCircle2 className="h-4 w-4" /> Conectado a {dns.target}
+                        <CheckCircle2 className="h-4 w-4" /> {t("Conectado a")} {dns.target}
                       </>
                     ) : (
                       <>
@@ -251,7 +256,7 @@ function DomainCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="ws-site">Tu web principal (opcional)</Label>
+          <Label htmlFor="ws-site">{t("Tu web principal (opcional)")}</Label>
           <Input
             id="ws-site"
             placeholder="https://www.tuhotel.com"
@@ -259,7 +264,9 @@ function DomainCard({
             onChange={(e) => setWebsite(e.target.value.trim())}
           />
           <p className="text-xs text-muted-foreground">
-            A donde vuelven los huéspedes desde la app y la web de reservas («Volver a la web»).
+            {t(
+              "A donde vuelven los huéspedes desde la app y la web de reservas («Volver a la web»).",
+            )}
           </p>
         </div>
 
@@ -269,13 +276,13 @@ function DomainCard({
             save.mutate(
               { domain, website_url: website },
               {
-                onSuccess: () => toast.success("Guardado"),
-                onError: (e) => toast.error(e.message),
+                onSuccess: () => toast.success(t("Guardado")),
+                onError: (e) => toast.error(t(e.message)),
               },
             )
           }
         >
-          Guardar
+          {t("Guardar")}
         </Button>
       </CardContent>
     </Card>

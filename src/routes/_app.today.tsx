@@ -21,6 +21,7 @@ import {
 import { Plus, LogIn, LogOut, BedDouble, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/today")({
   component: TodayPage,
@@ -84,9 +85,9 @@ function TodayPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reservations"] });
-      toast.success("Estado actualizado");
+      toast.success(t("Estado actualizado"));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const checkIn = useMutation({
@@ -112,13 +113,13 @@ function TodayPage() {
           : "Check-in hecho",
       );
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const startCheckIn = async (r: NonNullable<typeof stays>[number]) => {
     if (!sesOn?.has(r.tenant_id)) return checkIn.mutate({ id: r.id, tenantId: r.tenant_id });
     const { data, error } = await supabase.rpc("list_stay_travellers", { p_reservation: r.id });
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(t(error.message));
     const rows = (data ?? []) as { missing: string[] }[];
     const complete = rows.filter((t) => t.missing.length === 0).length;
     if (complete >= r.people && complete === rows.length) {
@@ -163,7 +164,8 @@ function TodayPage() {
     const start = new Date(r.start_at);
     const end = new Date(r.end_at);
     const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / DAY_MS));
-    const fmt = (d: Date) => d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+    const fmt = (d: Date) =>
+      d.toLocaleDateString(currentLocale(), { day: "numeric", month: "short" });
     return (
       <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-md border bg-card p-3">
         <button
@@ -175,30 +177,30 @@ function TodayPage() {
             {r.rooms?.name}
             <span className="font-normal text-muted-foreground"> · {r.rooms?.building}</span>
           </span>
-          <span className="text-sm">{r.customers?.name ?? "Sin nombre"}</span>
+          <span className="text-sm">{r.customers?.name ?? t("Sin nombre")}</span>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {fmt(start)} → {fmt(end)} · {nights} {nights === 1 ? "noche" : "noches"} · {r.people}{" "}
-            pax
+            {fmt(start)} → {fmt(end)} · {nights} {nights === 1 ? t("noche") : t("noches")} ·{" "}
+            {r.people} {t("pax")}
           </span>
           <Badge variant="outline" className={STATUS_COLORS[r.status]}>
-            {STATUS_LABELS[r.status]}
+            {t(STATUS_LABELS[r.status])}
           </Badge>
         </button>
         <div className="flex flex-wrap items-center gap-1">
           {r.deposit_paid ? (
             <span
               className="mr-1 text-xs text-emerald-700 dark:text-emerald-300"
-              title="Pagado online al reservar"
+              title={t("Pagado online al reservar")}
             >
-              pagado online {eur(Number(r.paid_amount))}
+              {t("pagado online")} {eur(Number(r.paid_amount))}
             </span>
           ) : (r as { payment_mode?: string }).payment_mode === "at_hotel" ? (
-            <span className="mr-1 text-xs text-muted-foreground">paga en el hotel</span>
+            <span className="mr-1 text-xs text-muted-foreground">{t("paga en el hotel")}</span>
           ) : null}
           <span className="mr-2 text-sm font-medium tabular-nums">{eur(Number(r.total))}</span>
           {r.status !== "pending" && (
             <Button size="sm" variant="ghost" onClick={() => setFolioId(r.id)}>
-              <Receipt className="mr-1 h-3.5 w-3.5" /> Cuenta
+              <Receipt className="mr-1 h-3.5 w-3.5" /> {t("Cuenta")}
             </Button>
           )}
           {action}
@@ -217,9 +219,9 @@ function TodayPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Hoy</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("Hoy")}</h1>
           <p className="text-sm text-muted-foreground first-letter:uppercase">
-            {today.toLocaleDateString("es-ES", {
+            {today.toLocaleDateString(currentLocale(), {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -234,37 +236,37 @@ function TodayPage() {
               setOpen(true);
             }}
           >
-            <Plus className="mr-2 h-4 w-4" /> Nueva reserva
+            <Plus className="mr-2 h-4 w-4" /> {t("Nueva reserva")}
           </Button>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatCard
-          label="Llegadas"
+          label={t("Llegadas")}
           value={String(arrivals.length)}
-          hint={`${pendingArrivals} pendientes de check-in`}
+          hint={t("{0} pendientes de check-in", { 0: pendingArrivals })}
         />
         <StatCard
-          label="Salidas"
+          label={t("Salidas")}
           value={String(departures.length)}
-          hint={`${pendingDepartures} pendientes de check-out`}
+          hint={t("{0} pendientes de check-out", { 0: pendingDepartures })}
         />
         <StatCard
-          label="Alojados"
+          label={t("Alojados")}
           value={String(inHouse.length)}
-          hint="Sin llegada ni salida hoy"
+          hint={t("Sin llegada ni salida hoy")}
         />
         <StatCard
-          label="Ocupación esta noche"
+          label={t("Ocupación esta noche")}
           value={`${occupancy}%`}
-          hint={`${tonight.size} de ${totalRooms} habitaciones`}
+          hint={t("{0} de {1} habitaciones", { 0: tonight.size, 1: totalRooms })}
           accent
         />
         <StatCard
-          label="Ingresos de llegadas"
+          label={t("Ingresos de llegadas")}
           value={eur(arrivals.reduce((s, r) => s + Number(r.total), 0))}
-          hint="Total de las estancias que entran hoy"
+          hint={t("Total de las estancias que entran hoy")}
         />
       </div>
 
@@ -277,8 +279,8 @@ function TodayPage() {
       <div className="grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <ListCard
           icon={<LogIn className="h-4 w-4" />}
-          title="Llegadas"
-          empty="No hay llegadas hoy."
+          title={t("Llegadas")}
+          empty={t("No hay llegadas hoy.")}
         >
           {arrivals.map((r) =>
             row(
@@ -291,7 +293,7 @@ function TodayPage() {
                     disabled={checkIn.isPending}
                     onClick={() => startCheckIn(r)}
                   >
-                    <LogIn className="mr-1 h-3.5 w-3.5" /> Check-in
+                    <LogIn className="mr-1 h-3.5 w-3.5" /> {t("Check-in")}
                   </Button>
                 )}
               </>,
@@ -299,7 +301,11 @@ function TodayPage() {
           )}
         </ListCard>
 
-        <ListCard icon={<LogOut className="h-4 w-4" />} title="Salidas" empty="No hay salidas hoy.">
+        <ListCard
+          icon={<LogOut className="h-4 w-4" />}
+          title={t("Salidas")}
+          empty={t("No hay salidas hoy.")}
+        >
           {departures.map((r) =>
             row(
               r,
@@ -310,7 +316,7 @@ function TodayPage() {
                     variant="outline"
                     onClick={() => updateStatus.mutate({ id: r.id, status: "completed" })}
                   >
-                    <LogOut className="mr-1 h-3.5 w-3.5" /> Check-out
+                    <LogOut className="mr-1 h-3.5 w-3.5" /> {t("Check-out")}
                   </Button>
                 )}
                 <ExtendCleaningButton
@@ -326,8 +332,8 @@ function TodayPage() {
 
       <ListCard
         icon={<BedDouble className="h-4 w-4" />}
-        title="Alojados"
-        empty="No hay más huéspedes alojados."
+        title={t("Alojados")}
+        empty={t("No hay más huéspedes alojados.")}
       >
         {inHouse.map((r) => row(r, null, false))}
       </ListCard>

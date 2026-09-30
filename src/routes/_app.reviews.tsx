@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useReviews } from "@/lib/reviews";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/reviews")({
   component: ReviewsPage,
@@ -28,7 +29,7 @@ type Filter = "all" | "unanswered" | "low";
 
 function StarsRow({ value }: { value: number }) {
   return (
-    <span className="inline-flex" aria-label={`${value} de 5`}>
+    <span className="inline-flex" aria-label={t("{0} de 5", { 0: value })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
@@ -83,9 +84,9 @@ function ReviewsPage() {
       setReplying(null);
       setText("");
       qc.invalidateQueries({ queryKey: ["reviews"] });
-      toast.success("Respuesta publicada");
+      toast.success(t("Respuesta publicada"));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   // Straight to the URL without the module in any of the staff's hotels.
@@ -95,9 +96,11 @@ function ReviewsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reseñas</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("Reseñas")}</h1>
           <p className="text-sm text-muted-foreground">
-            Valoraciones de estancias verificadas. Se publican al momento; responde desde aquí.
+            {t(
+              "Valoraciones de estancias verificadas. Se publican al momento; responde desde aquí.",
+            )}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -120,9 +123,9 @@ function ReviewsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="unanswered">Sin responder</SelectItem>
-              <SelectItem value="low">3 estrellas o menos</SelectItem>
+              <SelectItem value="all">{t("Todas")}</SelectItem>
+              <SelectItem value="unanswered">{t("Sin responder")}</SelectItem>
+              <SelectItem value="low">{t("3 estrellas o menos")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -132,14 +135,16 @@ function ReviewsPage() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
           <Card className="border-gold/50">
             <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">Valoración media</div>
+              <div className="text-xs text-muted-foreground">{t("Valoración media")}</div>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-bold tabular-nums">
                   {summary.average.toFixed(2)}
                 </span>
                 <StarsRow value={Math.round(summary.average)} />
               </div>
-              <div className="text-xs text-muted-foreground">{summary.count} reseñas</div>
+              <div className="text-xs text-muted-foreground">
+                {summary.count} {t("reseñas")}
+              </div>
             </CardContent>
           </Card>
           <Card className="lg:col-span-3">
@@ -148,7 +153,7 @@ function ReviewsPage() {
                 {Object.entries(REVIEW_SCORES).map(([k, label]) =>
                   summary.scores[k] != null ? (
                     <div key={k} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate text-muted-foreground">{label}</span>
+                      <span className="truncate text-muted-foreground">{t(label)}</span>
                       <span className="font-semibold tabular-nums">
                         {summary.scores[k].toFixed(1)}
                       </span>
@@ -186,20 +191,20 @@ function ReviewsPage() {
                 <StarsRow value={r.rating} />
                 <span className="font-medium">{r.author_name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(r.created_at).toLocaleDateString("es-ES", {
+                  {new Date(r.created_at).toLocaleDateString(currentLocale(), {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}
                 </span>
                 <span className="font-mono text-xs text-muted-foreground">
-                  Ref. {bookingReference(r.reservation_id)}
+                  {t("Ref.")} {bookingReference(r.reservation_id)}
                 </span>
               </div>
               {r.comment ? (
                 <p className="text-sm">{r.comment}</p>
               ) : (
-                <p className="text-sm italic text-muted-foreground">Sin comentario.</p>
+                <p className="text-sm italic text-muted-foreground">{t("Sin comentario.")}</p>
               )}
               {replying === r.id ? (
                 <div className="space-y-2 border-t pt-3">
@@ -208,7 +213,7 @@ function ReviewsPage() {
                     onChange={(e) => setText(e.target.value)}
                     rows={3}
                     maxLength={2000}
-                    placeholder="Respuesta pública del hotel"
+                    placeholder={t("Respuesta pública del hotel")}
                     autoFocus
                   />
                   <div className="flex gap-2">
@@ -217,16 +222,18 @@ function ReviewsPage() {
                       disabled={reply.isPending || !text.trim()}
                       onClick={() => reply.mutate({ id: r.id, body: text })}
                     >
-                      Publicar respuesta
+                      {t("Publicar respuesta")}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setReplying(null)}>
-                      Cancelar
+                      {t("Cancelar")}
                     </Button>
                   </div>
                 </div>
               ) : r.reply ? (
                 <div className="border-l-2 border-info bg-info/5 px-3 py-2 text-sm">
-                  <p className="text-xs font-semibold text-muted-foreground">Respuesta del hotel</p>
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    {t("Respuesta del hotel")}
+                  </p>
                   <p>{r.reply}</p>
                   <button
                     type="button"
@@ -236,7 +243,7 @@ function ReviewsPage() {
                       setText(r.reply ?? "");
                     }}
                   >
-                    Editar
+                    {t("Editar")}
                   </button>
                 </div>
               ) : (
@@ -248,14 +255,14 @@ function ReviewsPage() {
                     setText("");
                   }}
                 >
-                  <MessageSquareReply className="mr-1 h-3.5 w-3.5" /> Responder
+                  <MessageSquareReply className="mr-1 h-3.5 w-3.5" /> {t("Responder")}
                 </Button>
               )}
             </CardContent>
           </Card>
         ))}
         {reviews && reviews.length === 0 && (
-          <p className="py-10 text-center text-sm text-muted-foreground">No hay reseñas.</p>
+          <p className="py-10 text-center text-sm text-muted-foreground">{t("No hay reseñas.")}</p>
         )}
       </div>
     </div>

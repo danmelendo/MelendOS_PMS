@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { eur } from "@/lib/data";
+import { t, currentLocale } from "@/lib/i18n";
 
 interface Notif {
   id: string;
@@ -101,7 +102,7 @@ export function NotificationBell() {
           const notif: Notif = {
             id: r.id,
             title: `Nueva reserva · ${sourceLabel}`,
-            detail: `${room?.building ?? ""} · ${room?.name ?? ""} · ${start.toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · ${customerName} · ${eur(Number(r.total))}`,
+            detail: `${room?.building ?? ""} · ${room?.name ?? ""} · ${start.toLocaleString(currentLocale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · ${customerName} · ${eur(Number(r.total))}`,
             source,
             at: new Date(),
             read: false,
@@ -128,7 +129,7 @@ export function NotificationBell() {
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notificaciones">
+        <Button variant="ghost" size="icon" className="relative" aria-label={t("Notificaciones")}>
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
@@ -139,16 +140,18 @@ export function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 p-0">
         <div className="border-b px-3 py-2 flex items-center justify-between">
-          <span className="text-sm font-semibold">Notificaciones</span>
+          <span className="text-sm font-semibold">{t("Notificaciones")}</span>
           {items.length > 0 && (
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setItems([])}>
-              Limpiar
+              {t("Limpiar")}
             </Button>
           )}
         </div>
         <div className="max-h-96 overflow-y-auto">
           {items.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">Sin notificaciones</div>
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              {t("Sin notificaciones")}
+            </div>
           )}
           {items.map((n) => (
             <div key={n.id} className="border-b last:border-0 p-3 text-sm space-y-1">
@@ -160,7 +163,7 @@ export function NotificationBell() {
               </div>
               <div className="text-xs text-muted-foreground">{n.detail}</div>
               <div className="text-[10px] text-muted-foreground/70">
-                {n.at.toLocaleTimeString("es-ES")}
+                {n.at.toLocaleTimeString(currentLocale())}
               </div>
             </div>
           ))}

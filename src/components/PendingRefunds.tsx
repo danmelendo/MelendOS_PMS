@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { eur } from "@/lib/data";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 // Money still owed to guests after a cancellation (pending_refunds): the
 // suggested amount already keeps a late-cancellation fee. "Devolver" opens the
@@ -38,9 +39,9 @@ export function PendingRefunds({ onOpen }: { onOpen: (reservationId: string) => 
     },
     onSuccess: () => {
       setConfirming(null);
-      toast.success("Devolución registrada");
+      toast.success(t("Devolución registrada"));
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["pending_refunds"] });
       qc.invalidateQueries({ queryKey: ["refundable"] });
@@ -49,13 +50,15 @@ export function PendingRefunds({ onOpen }: { onOpen: (reservationId: string) => 
 
   if (!owed?.length) return null;
   const fmt = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "";
+    iso
+      ? new Date(iso).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" })
+      : "";
 
   return (
     <Card className="border-gold/50">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Undo2 className="h-4 w-4 text-gold" /> Devoluciones pendientes
+          <Undo2 className="h-4 w-4 text-gold" /> {t("Devoluciones pendientes")}
           <span className="text-sm font-normal text-muted-foreground">({owed.length})</span>
         </CardTitle>
       </CardHeader>
@@ -70,47 +73,48 @@ export function PendingRefunds({ onOpen }: { onOpen: (reservationId: string) => 
                   {bookingReference(r.reservation_id)}
                 </span>
                 <span className="font-medium">{r.room_name}</span>
-                <span>{r.guest_name ?? "Sin nombre"}</span>
+                <span>{r.guest_name ?? t("Sin nombre")}</span>
                 <span className="text-muted-foreground">
                   {fmt(r.start_at)} – {fmt(r.end_at)}
                 </span>
                 <span className="ml-auto font-medium tabular-nums">{eur(suggested)}</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                {r.status === "rejected" ? "Pagada sin reserva válida" : "Cancelada"}
-                {r.cancelled_at ? ` el ${fmt(r.cancelled_at)}` : ""} · pagado online sin devolver{" "}
-                {eur(Number(r.refundable))}
-                {fee > 0 && ` · retiene ${eur(fee)} por cancelación fuera de plazo`}
+                {r.status === "rejected" ? t("Pagada sin reserva válida") : t("Cancelada")}
+                {r.cancelled_at ? t(" el {0}", { 0: fmt(r.cancelled_at) }) : ""}{" "}
+                {t("· pagado online sin devolver")} {eur(Number(r.refundable))}
+                {fee > 0 && t(" · retiene {0} por cancelación fuera de plazo", { 0: eur(fee) })}
               </p>
               {canOperate && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {confirming === r.reservation_id ? (
                     <>
                       <span className="text-xs">
-                        ¿Registrar {eur(suggested)} como ya devueltos fuera de Melend/OS?
+                        {t("¿Registrar")} {eur(suggested)}{" "}
+                        {t("como ya devueltos fuera de Melend/OS?")}
                       </span>
                       <Button
                         size="sm"
                         disabled={settle.isPending}
                         onClick={() => settle.mutate({ id: r.reservation_id, amount: suggested })}
                       >
-                        Sí, registrar
+                        {t("Sí, registrar")}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setConfirming(null)}>
-                        No
+                        {t("No")}
                       </Button>
                     </>
                   ) : (
                     <>
                       <Button size="sm" variant="outline" onClick={() => onOpen(r.reservation_id)}>
-                        Devolver
+                        {t("Devolver")}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => setConfirming(r.reservation_id)}
                       >
-                        Ya devuelta en la pasarela
+                        {t("Ya devuelta en la pasarela")}
                       </Button>
                     </>
                   )}

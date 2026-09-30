@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { pms } from "@/integrations/pms";
 import type { JournalEventType } from "@/integrations/pms";
 import { PlatformOnly } from "@/components/settings/AdminOnly";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/journal")({
   component: () => (
@@ -75,33 +76,34 @@ function JournalPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Booking journal</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Booking journal")}</h1>
         <p className="text-sm text-muted-foreground">
-          Traza inmutable del ciclo de vida de cada reserva (prereserva → confirmación → firma →
-          check-in). Compartida con la web de reservas vía el conector PMS.
+          {t(
+            "Traza inmutable del ciclo de vida de cada reserva (prereserva → confirmación → firma → check-in). Compartida con la web de reservas vía el conector PMS.",
+          )}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Select value={eventType} onValueChange={setEventType}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tipo de evento" />
+            <SelectValue placeholder={t("Tipo de evento")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos los eventos</SelectItem>
+            <SelectItem value="all">{t("Todos los eventos")}</SelectItem>
             {Object.entries(EVENT_LABELS).map(([k, v]) => (
               <SelectItem key={k} value={k}>
-                {v}
+                {t(v)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={propertyId} onValueChange={setPropertyId}>
           <SelectTrigger className="w-56">
-            <SelectValue placeholder="Propiedad" />
+            <SelectValue placeholder={t("Propiedad")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas las propiedades</SelectItem>
+            <SelectItem value="all">{t("Todas las propiedades")}</SelectItem>
             {(properties ?? []).map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
@@ -117,19 +119,19 @@ function JournalPage() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="p-2 text-left">Fecha</th>
-                  <th className="p-2 text-left">Evento</th>
-                  <th className="p-2 text-left">Reserva</th>
-                  <th className="p-2 text-left">Propiedad</th>
-                  <th className="p-2 text-left">Actor</th>
-                  <th className="p-2 text-left">Detalle</th>
+                  <th className="p-2 text-left">{t("Fecha")}</th>
+                  <th className="p-2 text-left">{t("Evento")}</th>
+                  <th className="p-2 text-left">{t("Reserva")}</th>
+                  <th className="p-2 text-left">{t("Propiedad")}</th>
+                  <th className="p-2 text-left">{t("Actor")}</th>
+                  <th className="p-2 text-left">{t("Detalle")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(entries ?? []).map((e) => (
                   <tr key={e.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="whitespace-nowrap p-2 text-muted-foreground">
-                      {new Date(e.createdAt).toLocaleString("es-ES", {
+                      {new Date(e.createdAt).toLocaleString(currentLocale(), {
                         day: "2-digit",
                         month: "2-digit",
                         hour: "2-digit",
@@ -154,7 +156,7 @@ function JournalPage() {
                 {entries && entries.length === 0 && (
                   <tr>
                     <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                      Sin eventos.
+                      {t("Sin eventos.")}
                     </td>
                   </tr>
                 )}

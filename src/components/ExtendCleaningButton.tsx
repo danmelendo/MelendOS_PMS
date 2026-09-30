@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { t } from "@/lib/i18n";
 
 /**
  * Lets staff extend a room's cleaning time (typically detected at check-out).
@@ -49,7 +50,7 @@ export function ExtendCleaningButton({
       );
       setOpen(false);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   return (
@@ -57,28 +58,30 @@ export function ExtendCleaningButton({
       <Button
         size="sm"
         variant="outline"
-        title="Ampliar limpieza"
+        title={t("Ampliar limpieza")}
         onClick={() => {
           setMinutes(Math.max(15, (currentCleaning || 15) + 15));
           setOpen(true);
         }}
       >
         <Sparkles className="h-3.5 w-3.5 sm:mr-1" />
-        <span className="hidden sm:inline">Ampliar limpieza</span>
+        <span className="hidden sm:inline">{t("Ampliar limpieza")}</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ampliar tiempo de limpieza</DialogTitle>
+            <DialogTitle>{t("Ampliar tiempo de limpieza")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              La habitación quedará no reservable durante este tiempo tras la reserva. Si hay
-              reservas posteriores que se solapen, se <strong>retrasarán automáticamente</strong>{" "}
-              hasta que termine la limpieza.
+              {t(
+                "La habitación quedará no reservable durante este tiempo tras la reserva. Si hay reservas posteriores que se solapen, se",
+              )}{" "}
+              <strong>{t("retrasarán automáticamente")}</strong>{" "}
+              {t("hasta que termine la limpieza.")}
             </p>
             <div className="space-y-1.5">
-              <Label>Tiempo de limpieza total (min)</Label>
+              <Label>{t("Tiempo de limpieza total (min)")}</Label>
               <Input
                 type="number"
                 min={15}
@@ -87,16 +90,16 @@ export function ExtendCleaningButton({
                 onChange={(e) => setMinutes(Math.max(15, Number(e.target.value) || 15))}
               />
               <div className="text-[10px] text-muted-foreground">
-                Actual: {currentCleaning || 15} min · mínimo 15 min.
+                {t("Actual:")} {currentCleaning || 15} {t("min · mínimo 15 min.")}
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
+              {t("Cancelar")}
             </Button>
             <Button onClick={() => m.mutate()} disabled={m.isPending}>
-              {m.isPending ? "Aplicando..." : "Confirmar"}
+              {m.isPending ? t("Aplicando...") : t("Confirmar")}
             </Button>
           </DialogFooter>
         </DialogContent>

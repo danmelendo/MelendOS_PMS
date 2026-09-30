@@ -24,6 +24,7 @@ import {
   useSesSettings,
   type SesCommunication,
 } from "@/lib/ses";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/travellers")({
   component: TravellersPage,
@@ -45,14 +46,18 @@ const TONE: Record<string, string> = {
 };
 
 const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  new Date(iso).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" });
 
 /** "vence en 5 h" / "vencida hace 2 h" for what is still open. */
 function deadline(c: SesCommunication): { text: string; late: boolean } | null {
   if (!["pending", "blocked", "error", "rejected"].includes(c.status)) return null;
   const h = Math.round((Date.parse(c.due_at) - Date.now()) / 3_600_000);
-  if (h >= 0) return { text: h < 1 ? "vence en menos de 1 h" : `vence en ${h} h`, late: false };
-  return { text: `vencida hace ${-h} h`, late: true };
+  if (h >= 0)
+    return {
+      text: h < 1 ? t("vence en menos de 1 h") : t("vence en {0} h", { 0: h }),
+      late: false,
+    };
+  return { text: t("vencida hace {0} h", { 0: -h }), late: true };
 }
 
 function TravellersPage() {
@@ -91,11 +96,12 @@ function TravellersPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <ShieldCheck className="h-5 w-5 text-info" /> Registro de viajeros
+            <ShieldCheck className="h-5 w-5 text-info" /> {t("Registro de viajeros")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Comunicaciones al Ministerio del Interior (SES.HOSPEDAJES): cada reserva y el parte de
-            viajeros de cada entrada, en menos de 24 horas.
+            {t(
+              "Comunicaciones al Ministerio del Interior (SES.HOSPEDAJES): cada reserva y el parte de viajeros de cada entrada, en menos de 24 horas.",
+            )}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
@@ -124,12 +130,12 @@ function TravellersPage() {
                         (r.blocked ? ` · ${r.blocked} con datos pendientes` : "") +
                         (r.rejected ? ` · ${r.rejected} rechazadas` : ""),
                     ),
-                  onError: (e) => toast.error(e.message),
+                  onError: (e) => toast.error(t(e.message)),
                 })
               }
             >
               <Send className="h-4 w-4" />
-              {actions.dispatch.isPending ? "Enviando…" : "Enviar ahora"}
+              {actions.dispatch.isPending ? t("Enviando…") : t("Enviar ahora")}
             </Button>
           )}
         </div>
@@ -139,24 +145,28 @@ function TravellersPage() {
         <p className="flex items-start gap-2 rounded-md bg-gold/15 px-3 py-2 text-sm text-gold-foreground">
           <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" />
           {settings.environment === "simulated"
-            ? "Modo simulado: el PMS prepara y valida cada comunicación como para el ministerio, pero no la envía. Cambia a producción cuando tengas las credenciales de la Sede Electrónica."
-            : "Entorno de pruebas del ministerio: las comunicaciones no cuentan como registradas."}
+            ? t(
+                "Modo simulado: el PMS prepara y valida cada comunicación como para el ministerio, pero no la envía. Cambia a producción cuando tengas las credenciales de la Sede Electrónica.",
+              )
+            : t(
+                "Entorno de pruebas del ministerio: las comunicaciones no cuentan como registradas.",
+              )}
         </p>
       )}
 
       {setup && !settings?.enabled && (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            El registro de viajeros no está activado en este hotel.
+            {t("El registro de viajeros no está activado en este hotel.")}
             {isAdmin ? (
               <>
                 {" "}
                 <Link to="/settings/travellers" className="font-medium text-foreground underline">
-                  Activarlo
+                  {t("Activarlo")}
                 </Link>
               </>
             ) : (
-              " Pídeselo a dirección."
+              t(" Pídeselo a dirección.")
             )}
           </CardContent>
         </Card>
@@ -165,14 +175,14 @@ function TravellersPage() {
       {settings?.enabled && (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Stat label="Pendientes" value={openRows.length} />
-            <Stat label="Vencidas (más de 24 h)" value={late} alert={late > 0} />
-            <Stat label="Necesitan revisión" value={problems} alert={problems > 0} />
+            <Stat label={t("Pendientes")} value={openRows.length} />
+            <Stat label={t("Vencidas (más de 24 h)")} value={late} alert={late > 0} />
+            <Stat label={t("Necesitan revisión")} value={problems} alert={problems > 0} />
           </div>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-              <CardTitle className="text-base">Comunicaciones</CardTitle>
+              <CardTitle className="text-base">{t("Comunicaciones")}</CardTitle>
               <div className="flex gap-1 text-sm">
                 {(["open", "all"] as const).map((s) => (
                   <Button
@@ -181,7 +191,7 @@ function TravellersPage() {
                     variant={scope === s ? "secondary" : "ghost"}
                     onClick={() => setScope(s)}
                   >
-                    {s === "open" ? "Pendientes" : "Últimos 30 días"}
+                    {s === "open" ? t("Pendientes") : t("Últimos 30 días")}
                   </Button>
                 ))}
               </div>
@@ -189,7 +199,9 @@ function TravellersPage() {
             <CardContent className="p-0">
               {!rows?.length ? (
                 <p className="px-6 pb-6 text-sm text-muted-foreground">
-                  {scope === "open" ? "Todo al día: no hay nada pendiente." : "Sin comunicaciones."}
+                  {scope === "open"
+                    ? t("Todo al día: no hay nada pendiente.")
+                    : t("Sin comunicaciones.")}
                 </p>
               ) : (
                 <div className="divide-y">
@@ -201,8 +213,8 @@ function TravellersPage() {
                       onTravellers={() => openStay(c)}
                       onRetry={() =>
                         actions.retry.mutate(c.id, {
-                          onSuccess: () => toast.success("Se reenviará en el próximo envío"),
-                          onError: (e) => toast.error(e.message),
+                          onSuccess: () => toast.success(t("Se reenviará en el próximo envío")),
+                          onError: (e) => toast.error(t(e.message)),
                         })
                       }
                     />
@@ -216,9 +228,9 @@ function TravellersPage() {
 
       {isAdmin && settings?.enabled && (
         <p className="text-sm text-muted-foreground">
-          Credenciales, entorno y códigos de establecimiento:{" "}
+          {t("Credenciales, entorno y códigos de establecimiento:")}{" "}
           <Link to="/settings/travellers" className="font-medium text-foreground underline">
-            Configuración → SES.HOSPEDAJES
+            {t("Configuración → SES.HOSPEDAJES")}
           </Link>
         </p>
       )}
@@ -263,24 +275,30 @@ function Row({
     <div className="flex flex-wrap items-start gap-x-4 gap-y-2 px-6 py-3 text-sm">
       <div className="min-w-0 flex-1 basis-64">
         <p className="font-medium">
-          {KIND[c.kind + c.operation]}{" "}
+          {t(KIND[c.kind + c.operation])}{" "}
           <span className="font-mono text-xs text-muted-foreground">{r?.reference}</span>
         </p>
         <p className="text-xs text-muted-foreground">
-          {r?.customer?.name ?? "Sin nombre"}
+          {r?.customer?.name ?? t("Sin nombre")}
           {r ? ` · ${r.room?.name ?? ""} · ${shortDate(r.start_at)}–${shortDate(r.end_at)}` : ""}
         </p>
         {c.error && ["blocked", "rejected", "error"].includes(c.status) && (
           <p className="mt-1 flex items-start gap-1 text-xs text-gold-foreground">
-            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {c.error}
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />{" "}
+            {c.error
+              .split(" · ")
+              .map((part) => t(part))
+              .join(" · ")}
           </p>
         )}
         {c.ses_code && (
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">Código: {c.ses_code}</p>
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+            {t("Código:")} {c.ses_code}
+          </p>
         )}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
-        <Badge className={`${TONE[st.tone]} border-0`}>{st.label}</Badge>
+        <Badge className={`${TONE[st.tone]} border-0`}>{t(st.label)}</Badge>
         {due && (
           <span
             className={`text-xs ${due.late ? "font-medium text-destructive" : "text-muted-foreground"}`}
@@ -291,11 +309,11 @@ function Row({
       </div>
       <div className="flex shrink-0 gap-1">
         <Button size="sm" variant="outline" onClick={onTravellers}>
-          <Users className="h-4 w-4" /> Viajeros
+          <Users className="h-4 w-4" /> {t("Viajeros")}
         </Button>
         {canOperate && ["rejected", "error"].includes(c.status) && (
           <Button size="sm" variant="ghost" onClick={onRetry}>
-            <RotateCcw className="h-4 w-4" /> Reenviar
+            <RotateCcw className="h-4 w-4" /> {t("Reenviar")}
           </Button>
         )}
       </div>

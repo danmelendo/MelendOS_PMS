@@ -19,6 +19,7 @@ import {
   type InboxMessage,
 } from "@/lib/chat";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/messages")({
   component: MessagesPage,
@@ -28,8 +29,8 @@ const when = (iso: string) => {
   const d = new Date(iso);
   const today = new Date().toDateString() === d.toDateString();
   return today
-    ? d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+    ? d.toLocaleTimeString(currentLocale(), { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString(currentLocale(), { day: "numeric", month: "short" });
 };
 
 type Stay = {
@@ -84,9 +85,9 @@ function MessagesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mensajes</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Mensajes")}</h1>
         <p className="text-sm text-muted-foreground">
-          Peticiones y conversaciones de los huéspedes, una por reserva.
+          {t("Peticiones y conversaciones de los huéspedes, una por reserva.")}
         </p>
       </div>
 
@@ -94,42 +95,44 @@ function MessagesPage() {
         {/* Conversations */}
         <div className={`border-r ${selected ? "hidden md:block" : ""}`}>
           {threads.length === 0 && (
-            <p className="p-6 text-center text-sm text-muted-foreground">No hay conversaciones.</p>
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              {t("No hay conversaciones.")}
+            </p>
           )}
           <ul className="max-h-[70vh] divide-y overflow-y-auto">
-            {threads.map((t) => {
-              const s = stay(t.id);
+            {threads.map((thread) => {
+              const s = stay(thread.id);
               return (
-                <li key={t.id}>
+                <li key={thread.id}>
                   <button
                     type="button"
-                    onClick={() => setSelected(t.id)}
+                    onClick={() => setSelected(thread.id)}
                     className={`w-full px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
-                      selected === t.id ? "bg-info/10" : ""
+                      selected === thread.id ? "bg-info/10" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate font-medium">{guest(s)}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {when(t.last.created_at)}
+                        {when(thread.last.created_at)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-xs text-muted-foreground">
                         {s?.rooms ? `${s.rooms.name} · ${s.rooms.building}` : "…"} ·{" "}
-                        {bookingReference(t.id)}
+                        {bookingReference(thread.id)}
                       </span>
-                      {t.unread > 0 && (
+                      {thread.unread > 0 && (
                         <span className="shrink-0 rounded-full bg-gold px-1.5 text-[11px] font-semibold text-gold-foreground">
-                          {t.unread}
+                          {thread.unread}
                         </span>
                       )}
                     </div>
                     <p
-                      className={`mt-0.5 truncate text-sm ${t.unread ? "font-medium" : "text-muted-foreground"}`}
+                      className={`mt-0.5 truncate text-sm ${thread.unread ? "font-medium" : "text-muted-foreground"}`}
                     >
-                      {t.last.sender === "staff" ? "Tú: " : ""}
-                      {t.last.body}
+                      {thread.last.sender === "staff" ? t("Tú: ") : ""}
+                      {thread.last.body}
                     </p>
                   </button>
                 </li>
@@ -152,7 +155,8 @@ function MessagesPage() {
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
               <MessagesSquare className="h-8 w-8" />
-              Elige una conversación
+
+              {t("Elige una conversación")}
             </div>
           )}
         </div>
@@ -208,14 +212,14 @@ function Thread({
     if (!text.trim()) return;
     reply.mutate(
       { tenantId, reservationId, body: text.trim() },
-      { onSuccess: () => setText(""), onError: (e: Error) => toast.error(e.message) },
+      { onSuccess: () => setText(""), onError: (e: Error) => toast.error(t(e.message)) },
     );
   };
 
   return (
     <>
       <div className="flex items-center gap-3 border-b px-4 py-3">
-        <button type="button" onClick={onBack} className="md:hidden" aria-label="Volver">
+        <button type="button" onClick={onBack} className="md:hidden" aria-label={t("Volver")}>
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
@@ -223,19 +227,19 @@ function Thread({
           <p className="truncate text-xs text-muted-foreground">
             {stay?.rooms ? `${stay.rooms.name} · ${stay.rooms.building} · ` : ""}
             {stay
-              ? `${new Date(stay.start_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })} → ${new Date(stay.end_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`
+              ? `${new Date(stay.start_at).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" })} → ${new Date(stay.end_at).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" })}`
               : ""}{" "}
-            · Ref. {bookingReference(reservationId)}
+            {t("· Ref.")} {bookingReference(reservationId)}
           </p>
         </div>
         {stay && (
           <Badge variant="outline" className={STATUS_COLORS[stay.status]}>
-            {STATUS_LABELS[stay.status]}
+            {t(STATUS_LABELS[stay.status])}
           </Badge>
         )}
         {stay && stay.status !== "pending" && (
           <Button size="sm" variant="outline" onClick={() => setFolio(true)}>
-            <Receipt className="mr-1 h-3.5 w-3.5" /> Cuenta
+            <Receipt className="mr-1 h-3.5 w-3.5" /> {t("Cuenta")}
           </Button>
         )}
       </div>
@@ -253,18 +257,18 @@ function Thread({
               >
                 {m.sender === "assistant" && (
                   <p className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold opacity-70">
-                    <Bot className="h-3 w-3" /> Asistente
+                    <Bot className="h-3 w-3" /> {t("Asistente")}
                   </p>
                 )}
                 {m.category && CATEGORY_LABELS[m.category] && (
                   <span className="mb-1 inline-block rounded bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-foreground">
-                    {CATEGORY_LABELS[m.category]}
+                    {t(CATEGORY_LABELS[m.category])}
                   </span>
                 )}
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>
                 <p className="mt-1 text-right text-[10px] opacity-60">
                   {when(m.created_at)}
-                  {mine && m.read_at ? " · leído" : ""}
+                  {mine && m.read_at ? t(" · leído") : ""}
                 </p>
               </div>
             </div>
@@ -275,7 +279,7 @@ function Thread({
 
       {!canOperate ? (
         <p className="border-t p-3 text-center text-xs text-muted-foreground">
-          La dirección de grupo consulta las conversaciones; responde la recepción del hotel.
+          {t("La dirección de grupo consulta las conversaciones; responde la recepción del hotel.")}
         </p>
       ) : (
         <form
@@ -296,11 +300,11 @@ function Thread({
             }}
             rows={2}
             maxLength={2000}
-            placeholder={`Responder a ${guestName}…`}
-            aria-label="Respuesta"
+            placeholder={t("Responder a {0}…", { 0: guestName })}
+            aria-label={t("Respuesta")}
             className="min-h-[44px] flex-1 resize-none"
           />
-          <Button type="submit" disabled={reply.isPending || !text.trim()} aria-label="Enviar">
+          <Button type="submit" disabled={reply.isPending || !text.trim()} aria-label={t("Enviar")}>
             <SendHorizonal className="h-4 w-4" />
           </Button>
         </form>

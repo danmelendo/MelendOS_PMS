@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import type { HotelWebData } from "@/lib/website";
+import { t } from "@/lib/i18n";
 
 /** The line a hotel pastes in its own website to add the booking widget. */
 export function EmbedSnippet({ data }: { data: HotelWebData }) {
@@ -27,15 +28,16 @@ export function EmbedSnippet({ data }: { data: HotelWebData }) {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <div>
-          <CardTitle className="text-base">Añadir a tu web actual</CardTitle>
+          <CardTitle className="text-base">{t("Añadir a tu web actual")}</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Si ya tienes web (WordPress, Wix…), pega este código donde quieras el buscador: tus
-            huéspedes eligen fechas ahí y reservan en tu motor de reservas, sin comisiones.
+            {t(
+              "Si ya tienes web (WordPress, Wix…), pega este código donde quieras el buscador: tus huéspedes eligen fechas ahí y reservan en tu motor de reservas, sin comisiones.",
+            )}
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
           <a href={`/ejemplo-web?hotel=${data.row.slug}`} target="_blank" rel="noreferrer">
-            <ExternalLink className="h-4 w-4" /> Ver ejemplo
+            <ExternalLink className="h-4 w-4" /> {t("Ver ejemplo")}
           </a>
         </Button>
       </CardHeader>
@@ -43,11 +45,13 @@ export function EmbedSnippet({ data }: { data: HotelWebData }) {
         <div className="flex flex-wrap gap-6">
           <label className="flex items-center gap-2">
             <Switch checked={search} onCheckedChange={setSearch} />
-            Buscador de fechas
+
+            {t("Buscador de fechas")}
           </label>
           <label className="flex items-center gap-2">
             <Switch checked={assistant} onCheckedChange={setAssistant} />
-            Asistente de reservas (botón flotante)
+
+            {t("Asistente de reservas (botón flotante)")}
           </label>
         </div>
         <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
@@ -57,14 +61,15 @@ export function EmbedSnippet({ data }: { data: HotelWebData }) {
           <Button
             variant="outline"
             onClick={() =>
-              navigator.clipboard.writeText(code).then(() => toast.success("Código copiado"))
+              navigator.clipboard.writeText(code).then(() => toast.success(t("Código copiado")))
             }
           >
-            <Copy className="h-4 w-4" /> Copiar código
+            <Copy className="h-4 w-4" /> {t("Copiar código")}
           </Button>
           <p className="text-xs text-muted-foreground">
-            El `div` marca dónde sale el buscador; el asistente aparece abajo a la derecha. El pago
-            y la reserva se hacen siempre en tu motor, con tu marca.
+            {t(
+              "El `div` marca dónde sale el buscador; el asistente aparece abajo a la derecha. El pago y la reserva se hacen siempre en tu motor, con tu marca.",
+            )}
           </p>
         </div>
       </CardContent>

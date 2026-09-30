@@ -24,10 +24,15 @@ import {
 import { eur } from "@/lib/data";
 import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 const day = (iso: string | null) =>
   iso
-    ? new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
+    ? new Date(iso).toLocaleDateString(currentLocale(), {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
     : "—";
 
 /** Sensitive data stays on screen this long, then hides again. */
@@ -76,36 +81,36 @@ function Body({ customer: c, hotelName }: { customer: CustomerRow; hotelName?: s
       <header className="flex items-start gap-3 border-b px-5 py-4">
         <div className="min-w-0 flex-1">
           <DialogPrimitive.Title className="truncate text-lg font-semibold">
-            {c.name ?? "Sin nombre"}
+            {c.name ?? t("Sin nombre")}
           </DialogPrimitive.Title>
           <p className="text-sm text-muted-foreground">
-            {hotelName ?? ""} · cliente desde {day(c.created_at)}
+            {hotelName ?? ""} {t("· cliente desde")} {day(c.created_at)}
           </p>
         </div>
         <DialogPrimitive.Close asChild>
-          <Button variant="ghost" size="icon" aria-label="Cerrar">
+          <Button variant="ghost" size="icon" aria-label={t("Cerrar")}>
             <X className="h-4 w-4" />
           </Button>
         </DialogPrimitive.Close>
       </header>
       <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4 text-sm">
         <section className="grid grid-cols-2 gap-3">
-          <Fact label="Email" value={c.email ?? "—"} />
-          <Fact label="Teléfono" value={c.phone ?? "—"} />
-          <Fact label="Estancias" value={String(c.stays)} />
-          <Fact label="Noches" value={String(c.nights)} />
-          <Fact label="Gastado" value={eur(Number(c.spent))} />
+          <Fact label={t("Email")} value={c.email ?? "—"} />
+          <Fact label={t("Teléfono")} value={c.phone ?? "—"} />
+          <Fact label={t("Estancias")} value={String(c.stays)} />
+          <Fact label={t("Noches")} value={String(c.nights)} />
+          <Fact label={t("Gastado")} value={eur(Number(c.spent))} />
           <Fact
-            label={c.in_house ? "Estado" : "Próxima llegada"}
+            label={c.in_house ? t("Estado") : t("Próxima llegada")}
             value={c.in_house ? "Alojado ahora" : day(c.next_check_in)}
           />
-          <Fact label="Última salida" value={day(c.last_check_out)} />
-          <Fact label="Comunicaciones" value={c.no_contact ? "No desea" : "Acepta"} />
+          <Fact label={t("Última salida")} value={day(c.last_check_out)} />
+          <Fact label={t("Comunicaciones")} value={c.no_contact ? t("No desea") : t("Acepta")} />
         </section>
         {c.notes && (
           <section>
             <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Notas
+              {t("Notas")}
             </h3>
             <p className="whitespace-pre-line">{c.notes}</p>
           </section>
@@ -164,20 +169,21 @@ function IdentitySection({ customer }: { customer: CustomerRow }) {
   return (
     <section className="rounded-lg border p-4">
       <h3 className="flex items-center gap-2 font-medium">
-        <IdCard className="h-4 w-4 text-info" /> Registro de viajero
+        <IdCard className="h-4 w-4 text-info" /> {t("Registro de viajero")}
         {customer.has_identity ? (
           <span className="ml-auto rounded bg-info/10 px-2 py-0.5 text-xs text-info">
-            Documento registrado
+            {t("Documento registrado")}
           </span>
         ) : (
           <span className="ml-auto rounded bg-gold/15 px-2 py-0.5 text-xs text-gold">
-            Pendiente
+            {t("Pendiente")}
           </span>
         )}
       </h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Documento, nacionalidad, fecha de nacimiento y domicilio. Solo dirección puede verlos, tras
-        volver a identificarse; cada consulta queda registrada.
+        {t(
+          "Documento, nacionalidad, fecha de nacimiento y domicilio. Solo dirección puede verlos, tras volver a identificarse; cada consulta queda registrada.",
+        )}
       </p>
 
       {mode === "edit" ? (
@@ -198,29 +204,30 @@ function IdentitySection({ customer }: { customer: CustomerRow }) {
           }}
         >
           <p className="flex items-center gap-1.5 font-medium">
-            <Lock className="h-3.5 w-3.5" /> Confirma que eres tú
+            <Lock className="h-3.5 w-3.5" /> {t("Confirma que eres tú")}
           </p>
           {DEMO_ACCESS ? (
             <p className="text-xs text-muted-foreground">
-              En la demo se vuelve a entrar con la cuenta de demostración; en producción se pide la
-              contraseña.
+              {t(
+                "En la demo se vuelve a entrar con la cuenta de demostración; en producción se pide la contraseña.",
+              )}
             </p>
           ) : (
             <Input
               type="password"
               autoFocus
               autoComplete="current-password"
-              placeholder="Tu contraseña"
+              placeholder={t("Tu contraseña")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           )}
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={busy || (!DEMO_ACCESS && !password)}>
-              Confirmar y ver
+              {t("Confirmar y ver")}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setMode("idle")}>
-              Volver
+              {t("Volver")}
             </Button>
           </div>
         </form>
@@ -229,13 +236,13 @@ function IdentitySection({ customer }: { customer: CustomerRow }) {
           {identity ? (
             <dl className="grid grid-cols-2 gap-3">
               <Fact
-                label={DOCUMENT_TYPES[identity.document_type]}
+                label={t(DOCUMENT_TYPES[identity.document_type])}
                 value={`${identity.document_number}${identity.document_country ? ` (${identity.document_country})` : ""}`}
               />
-              <Fact label="Nacionalidad" value={identity.nationality ?? "—"} />
-              <Fact label="Fecha de nacimiento" value={day(identity.birth_date)} />
+              <Fact label={t("Nacionalidad")} value={identity.nationality ?? "—"} />
+              <Fact label={t("Fecha de nacimiento")} value={day(identity.birth_date)} />
               <Fact
-                label="Domicilio"
+                label={t("Domicilio")}
                 value={
                   [identity.address_line, identity.postal_code, identity.city, identity.country]
                     .filter(Boolean)
@@ -244,11 +251,11 @@ function IdentitySection({ customer }: { customer: CustomerRow }) {
               />
             </dl>
           ) : (
-            <p className="text-muted-foreground">Sin datos registrados.</p>
+            <p className="text-muted-foreground">{t("Sin datos registrados.")}</p>
           )}
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setMode("edit")}>
-              Corregir
+              {t("Corregir")}
             </Button>
             <Button
               size="sm"
@@ -258,7 +265,7 @@ function IdentitySection({ customer }: { customer: CustomerRow }) {
                 setMode("idle");
               }}
             >
-              Ocultar
+              {t("Ocultar")}
             </Button>
           </div>
         </div>
@@ -266,12 +273,12 @@ function IdentitySection({ customer }: { customer: CustomerRow }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {isAdmin && customer.has_identity && (
             <Button size="sm" variant="outline" disabled={busy} onClick={() => reveal()}>
-              <Eye className="mr-1 h-3.5 w-3.5" /> Ver datos de identidad
+              <Eye className="mr-1 h-3.5 w-3.5" /> {t("Ver datos de identidad")}
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={() => setMode("edit")}>
             <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-            {customer.has_identity ? "Registrar de nuevo" : "Registrar documento"}
+            {customer.has_identity ? t("Registrar de nuevo") : t("Registrar documento")}
           </Button>
         </div>
       )}
@@ -302,15 +309,15 @@ function IdentityForm({
         e.preventDefault();
         save.mutate(f, {
           onSuccess: () => {
-            toast.success("Registro de viajero guardado");
+            toast.success(t("Registro de viajero guardado"));
             onDone();
           },
-          onError: (err) => toast.error(err.message),
+          onError: (err) => toast.error(t(err.message)),
         });
       }}
     >
       <div className="space-y-1">
-        <Label>Documento</Label>
+        <Label>{t("Documento")}</Label>
         <Select
           value={f.document_type}
           onValueChange={(v) =>
@@ -323,14 +330,14 @@ function IdentityForm({
           <SelectContent>
             {Object.entries(DOCUMENT_TYPES).map(([k, v]) => (
               <SelectItem key={k} value={k}>
-                {v}
+                {t(v)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
       <div className="space-y-1">
-        <Label htmlFor="id-number">Número</Label>
+        <Label htmlFor="id-number">{t("Número")}</Label>
         <Input
           id="id-number"
           required
@@ -341,7 +348,7 @@ function IdentityForm({
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="id-nat">Nacionalidad (país, 2 letras)</Label>
+        <Label htmlFor="id-nat">{t("Nacionalidad (país, 2 letras)")}</Label>
         <Input
           id="id-nat"
           maxLength={2}
@@ -350,11 +357,11 @@ function IdentityForm({
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="id-birth">Fecha de nacimiento</Label>
+        <Label htmlFor="id-birth">{t("Fecha de nacimiento")}</Label>
         <Input id="id-birth" type="date" value={f.birth_date ?? ""} onChange={set("birth_date")} />
       </div>
       <div className="col-span-2 space-y-1">
-        <Label htmlFor="id-address">Domicilio</Label>
+        <Label htmlFor="id-address">{t("Domicilio")}</Label>
         <Input
           id="id-address"
           maxLength={200}
@@ -363,7 +370,7 @@ function IdentityForm({
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="id-cp">Código postal</Label>
+        <Label htmlFor="id-cp">{t("Código postal")}</Label>
         <Input
           id="id-cp"
           maxLength={12}
@@ -372,15 +379,15 @@ function IdentityForm({
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="id-city">Ciudad</Label>
+        <Label htmlFor="id-city">{t("Ciudad")}</Label>
         <Input id="id-city" maxLength={100} value={f.city ?? ""} onChange={set("city")} />
       </div>
       <div className="col-span-2 flex gap-2">
         <Button type="submit" size="sm" disabled={save.isPending || f.document_number.length < 3}>
-          Guardar
+          {t("Guardar")}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onDone}>
-          Cancelar
+          {t("Cancelar")}
         </Button>
       </div>
     </form>

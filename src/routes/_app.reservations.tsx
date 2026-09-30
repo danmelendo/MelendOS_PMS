@@ -43,6 +43,7 @@ import {
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 // Where a booking came from (created_by_role).
 const ORIGINS: Record<string, { label: string; cls: string }> = {
@@ -239,17 +240,17 @@ function ReservationsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Reserva cancelada");
+      toast.success(t("Reserva cancelada"));
       qc.invalidateQueries({ queryKey: ["reservations"] });
       closeCancel();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const confirmCancel = () => {
     if (!cancelTarget) return;
     if (!cancelCategory) {
-      toast.error("Elige el motivo de la cancelación");
+      toast.error(t("Elige el motivo de la cancelación"));
       return;
     }
     cancel.mutate({ id: cancelTarget, category: cancelCategory, note: cancelNote.trim() });
@@ -267,7 +268,7 @@ function ReservationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Reservas</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Reservas")}</h1>
         {canOperate && (
           <Button
             onClick={() => {
@@ -275,21 +276,21 @@ function ReservationsPage() {
               setOpen(true);
             }}
           >
-            <Plus className="mr-2 h-4 w-4" /> Nueva
+            <Plus className="mr-2 h-4 w-4" /> {t("Nueva")}
           </Button>
         )}
       </div>
 
       <div className="flex gap-2 flex-wrap">
         <Input
-          placeholder="Buscar por referencia, nombre, email, teléfono o habitación"
+          placeholder={t("Buscar por referencia, nombre, email, teléfono o habitación")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
         {filtering && (
           <Button variant="ghost" onClick={clearFilters}>
-            <X className="mr-1 h-4 w-4" /> Quitar filtros
+            <X className="mr-1 h-4 w-4" /> {t("Quitar filtros")}
           </Button>
         )}
       </div>
@@ -302,7 +303,7 @@ function ReservationsPage() {
                 <tr className="text-left">
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Referencia"
+                      label={t("Referencia")}
                       sort={sortOf("created_at")}
                       sortLabels={["Reservadas antes primero", "Reservadas después primero"]}
                       onSort={sortBy("created_at")}
@@ -310,7 +311,7 @@ function ReservationsPage() {
                   </th>
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Llegada"
+                      label={t("Llegada")}
                       sort={sortOf("start_at")}
                       sortLabels={["Más antiguas primero", "Más recientes primero"]}
                       onSort={sortBy("start_at")}
@@ -322,7 +323,7 @@ function ReservationsPage() {
                   </th>
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Salida"
+                      label={t("Salida")}
                       sort={sortOf("end_at")}
                       sortLabels={["Más antiguas primero", "Más recientes primero"]}
                       onSort={sortBy("end_at")}
@@ -335,7 +336,7 @@ function ReservationsPage() {
                   {multiHotel && (
                     <th className="p-2 font-medium">
                       <ColumnMenu
-                        label="Hotel"
+                        label={t("Hotel")}
                         active={hotels.length > 0}
                         onClear={() => setHotels([])}
                       >
@@ -358,7 +359,7 @@ function ReservationsPage() {
                   )}
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Habitación"
+                      label={t("Habitación")}
                       active={roomIds.length > 0}
                       onClear={() => setRoomIds([])}
                     >
@@ -369,10 +370,10 @@ function ReservationsPage() {
                       />
                     </ColumnMenu>
                   </th>
-                  <th className="p-2 font-medium">Cliente</th>
+                  <th className="p-2 font-medium">{t("Cliente")}</th>
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Origen"
+                      label={t("Origen")}
                       active={origins.length > 0}
                       onClear={() => setOrigins([])}
                     >
@@ -380,7 +381,7 @@ function ReservationsPage() {
                         options={[
                           ...Object.entries(ORIGINS).map(([value, o]) => ({
                             value,
-                            label: o.label,
+                            label: t(o.label),
                           })),
                           { value: NO_ORIGIN, label: "Sin origen" },
                         ]}
@@ -391,14 +392,14 @@ function ReservationsPage() {
                   </th>
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Estado"
+                      label={t("Estado")}
                       active={statuses.length > 0}
                       onClear={() => setStatuses([])}
                     >
                       <ValuesFilter
                         options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
                           value,
-                          label,
+                          label: t(label),
                         }))}
                         selected={statuses}
                         onChange={setStatuses}
@@ -407,7 +408,7 @@ function ReservationsPage() {
                   </th>
                   <th className="p-2 font-medium">
                     <ColumnMenu
-                      label="Total"
+                      label={t("Total")}
                       align="right"
                       sort={sortOf("total")}
                       sortLabels={["De menor a mayor", "De mayor a menor"]}
@@ -440,12 +441,12 @@ function ReservationsPage() {
                           </div>
                         </td>
                         <td className="p-2 whitespace-nowrap tabular-nums">
-                          {s.toLocaleDateString("es-ES", DATE_FMT)}
+                          {s.toLocaleDateString(currentLocale(), DATE_FMT)}
                         </td>
                         <td className="p-2 whitespace-nowrap tabular-nums">
-                          <div>{e.toLocaleDateString("es-ES", DATE_FMT)}</div>
+                          <div>{e.toLocaleDateString(currentLocale(), DATE_FMT)}</div>
                           <div className="text-xs text-muted-foreground">
-                            {nights} {nights === 1 ? "noche" : "noches"}
+                            {nights} {nights === 1 ? t("noche") : t("noches")}
                           </div>
                         </td>
                         {multiHotel && <td className="p-2">{hotelName.get(r.tenant_id) ?? "—"}</td>}
@@ -472,7 +473,7 @@ function ReservationsPage() {
                                   : null;
                             return info ? (
                               <Badge variant="outline" className={info.cls}>
-                                {info.label}
+                                {t(info.label)}
                               </Badge>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
@@ -481,18 +482,18 @@ function ReservationsPage() {
                         </td>
                         <td className="p-2">
                           <Badge variant="outline" className={STATUS_COLORS[r.status]}>
-                            {STATUS_LABELS[r.status]}
+                            {t(STATUS_LABELS[r.status])}
                           </Badge>
                           {(r.status === "cancelled" || r.status === "rejected") &&
                             (r.cancellation_category || r.cancellation_reason) && (
                               <div className="mt-1 max-w-[220px] space-y-0.5 text-xs text-muted-foreground">
                                 <div className="font-medium">
                                   {isCancellationCategory(r.cancellation_category)
-                                    ? CANCELLATION_CATEGORIES[r.cancellation_category]
-                                    : r.cancellation_reason}
+                                    ? t(CANCELLATION_CATEGORIES[r.cancellation_category])
+                                    : t(r.cancellation_reason ?? "")}
                                 </div>
                                 {r.cancellation_note && (
-                                  <div className="italic" title="Nota interna">
+                                  <div className="italic" title={t("Nota interna")}>
                                     {r.cancellation_note}
                                   </div>
                                 )}
@@ -505,7 +506,7 @@ function ReservationsPage() {
                             TPV (depósito, ya con descuentos/promos aplicados). */}
                           {r.created_by_role === "public" && r.deposit_paid && (
                             <div className="text-xs font-normal text-emerald-700 dark:text-emerald-300">
-                              Pagado web: {eur(Number(r.paid_amount))}
+                              {t("Pagado web:")} {eur(Number(r.paid_amount))}
                             </div>
                           )}
                         </td>
@@ -524,7 +525,7 @@ function ReservationsPage() {
                                   setCancelNote("");
                                   setCancelTarget(r.id);
                                 }}
-                                title="Cancelar"
+                                title={t("Cancelar")}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -544,7 +545,7 @@ function ReservationsPage() {
                 {!filtered?.length && (
                   <tr>
                     <td colSpan={cols} className="p-8 text-center text-muted-foreground">
-                      {filtering ? "Ninguna reserva cumple los filtros." : "Sin reservas."}
+                      {filtering ? t("Ninguna reserva cumple los filtros.") : t("Sin reservas.")}
                     </td>
                   </tr>
                 )}
@@ -555,8 +556,10 @@ function ReservationsPage() {
       </Card>
       {!query && filtered?.length === LIMIT && (
         <p className="text-xs text-muted-foreground">
-          Se muestran las {LIMIT} primeras según el orden elegido. Usa los filtros de las columnas o
-          el buscador para encontrar otras.
+          {t("Se muestran las")} {LIMIT}{" "}
+          {t(
+            "primeras según el orden elegido. Usa los filtros de las columnas o el buscador para encontrar otras.",
+          )}
         </p>
       )}
 
@@ -577,54 +580,54 @@ function ReservationsPage() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Cancelar reserva</DialogTitle>
+            <DialogTitle>{t("Cancelar reserva")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="cancel-category">
-                Motivo <span className="text-destructive">*</span>
+                {t("Motivo")} <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={cancelCategory}
                 onValueChange={(v) => setCancelCategory(v as CancellationCategory)}
               >
                 <SelectTrigger id="cancel-category">
-                  <SelectValue placeholder="Elige un motivo" />
+                  <SelectValue placeholder={t("Elige un motivo")} />
                 </SelectTrigger>
                 <SelectContent>
                   {STAFF_CATEGORIES.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {CANCELLATION_CATEGORIES[c]}
+                      {t(CANCELLATION_CATEGORIES[c])}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cancel-note">Nota interna</Label>
+              <Label htmlFor="cancel-note">{t("Nota interna")}</Label>
               <Textarea
                 id="cancel-note"
                 rows={3}
                 maxLength={2000}
-                placeholder="Detalles para el equipo (no la ve el huésped)"
+                placeholder={t("Detalles para el equipo (no la ve el huésped)")}
                 value={cancelNote}
                 onChange={(e) => setCancelNote(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                El motivo alimenta los informes y los modelos de predicción.
+                {t("El motivo alimenta los informes y los modelos de predicción.")}
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeCancel}>
-              Volver
+              {t("Volver")}
             </Button>
             <Button
               variant="destructive"
               onClick={confirmCancel}
               disabled={!cancelCategory || cancel.isPending}
             >
-              {cancel.isPending ? "Cancelando…" : "Confirmar cancelación"}
+              {cancel.isPending ? t("Cancelando…") : t("Confirmar cancelación")}
             </Button>
           </DialogFooter>
         </DialogContent>

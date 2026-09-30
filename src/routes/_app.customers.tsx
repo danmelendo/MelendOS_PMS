@@ -19,6 +19,7 @@ import { useCustomerDirectory, type CustomerRow } from "@/lib/customers";
 import { eur } from "@/lib/data";
 import { useStaffHotels } from "@/lib/reports";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/customers")({
   component: CustomersPage,
@@ -52,7 +53,7 @@ type Sort = keyof typeof SORTS;
 const PAGE = 100;
 
 const day = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "—";
+  iso ? new Date(iso).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" }) : "—";
 
 // Customer files: filterable directory; the sensitive traveller register lives
 // in the side panel, visible only to admins after signing in again.
@@ -104,7 +105,7 @@ function CustomersPage() {
       );
       qc.invalidateQueries({ queryKey: ["customers"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   const hotelName = (id: string) => hotels?.find((h) => h.id === id)?.name ?? "";
@@ -112,15 +113,15 @@ function CustomersPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Clientes")}</h1>
         <p className="text-sm text-muted-foreground">
-          {Number(total).toLocaleString("es-ES")} fichas
-          {isFetching && " · actualizando…"}
+          {Number(total).toLocaleString(currentLocale())} {t("fichas")}
+          {isFetching && t(" · actualizando…")}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Input
-          placeholder="Buscar por nombre, teléfono o email"
+          placeholder={t("Buscar por nombre, teléfono o email")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:max-w-xs"
@@ -131,7 +132,7 @@ function CustomersPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los hoteles</SelectItem>
+              <SelectItem value="all">{t("Todos los hoteles")}</SelectItem>
               {hotels.map((h) => (
                 <SelectItem key={h.id} value={h.id}>
                   {h.name}
@@ -154,7 +155,7 @@ function CustomersPage() {
             <SelectContent>
               {Object.entries(options).map(([k, label]) => (
                 <SelectItem key={k} value={k}>
-                  {label}
+                  {t(label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -167,12 +168,12 @@ function CustomersPage() {
             <table className="w-full min-w-[46rem] text-sm">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="p-2 text-left">Nombre</th>
-                  <th className="p-2 text-left">Contacto</th>
-                  <th className="p-2 text-right">Estancias</th>
-                  <th className="p-2 text-right">Gastado</th>
-                  <th className="p-2 text-left">Última / próxima</th>
-                  <th className="p-2 text-left">Documento</th>
+                  <th className="p-2 text-left">{t("Nombre")}</th>
+                  <th className="p-2 text-left">{t("Contacto")}</th>
+                  <th className="p-2 text-right">{t("Estancias")}</th>
+                  <th className="p-2 text-right">{t("Gastado")}</th>
+                  <th className="p-2 text-left">{t("Última / próxima")}</th>
+                  <th className="p-2 text-left">{t("Documento")}</th>
                   <th className="p-2"></th>
                 </tr>
               </thead>
@@ -195,7 +196,9 @@ function CustomersPage() {
                     <td className="p-2 text-right tabular-nums">{eur(Number(c.spent))}</td>
                     <td className="p-2 text-xs">
                       {c.in_house ? (
-                        <span className="rounded bg-info/10 px-1.5 py-0.5 text-info">Alojado</span>
+                        <span className="rounded bg-info/10 px-1.5 py-0.5 text-info">
+                          {t("Alojado")}
+                        </span>
                       ) : (
                         <>
                           {day(c.last_check_out)} / {day(c.next_check_in)}
@@ -205,10 +208,10 @@ function CustomersPage() {
                     <td className="p-2 text-xs">
                       {c.has_identity ? (
                         <span className="inline-flex items-center gap-1 text-info">
-                          <IdCard className="h-3.5 w-3.5" /> Registrado
+                          <IdCard className="h-3.5 w-3.5" /> {t("Registrado")}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">Pendiente</span>
+                        <span className="text-muted-foreground">{t("Pendiente")}</span>
                       )}
                     </td>
                     <td className="p-2 text-right">
@@ -217,7 +220,7 @@ function CustomersPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          title="Eliminar cliente"
+                          title={t("Eliminar cliente")}
                           disabled={del.isPending}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -242,7 +245,7 @@ function CustomersPage() {
                 {!rows.length && (
                   <tr>
                     <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      Sin clientes con estos filtros.
+                      {t("Sin clientes con estos filtros.")}
                     </td>
                   </tr>
                 )}
@@ -257,7 +260,7 @@ function CustomersPage() {
                 disabled={isFetching}
                 onClick={() => setLimit((n) => n + PAGE)}
               >
-                Cargar más
+                {t("Cargar más")}
               </Button>
             </div>
           )}

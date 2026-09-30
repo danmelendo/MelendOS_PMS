@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from "react";
 import { EN } from "./i18n-en";
+import { PANEL_EN } from "./i18n-panel-en";
 
-// Languages of what the guest sees (booking web, "Mi reserva", widget,
-// emails). The Spanish text is the key: t("Mi reserva") gives the English
-// from i18n-en.ts, or the Spanish itself if there is no translation yet, so a
-// missing entry never breaks a page. The panel stays in Spanish.
+// Languages of the guest web ("Mi reserva", widget, emails) and of the
+// management panel. The Spanish text is the key: t("Mi reserva") gives the
+// English from i18n-en.ts (guest) or i18n-panel-en.ts (panel), or the Spanish
+// itself if there is no translation yet, so a missing entry never breaks a
+// page.
 //
 // The guest's choice: ?lang=en|es, then what they chose before (this
 // browser), then the browser's language (Spanish if it is Spanish, English
@@ -14,6 +16,17 @@ export type Lang = "es" | "en";
 export const LANGS: Record<Lang, string> = { es: "Español", en: "English" };
 
 const KEY = "melendos-lang";
+const PANEL_KEY = "melendos-panel-lang";
+// Same Spanish word, different meaning («Dirección»: address on the web,
+// management in the panel): each side looks in its own dictionary first.
+const WEB_DICT: Record<string, string> = { ...PANEL_EN, ...EN };
+const PANEL_DICT: Record<string, string> = { ...EN, ...PANEL_EN };
+let dict = WEB_DICT;
+
+/** The panel layout turns this on; the guest web, off. */
+export function setPanelScope(on: boolean) {
+  dict = on ? PANEL_DICT : WEB_DICT;
+}
 let active: Lang = "es";
 const listeners = new Set<() => void>();
 
@@ -43,7 +56,29 @@ export function preferredLang(): Lang {
   return (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en";
 }
 
-/** Language in use now (the web sets the guest's; the panel, Spanish). */
+/**
+ * The panel's language: what this person chose in the panel (this browser),
+ * Spanish by default. Separate from the guest web's choice.
+ */
+export function panelLang(): Lang {
+  try {
+    const v = localStorage.getItem(PANEL_KEY);
+    return v === "en" ? "en" : "es";
+  } catch {
+    return "es";
+  }
+}
+
+export function setPanelLang(lang: Lang) {
+  try {
+    localStorage.setItem(PANEL_KEY, lang);
+  } catch {
+    /* private mode */
+  }
+  setActiveLang(lang);
+}
+
+/** Language in use now (the web sets the guest's; the panel, the staff member's). */
 export function setActiveLang(lang: Lang, remember = false) {
   if (remember) {
     try {
@@ -69,7 +104,7 @@ export function currentLocale(): string {
 
 /** Translates a Spanish text ({name} placeholders filled from vars). */
 export function t(es: string, vars?: Record<string, string | number>): string {
-  const text = active === "en" ? (EN[es] ?? es) : es;
+  const text = active === "en" ? (dict[es] ?? es) : es;
   return vars ? text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : text;
 }
 

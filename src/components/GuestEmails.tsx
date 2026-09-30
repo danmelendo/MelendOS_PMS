@@ -3,6 +3,7 @@ import { Loader2, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/lib/roles";
+import { t, currentLocale } from "@/lib/i18n";
 
 // Emails sent to the guest about this booking (confirmation, cancellation,
 // check-in invite), queued by the database and sent by guest-emails-dispatch.
@@ -54,29 +55,29 @@ export function GuestEmails({ reservationId }: { reservationId: string }) {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      toast.success("Enlace de check-in enviado al huésped");
+      toast.success(t("Enlace de check-in enviado al huésped"));
       qc.invalidateQueries({ queryKey: ["guest-emails", reservationId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   if (!data?.length && !canOperate) return null;
   return (
     <div className="space-y-2 rounded-lg border bg-card p-3 text-xs">
       <p className="flex items-center gap-1.5 font-medium text-foreground">
-        <Mail className="h-3.5 w-3.5" /> Emails al huésped
+        <Mail className="h-3.5 w-3.5" /> {t("Emails al huésped")}
       </p>
       {data?.map((e) => {
         const s = STATUS[e.status] ?? STATUS.pending;
         return (
           <p key={e.id} className="flex flex-wrap gap-x-1.5">
-            <span>{KIND[e.kind] ?? e.kind}:</span>
-            <span className={s.className}>{s.label}</span>
+            <span>{t(KIND[e.kind] ?? e.kind)}:</span>
+            <span className={s.className}>{t(s.label)}</span>
             {e.to_email && <span className="text-muted-foreground">· {e.to_email}</span>}
             {e.sent_at && (
               <span className="text-muted-foreground">
                 ·{" "}
-                {new Date(e.sent_at).toLocaleString("es-ES", {
+                {new Date(e.sent_at).toLocaleString(currentLocale(), {
                   dateStyle: "short",
                   timeStyle: "short",
                 })}
@@ -101,10 +102,13 @@ export function GuestEmails({ reservationId }: { reservationId: string }) {
             ) : (
               <Send className="h-3.5 w-3.5" />
             )}
-            Enviar enlace de check-in online
+
+            {t("Enviar enlace de check-in online")}
           </button>
           <p className="mt-1 text-muted-foreground">
-            Enlace de un solo uso: el huésped rellena los datos del viajero y firma desde su móvil.
+            {t(
+              "Enlace de un solo uso: el huésped rellena los datos del viajero y firma desde su móvil.",
+            )}
           </p>
         </div>
       )}

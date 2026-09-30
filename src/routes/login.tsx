@@ -11,6 +11,7 @@ import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useAssurance, useRefreshMfa } from "@/lib/mfa";
 import { MfaCodeForm } from "@/components/MfaCodeForm";
 import { supabase } from "@/integrations/supabase/client";
+import { panelLang, setActiveLang, setPanelScope, t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -21,6 +22,11 @@ function LoginPage() {
   const aal = useAssurance(!!session);
   const refreshMfa = useRefreshMfa();
   const navigate = useNavigate();
+  // The panel's sign-in speaks the panel's language.
+  useState(() => {
+    setPanelScope(true);
+    setActiveLang(panelLang());
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -62,13 +68,13 @@ function LoginPage() {
         <CardHeader className="text-center">
           <img
             src="/brand/logo.webp"
-            alt="Melend/OS"
+            alt={t("Melend/OS")}
             width={583}
             height={96}
             className="mx-auto mb-3 h-10 w-auto"
           />
-          <CardTitle>Recepción</CardTitle>
-          <CardDescription>Accede al panel interno</CardDescription>
+          <CardTitle>{t("Recepción")}</CardTitle>
+          <CardDescription>{t("Accede al panel interno")}</CardDescription>
         </CardHeader>
         <CardContent>
           {needsCode ? (
@@ -89,20 +95,24 @@ function LoginPage() {
             sent ? (
               <div className="space-y-4 text-sm">
                 <p>
-                  Si <strong>{email}</strong> tiene cuenta, te llegará un email con un enlace para
-                  elegir una contraseña nueva. Revisa también el correo no deseado.
+                  {t("Si")} <strong>{email}</strong>{" "}
+                  {t(
+                    "tiene cuenta, te llegará un email con un enlace para elegir una contraseña nueva. Revisa también el correo no deseado.",
+                  )}
                 </p>
                 <Button variant="outline" className="w-full" onClick={() => setForgot(false)}>
-                  Volver
+                  {t("Volver")}
                 </Button>
               </div>
             ) : (
               <form onSubmit={sendReset} className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Escribe tu email y te enviaremos un enlace para elegir una contraseña nueva.
+                  {t(
+                    "Escribe tu email y te enviaremos un enlace para elegir una contraseña nueva.",
+                  )}
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="reset-email">Email</Label>
+                  <Label htmlFor="reset-email">{t("Email")}</Label>
                   <Input
                     id="reset-email"
                     type="email"
@@ -113,21 +123,21 @@ function LoginPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? "..." : "Enviar enlace"}
+                  {busy ? "..." : t("Enviar enlace")}
                 </Button>
                 <button
                   type="button"
                   className="w-full text-center text-xs text-muted-foreground hover:underline"
                   onClick={() => setForgot(false)}
                 >
-                  Volver a entrar
+                  {t("Volver a entrar")}
                 </button>
               </form>
             )
           ) : (
             <form onSubmit={submit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("Email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -138,7 +148,7 @@ function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">{t("Contraseña")}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -149,7 +159,7 @@ function LoginPage() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? "..." : "Entrar"}
+                {busy ? "..." : t("Entrar")}
               </Button>
               <button
                 type="button"
@@ -159,7 +169,7 @@ function LoginPage() {
                   setForgot(true);
                 }}
               >
-                ¿Has olvidado la contraseña?
+                {t("¿Has olvidado la contraseña?")}
               </button>
             </form>
           )}

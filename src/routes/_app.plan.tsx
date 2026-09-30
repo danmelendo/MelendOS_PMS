@@ -26,6 +26,7 @@ import { DEMO_ACCESS } from "@/lib/demo-access";
 import { useStaffHotelModules, type StaffHotel } from "@/lib/features";
 import { useRoles } from "@/lib/roles";
 import { PlatformOnly } from "@/components/settings/AdminOnly";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/plan")({
   component: () => (
@@ -59,23 +60,25 @@ function PackageCard({
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
         <div className="min-w-0">
           <CardTitle className="flex items-center gap-2 text-base">
-            {PACKAGES[id].name}
+            {t(PACKAGES[id].name)}
             {contracted ? (
-              <Badge className="bg-info text-info-foreground hover:bg-info">Contratado</Badge>
+              <Badge className="bg-info text-info-foreground hover:bg-info">
+                {t("Contratado")}
+              </Badge>
             ) : (
               <Badge variant="outline" className="text-muted-foreground">
-                No contratado
+                {t("No contratado")}
               </Badge>
             )}
           </CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">{PACKAGES[id].description}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t(PACKAGES[id].description)}</p>
         </div>
         {DEMO_ACCESS && (
           <Switch
             checked={contracted}
             disabled={saving}
             onCheckedChange={onToggle}
-            aria-label={`Paquete ${PACKAGES[id].name}`}
+            aria-label={t("Paquete {0}", { 0: t(PACKAGES[id].name) })}
           />
         )}
       </CardHeader>
@@ -93,14 +96,14 @@ function PackageCard({
                 )}
                 <div className="min-w-0">
                   <span className={on ? "font-medium" : "text-muted-foreground"}>
-                    {MODULES[f].name}
+                    {t(MODULES[f].name)}
                   </span>
                   {custom && (
                     <span className="ml-2 text-xs text-gold">
-                      {on ? "activado aparte" : "desactivado aparte"}
+                      {on ? t("activado aparte") : t("desactivado aparte")}
                     </span>
                   )}
-                  <p className="text-xs text-muted-foreground">{MODULES[f].description}</p>
+                  <p className="text-xs text-muted-foreground">{t(MODULES[f].description)}</p>
                 </div>
               </li>
             );
@@ -133,7 +136,7 @@ function PlanPage() {
     },
     // Menus, pages, the web and the guest app all read the hotel's modules.
     onSuccess: () => qc.invalidateQueries(),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(t(e.message)),
   });
 
   if (loading) return null;
@@ -144,7 +147,13 @@ function PlanPage() {
     const next = PACKAGE_IDS.filter((p) => (p === id ? on : hotel.packages.includes(p)));
     save.mutate(next, {
       onSuccess: () =>
-        toast.success(`${PACKAGES[id].name} ${on ? "activado" : "desactivado"} en ${hotel.name}`),
+        toast.success(
+          t("{0} {1} en {2}", {
+            0: t(PACKAGES[id].name),
+            1: on ? t("activado") : t("desactivado"),
+            2: hotel.name,
+          }),
+        ),
     });
   };
 
@@ -152,9 +161,9 @@ function PlanPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Plan y módulos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("Plan y módulos")}</h1>
           <p className="text-sm text-muted-foreground">
-            Cada hotel contrata solo lo que necesita: la base y los paquetes que elija.
+            {t("Cada hotel contrata solo lo que necesita: la base y los paquetes que elija.")}
           </p>
         </div>
         {hotels && hotels.length > 1 && (
@@ -178,10 +187,12 @@ function PlanPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                Base
-                <Badge variant="secondary">Plan {PLAN_LABELS[hotel.plan] ?? hotel.plan}</Badge>
+                {t("Base")}
+                <Badge variant="secondary">
+                  {t("Plan")} {PLAN_LABELS[hotel.plan] ?? hotel.plan}
+                </Badge>
               </CardTitle>
-              <p className="text-sm text-muted-foreground">Incluida en todos los planes.</p>
+              <p className="text-sm text-muted-foreground">{t("Incluida en todos los planes.")}</p>
             </CardHeader>
             <CardContent>
               <ul className="grid gap-2 text-sm sm:grid-cols-2">
@@ -208,8 +219,10 @@ function PlanPage() {
 
           <p className="text-xs text-muted-foreground">
             {DEMO_ACCESS
-              ? "Demo: activa o desactiva paquetes para ver cómo cambian el panel y la web de reservas. En producción los paquetes se contratan con ventas."
-              : "Para contratar un paquete o darlo de baja, contacta con ventas."}
+              ? t(
+                  "Demo: activa o desactiva paquetes para ver cómo cambian el panel y la web de reservas. En producción los paquetes se contratan con ventas.",
+                )
+              : t("Para contratar un paquete o darlo de baja, contacta con ventas.")}
           </p>
         </>
       )}
