@@ -5,7 +5,18 @@
 	}
 }
 
+# Web of one installation: import web <instance>
 (web) {
+	root * /srv/instances/{args[0]}/web
+	# The installation's own settings (deploy/vps/tools/web-config.sh).
+	handle /config.js {
+		root * /srv/instances/{args[0]}
+		header Cache-Control no-store
+		file_server
+	}
+	# Revalidate everything but the hashed assets: a new version shows at once.
+	@html not path /assets/*
+	header @html Cache-Control no-cache
 	encode zstd gzip
 	header {
 		-Server

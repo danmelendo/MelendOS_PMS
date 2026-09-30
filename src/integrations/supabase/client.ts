@@ -4,12 +4,15 @@
 // production project in production.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
+import { runtimeConfig } from "@/lib/runtime-config";
 
 function getEnv() {
   const SUPABASE_URL =
+    runtimeConfig.supabaseUrl ||
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
     (typeof process !== "undefined" ? process.env.SUPABASE_URL : undefined);
   const SUPABASE_ANON_KEY =
+    runtimeConfig.supabaseKey ||
     (typeof import.meta !== "undefined" &&
       (import.meta.env?.VITE_SUPABASE_ANON_KEY ||
         import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) ||

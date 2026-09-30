@@ -1,6 +1,8 @@
 // The hotel's web identity (tenants.brand) and where its booking web answers.
 // Pure helpers shared by the brand layer (brand.tsx) and the panel.
 
+import { runtimeConfig } from "./runtime-config";
+
 /** The hotel's slug (stable, readable key). */
 export type BrandId = string;
 
@@ -119,7 +121,11 @@ export function brandOf(t: TenantRow): Brand {
   };
 }
 
-const PLATFORM = (import.meta.env.VITE_PLATFORM_DOMAIN as string | undefined)?.toLowerCase() ?? "";
+const PLATFORM = (
+  runtimeConfig.platformDomain ??
+  (import.meta.env.VITE_PLATFORM_DOMAIN as string | undefined) ??
+  ""
+).toLowerCase();
 
 /** The URL where a hotel's booking web answers (its domain, or the platform subdomain). */
 export function hotelWebUrl(t: { slug: string; domain: string | null }): string | null {
