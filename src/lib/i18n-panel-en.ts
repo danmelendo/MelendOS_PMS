@@ -1007,4 +1007,87 @@ export const PANEL_EN: Record<string, string> = {
   "Este periodo": "This period",
   "No desea": "Opted out",
   Acepta: "Accepts",
+  // Web y dominio, and its DNS guide (fragments around names and bold words).
+  ": el proveedor añade": ": the provider adds",
+  ". Enlázalo desde el botón «Reservar» de tu web actual: no hace falta cambiarla.":
+    ". Link to it from the «Book» button on your current website: no need to change it.",
+  ". O pega el buscador de fechas con el código de «Añadir a tu web actual», más abajo. El certificado HTTPS se crea solo.":
+    ". Or paste the date search with the code from «Add to your current website», further down. The HTTPS certificate is created automatically.",
+  ". Suele tardar unos minutos; a veces, unas horas.":
+    ". It usually takes a few minutes; sometimes a few hours.",
+  "(de tipo A, AAAA o CNAME), bórralo antes: no pueden convivir.":
+    "(type A, AAAA or CNAME), delete it first: they cannot coexist.",
+  "(o la de quien te lleva la web). Busca la sección":
+    "(or that of whoever runs your website). Look for the section",
+  "), no en naranja.": "), not orange.",
+  "): usa siempre un subdominio como": "): always use a subdomain such as",
+  "A donde vuelven los huéspedes desde la app y la web de reservas («Volver a la web»).":
+    "Where guests go back to from the booking website («Back to the website»).",
+  "Ahora responde en": "Now answering at",
+  "Añade un registro nuevo de tipo CNAME": "Add a new CNAME record",
+  "Añadir registro": "Add record",
+  "arriba y pulsa": "above and click",
+  "Cómo conectarlo (una vez)": "How to connect it (once)",
+  "Comprobar DNS": "Check DNS",
+  "Conectado a": "Connected to",
+  "Dirección de tu web de reservas": "Address of your booking website",
+  "Dónde reservan tus huéspedes: tu motor de reservas en un subdominio propio, enlazado desde la web que ya tienes.":
+    "Where your guests book: your booking engine on your own subdomain, linked from the website you already have.",
+  "El cambio tarda de unos minutos a unas horas. El certificado HTTPS se crea solo.":
+    "The change takes from a few minutes to a few hours. The HTTPS certificate is created automatically.",
+  En: "In",
+  "En Cloudflare, deja la nube en gris (": "In Cloudflare, leave the cloud grey (",
+  "En el panel de tu dominio (donde lo compraste o tu informático), crea este registro DNS:":
+    "In your domain's control panel (where you bought it, or ask your IT person), create this DNS record:",
+  "En tu web actual, haz que el botón": "On your current website, make the",
+  "Enlaza tu web a las reservas": "Link your website to the bookings",
+  "Entra en el panel de tu dominio": "Open your domain's control panel",
+  "Es la web donde compraste": "It is the website where you bought",
+  "escribe solo": "type only",
+  Galería: "Gallery",
+  "Gestionar DNS": "Manage DNS",
+  "Guarda el registro en tu proveedor. Vuelve a esta página, escribe":
+    "Save the record at your provider. Come back to this page, type",
+  "Guarda y comprueba aquí": "Save and check here",
+  "Guía paso a paso, con imágenes": "Step-by-step guide, with pictures",
+  "La dirección se asigna al publicar el motor de reservas. En la demo se ve en «Web pública».":
+    "The address is assigned when the booking engine is published. In the demo it is under «Public website».",
+  "lleve a": "button point to",
+  "Los nombres de los menús cambian con el tiempo. Si no lo encuentras, busca «DNS» en la ayuda de tu proveedor o pásale esta guía a quien te lleva la web.":
+    "Menu names change over time. If you cannot find it, search for «DNS» in your provider's help or pass this guide on to whoever runs your website.",
+  "No sirve para el dominio sin nada delante (": "It does not work for the bare domain (",
+  o: "or",
+  "por su cuenta. Si escribes el nombre completo, acabará como":
+    "on its own. If you type the full name, it will end up as",
+  Pulsa: "Click",
+  "Registros DNS de": "DNS records of",
+  "Si ya existe un registro": "If there is already a record",
+  "Solo DNS": "DNS only",
+  "te lo damos al activar tu cuenta": "we give it to you when your account is activated",
+  "Textos legales de tu web": "Legal texts of your website",
+  "Tu hotel": "Your hotel",
+  "Tu motor de reservas vive en un subdominio de tu web, por ejemplo":
+    "Your booking engine lives on a subdomain of your website, for example",
+  "Tu subdominio": "Your subdomain",
+  "Tu subdominio (opcional)": "Your subdomain (optional)",
+  "Tu web muestra en el pie el aviso legal, la política de privacidad, la de cookies y las condiciones de reserva. Se rellenan solos con tus datos fiscales (Facturación → Datos fiscales) y tus políticas de pago y cancelación. Son una plantilla: revísalos con tu asesoría.":
+    "Your website shows the legal notice, privacy policy, cookie policy and booking terms in the footer. They fill in on their own with your tax details (Invoicing → Tax details) and your payment and cancellation policies. They are a template: review them with your advisers.",
+  "Tu web principal (opcional)": "Your main website (optional)",
+  Valor: "Value",
+  "Valor / Destino": "Value / Target",
+  "y rellénalo así. Si el proveedor pide TTL, deja el que venga por defecto.":
+    "and fill it in like this. If the provider asks for a TTL, leave the default.",
+  "Zona DNS": "DNS zone",
+  "Ilustración: así es el formulario en casi todos los proveedores (cambian los colores y el orden).":
+    "Illustration: this is what the form looks like at almost every provider (colours and order vary).",
+  "Cuando el DNS está bien, aparece «Conectado» en verde.":
+    "When the DNS is right, «Connected» appears in green.",
+  "Tu web no cambia: solo el destino del botón «Reservar».":
+    "Your website does not change: only where the «Book» button points.",
+  "Dominios y SSL → tu dominio → DNS": "Domains & SSL → your domain → DNS",
+  "Mis productos → tu dominio → DNS": "My products → your domain → DNS",
+  "Dominios → tu dominio → Zona DNS": "Domains → your domain → DNS zone",
+  "Dominios → tu dominio → DNS": "Domains → your domain → DNS",
+  "Dominios → tu dominio → Registros DNS": "Domains → your domain → DNS records",
+  "tu dominio → DNS → Registros": "your domain → DNS → Records",
 };
