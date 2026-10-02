@@ -52,7 +52,7 @@ Total orientativo: **3-5 semanas de trabajo**, más los tiempos de terceros (ban
 
 - **Idiomas**: la web del huésped, el widget, los emails y los textos legales ya están en español e inglés (28/09). Faltan los textos que escribe cada hotel (portada, descripciones) en varios idiomas y, según el mercado, francés o alemán.
 - **LLM de producción**: hoy el asistente usa un modelo local en el PC de Dan. Hace falta un proveedor de API por hotel con el consumo medido (ya se registra por turno) y afinar lo conocido: a veces responde preguntas fuera de tema.
-- **Un channel manager real**: sin conexión con Booking y Expedia muchos hoteles no cambian de PMS. Investigado el 02/10: Booking no admite proveedores nuevos; la vía es **Channex** en marca blanca, unas 2-3 semanas (`docs/conector-booking.md`). Es imprescindible para el primer cliente objetivo (`clientes/hoteles-alcala/`).
+- **Un channel manager real**: sin conexión con Booking y Expedia muchos hoteles no cambian de PMS. Investigado el 02/10: Booking no admite proveedores nuevos; la vía es **WooDoo (WuBook)**, pago por canal y sin cuota fija, unos 6-8 días en versión simplificada; **Channex** en marca blanca al escalar (`docs/conector-booking.md`). Es imprescindible para el primer cliente objetivo (`clientes/hoteles-alcala/`).
 - **Cobro de la suscripción** (propuesta: Stripe Billing) y facturas propias de Melend/OS.
 - **Ayuda de uso**: guía corta por pantalla y vídeos de 2 minutos. Reduce soporte, que es el coste que más escala.
 - **Informes a escala**: `report_stays` devuelve una fila por estancia. Con hoteles grandes hay que agregar en SQL.

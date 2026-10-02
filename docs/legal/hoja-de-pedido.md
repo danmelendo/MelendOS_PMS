@@ -39,7 +39,7 @@ La cuota se ajusta al número real de habitaciones activas: si se añaden, desde
 | Descuento         | ☒ **Fundador** (10 % anual), mantenido mientras el contrato siga sin interrupción y al corriente de pago               | −28,80 €/mes                                         |
 | **Total anual**   | 259,20 €/mes × 12                                                                                                      | **3.110,40 € + IVA**                                 |
 | Cuota de alta     | Incluida con el pago anual                                                                                             | **0,00 €**                                           |
-| Consumo variable  | Tokenización de tarjetas de canales: al coste del proveedor (0,02 $/operación). IA: no contratada.                     | Por meses vencidos                                   |
+| Consumo variable  | Canales adicionales a Booking.com, si se piden: según la página de precios. IA: no contratada.                         | Por meses vencidos                                   |
 
 Precios sin IVA. La factura anual se emite al terminar el periodo de prueba.
 

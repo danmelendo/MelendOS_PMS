@@ -37,10 +37,10 @@ Las páginas legales **de la web de cada hotel** (aviso legal, privacidad, cooki
    - El **límite de responsabilidad** (cap. 9): 12 meses de cuotas. ¿Suficiente y defendible? ¿Hay que excluir los datos personales del límite?
    - **Cuotas no reembolsables** (cap. 6): que la cláusula aguante con la excepción por incumplimiento nuestro.
    - **Reparto de la normativa** (cap. 8): sobre todo VERI\*FACTU, donde somos fabricante del programa y respondemos de que cumpla.
-   - **Subencargados con transferencia fuera de la UE** (anexo II del encargo): Vercel, Resend, Channex y el proveedor de IA. Comprobar su adhesión al Marco de Privacidad UE-EE. UU. o sus cláusulas contractuales tipo.
+   - **Subencargados con transferencia fuera de la UE** (anexo II del encargo): Vercel, Resend, el channel manager (WuBook ahora, Channex más adelante) y el proveedor de IA. Comprobar su adhesión al Marco de Privacidad UE-EE. UU. o sus cláusulas contractuales tipo.
    - **Jurisdicción**: juzgados de Alcalá de Henares.
 3. **Seguro de responsabilidad civil profesional** contratado antes de arrancar, y su importe coherente con el límite del cap. 9.
-4. **Firmar los DPA** de Supabase, Vercel, Resend y Channex, y abrir el **registro de actividades de tratamiento** de Melend/OS (art. 30 del RGPD).
+4. **Firmar los DPA** de Supabase, Vercel, Resend y WuBook (con la prohibición expresa de usar los datos de nuestros hoteles para su propio PMS; `docs/conector-booking.md`, sección 3), y abrir el **registro de actividades de tratamiento** de Melend/OS (art. 30 del RGPD).
 5. **Declaración responsable** del programa de facturación (VERI\*FACTU) publicada antes de que el cliente facture de verdad.
 6. Actualizar `site/src/pages/Privacy.tsx` y añadir el aviso legal con los datos de `web-comercial.md`.
 

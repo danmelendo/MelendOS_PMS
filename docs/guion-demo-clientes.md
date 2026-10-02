@@ -87,7 +87,7 @@ Cambia a la pestaña del **panel** (entra como «Recepción · Hotel Lumen»).
 | «¿Cumple con el registro de viajeros nuevo?» | Sí, SES.HOSPEDAJES integrado; se envía al hacer el check-in. |
 | «¿El huésped tiene que hacer algo?» | No es obligatorio: recibe un enlace de un solo uso para el check-in online (datos + firma desde el móvil). Si no lo usa, recepción lo completa a la llegada en su tablet. |
 | «¿Y VeriFactu?» | Integrado, con huella y QR. La puesta en marcha con vuestro certificado va en la implantación. |
-| «¿Se conecta con Booking?» | Sí, en el paquete Distribución, a través de un channel manager certificado (Channex), en la puesta en marcha. Mientras no esté certificado, se enseña la simulación y se dice así (`docs/conector-booking.md`). |
+| «¿Se conecta con Booking?» | Sí, en el paquete Distribución, a través de un channel manager certificado, en la puesta en marcha. Mientras no esté certificado, se enseña la simulación y se dice así (`docs/conector-booking.md`). |
 | «¿Qué pasa si se cae?» | Está sobre Supabase (infraestructura profesional); hay copias y alertas automáticas. El SLA se contrata según lo que necesitéis. |
 | «¿Mis datos están seguros?» | RLS por hotel: cada hotel solo ve lo suyo. Datos sensibles (DNI, domicilio) solo los ve dirección, con reautenticación. Hemos hecho pentesting. |
 | «¿Cuánto tarda la puesta en marcha?» | Damos de alta el hotel con vuestras habitaciones y tarifas desde vuestro Excel; unos días. |
