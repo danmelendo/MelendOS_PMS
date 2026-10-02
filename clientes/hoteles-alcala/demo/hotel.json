@@ -1,0 +1,393 @@
+{
+  "slug": "hoteles-alcala",
+  "name": "Hoteles Alcalá",
+  "plan": "starter",
+  "packages": ["stay", "distribution"],
+  "status": "trial",
+  "timezone": "Europe/Madrid",
+  "checkin_hour": 14,
+  "checkout_hour": 12,
+  "payment_modes": ["at_hotel", "prepay"],
+  "free_cancellation_hours": 48,
+  "cancellation_penalty": "first_night",
+  "brand": {
+    "accent": "#8B1E2D",
+    "email_header": "color",
+    "tagline": "Tres alojamientos en el corazón de Alcalá de Henares, Ciudad Patrimonio de la Humanidad",
+    "email": "info@hotelesalcala.com",
+    "phone": "+34 91 881 38 44",
+    "address": "C/ Divino Figueroa, 10 · 28801 Alcalá de Henares"
+  },
+  "admins": ["direccion@alcala.demostays.example"],
+  "reception": ["recepcion@alcala.demostays.example"],
+  "rates": [
+    {
+      "name": "Complutense · Individual",
+      "price": 45,
+      "weekend_price": 52
+    },
+    {
+      "name": "Complutense · Doble",
+      "price": 58,
+      "weekend_price": 68
+    },
+    {
+      "name": "Complutense · Triple",
+      "price": 75,
+      "weekend_price": 85
+    },
+    {
+      "name": "Cuatro Caños · Individual",
+      "price": 42,
+      "weekend_price": 50
+    },
+    {
+      "name": "Cuatro Caños · Doble",
+      "price": 55,
+      "weekend_price": 65
+    },
+    {
+      "name": "Cuatro Caños · Doble baño compartido",
+      "price": 45,
+      "weekend_price": 52
+    },
+    {
+      "name": "Jacinto · Individual baño compartido",
+      "price": 32,
+      "weekend_price": 36
+    },
+    {
+      "name": "Jacinto · Doble baño compartido",
+      "price": 42,
+      "weekend_price": 48
+    },
+    {
+      "name": "Jacinto · Doble",
+      "price": 50,
+      "weekend_price": 58
+    }
+  ],
+  "properties": [
+    {
+      "name": "Hotel Complutense",
+      "city": "Alcalá de Henares",
+      "address": "C/ Encomienda, 9 · 28805",
+      "province": "Comunidad de Madrid",
+      "description": "Hotel de dos estrellas en una casa del centro histórico, a pocos minutos del Rectorado de la Universidad y de la Plaza de Cervantes. Habitaciones con aire acondicionado, baño privado y wifi.",
+      "amenities": ["wifi"],
+      "rooms": [
+        {
+          "name": "101",
+          "capacity": 1,
+          "rate": "Complutense · Individual",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "102",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "103",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "104",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "105",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "106",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "107",
+          "capacity": 3,
+          "type": "family",
+          "rate": "Complutense · Triple",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "201",
+          "capacity": 1,
+          "rate": "Complutense · Individual",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "202",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "203",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "204",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "205",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "206",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "207",
+          "capacity": 3,
+          "type": "family",
+          "rate": "Complutense · Triple",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "301",
+          "capacity": 1,
+          "rate": "Complutense · Individual",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "302",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac", "city_view"]
+        },
+        {
+          "name": "303",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac", "city_view"]
+        },
+        {
+          "name": "304",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac", "city_view"]
+        },
+        {
+          "name": "305",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac", "city_view"]
+        },
+        {
+          "name": "306",
+          "capacity": 2,
+          "rate": "Complutense · Doble",
+          "features": ["wifi", "ac", "city_view"]
+        },
+        {
+          "name": "307",
+          "capacity": 3,
+          "type": "family",
+          "rate": "Complutense · Triple",
+          "features": ["wifi", "ac"]
+        }
+      ]
+    },
+    {
+      "name": "Hotel Cuatro Caños",
+      "city": "Alcalá de Henares",
+      "address": "C/ Divino Figueroa, 10 · 28801",
+      "province": "Comunidad de Madrid",
+      "description": "Hotel de dos estrellas reformado, con recepción 24 horas, a un paseo de la Plaza de Cervantes y de la Catedral Magistral y a 10 minutos andando de la estación.",
+      "amenities": ["wifi"],
+      "rooms": [
+        {
+          "name": "1",
+          "capacity": 1,
+          "rate": "Cuatro Caños · Individual",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "2",
+          "capacity": 1,
+          "rate": "Cuatro Caños · Individual",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "3",
+          "capacity": 1,
+          "rate": "Cuatro Caños · Individual",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "4",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "5",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "6",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "7",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "8",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "9",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "10",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "11",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "12",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "13",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "14",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "15",
+          "capacity": 2,
+          "rate": "Cuatro Caños · Doble baño compartido",
+          "features": ["wifi"]
+        }
+      ]
+    },
+    {
+      "name": "Hostal Jacinto",
+      "city": "Alcalá de Henares",
+      "address": "Pº de la Estación, 2, 1.ª planta · 28807",
+      "province": "Comunidad de Madrid",
+      "description": "Hostal familiar a 300 metros de la estación de Cercanías y a cinco minutos andando del centro histórico. Habitaciones con baño privado o compartido.",
+      "amenities": ["wifi"],
+      "rooms": [
+        {
+          "name": "1",
+          "capacity": 1,
+          "rate": "Jacinto · Individual baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "2",
+          "capacity": 1,
+          "rate": "Jacinto · Individual baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "3",
+          "capacity": 1,
+          "rate": "Jacinto · Individual baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "4",
+          "capacity": 1,
+          "rate": "Jacinto · Individual baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "5",
+          "capacity": 2,
+          "rate": "Jacinto · Doble baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "6",
+          "capacity": 2,
+          "rate": "Jacinto · Doble baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "7",
+          "capacity": 2,
+          "rate": "Jacinto · Doble baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "8",
+          "capacity": 2,
+          "rate": "Jacinto · Doble baño compartido",
+          "features": ["wifi"]
+        },
+        {
+          "name": "9",
+          "capacity": 2,
+          "rate": "Jacinto · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "10",
+          "capacity": 2,
+          "rate": "Jacinto · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "11",
+          "capacity": 2,
+          "rate": "Jacinto · Doble",
+          "features": ["wifi", "ac"]
+        },
+        {
+          "name": "12",
+          "capacity": 2,
+          "rate": "Jacinto · Doble",
+          "features": ["wifi", "ac"]
+        }
+      ]
+    }
+  ]
+}
